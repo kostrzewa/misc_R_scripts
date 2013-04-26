@@ -1,2 +1,2 @@
-An R function which will plot the output of the ORIENTEDPLAQUETTES online
-measurement in tmLQCD.
+A small collection of miscellaneous R scripts for the analyis and plotting
+of various tmLQCD outputs.
