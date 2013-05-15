@@ -1,5 +1,7 @@
 eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,debug=FALSE)
 {
+  # produce one plot with two columns
+  par(mfrow=c(1,2))
   Tover2 <- floor(T/2)
 
   Cpp.raw <- NULL
@@ -23,6 +25,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,debug=FALSE)
   Cpp.error <- NULL
   m_eff <- NULL
   m_eff.error <- NULL
+  m_eff.estimate <- NULL # keep track of bootstrap estimate of m_eff
   for(t in 1:T){
     meanval <- mean(Cpp.raw[,t])
     errorval <- sqrt(var(Cpp.raw[,t])/(i_end-i_start))
@@ -58,9 +61,9 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,debug=FALSE)
     }
   } 
 
-  uniroot_boot <- function(data,indices,t,sym=TRUE) {
-    val <- (mean(data[,t+2][indices]) - mean(data[,t][indices]))/ mean( data[,t][indices] )
-    solution <- uniroot(corratio_fun,value=val,t=t,N_t=T,lower=0,upper=3)
+  uniroot_boot <- function(data,t_val,sym=TRUE) {
+    val <- (mean(data[,t_val+2]) - mean(data[,t_val]))/ mean( data[,t_val+1] )
+    solution <- uniroot(corratio_fun,value=val,t=t_val,N_t=T,lower=0,upper=3)
     return(solution$root)
   }
 
@@ -77,8 +80,9 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,debug=FALSE)
     solution <- uniroot(corratio_fun,value=corratio_val(t,sym=TRUE),sym=TRUE,t=t,N_t=T,lower=0,upper=6)
     m_eff <- c(m_eff,solution$root)
     # do bootstrap analysis for effective mass value for each timeslice
-    boots <- boot(Cpp.raw,uniroot_boot,R=200,t=t)
+    boots <- tsboot(Cpp.raw,statistic=uniroot_boot,sim="fixed",l=100,R=1200,t_val=t)
     m_eff.error <- c(m_eff.error,sd(boots$t))
+    m_eff.estimate <- c(m_eff.estimate,mean(boots$t))
     #m_eff <- c(m_eff,log(Cpp.mean[t]/Cpp.mean[t+1]))
     #m_eff.error <- c(m_eff.error, abs(Cpp.error[t]/Cpp.mean[t])+abs(Cpp.error[t+1]/Cpp.mean[t+1])) 
   }
@@ -110,7 +114,6 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,debug=FALSE)
     cppmin <- 0.00000001
   }
 
-  par(mfrow=c(1,2))
   plotwitherror(x=seq(0,T-1,1),
     ylim=c(cppmin,1.2*cppmax),
     log="y"
@@ -118,10 +121,10 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,debug=FALSE)
     dy=Cpp.error,
     xlab="t",ylab=expression(C[pp](t)),
     xaxp=c(0,T-1,T-1))
-  
+    
   abline(v=picorfit.t1,col='gray')
   abline(v=picorfit.t2,col='gray')
-
+  
   picorfit <- nls(Cpp~picorrel(t,a,E,T),data=Cppdata,
     weights=Cppdata$weight,
     start=list(a=1,E=0.06),
@@ -156,9 +159,10 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,debug=FALSE)
     y=m_eff,dy=m_eff.error,
     ylab=expression(am[eff](t)),xlab="t",
     xaxp=c(0,T-2,T-2))
-
+      
   abline(v=t1,col='gray')
   abline(v=t2,col='gray')
+  points(x=seq(t1,t2,1),y=m_eff.estimate,col='gray')
 
   m_ps <- mean(m_eff)
   dm_ps <- sqrt((var(m_eff)/(length(m_eff)))+mean(m_eff.error/sqrt(length(m_eff.error)))^2)
