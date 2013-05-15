@@ -40,4 +40,8 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0)
   print(c(mcpac=onlineout$uwerrresultmpcac$value,dmpcac=onlineout$uwerrresultmpcac$dvalue))
   print("m_pcac from derivative")
   print(c(mpcac=mean(onlineout$MChist.dpaopp),dmpcac=sqrt(var(onlineout$MChist.dpaopp)/length(onlineout$MChist.dpaopp))))
+
+  print("best estimate")
+  print(c(mpcac=mean(c(onlineout$uwerrresultmpcac$value,mean(onlineout$MChist.dpaopp))),
+        dmpcac=sqrt(onlineout$uwerrresultmpcac$dvalue^2+sqrt(var(onlineout$MChist.dpaopp)/length(onlineout$MChist.dpaopp))^2)))
 }
