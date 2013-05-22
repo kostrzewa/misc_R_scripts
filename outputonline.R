@@ -1,11 +1,21 @@
-outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0)
+outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudelta=0)
 {
   rundir <- NULL
-  if(csw==0) {
-    rundir <- sprintf("%s_b%g-L%dT%d-k%.7g-mu%g",type,beta,L,T,kappa,mu)
-  } else {
-    rundir <- sprintf("%s_b%g-L%dT%d-csw%g-k%g-mu%g",type,beta,L,T,csw,kappa,mu)
+  rundir <- sprintf("%s_b%g-L%dT%d",type,beta,L,T)
+
+  if(csw!=0) {
+    rundir <- sprintf("%s-csw%g",rundir,csw)
   }
+
+  rundir <- sprintf("%s-k%g-mu%g",rundir,kappa,mu)
+
+  if(musigma!=0){
+    rundir <- sprintf("%s-musigma%g",rundir,musigma)
+  }
+  if(mudelta!=0){
+    rundir <- sprintf("%s-mudelta%g",rundir,mudelta)
+  }
+
   filename <- sprintf("%s/piononline.dat",rundir)
   plaqfile <- sprintf("%s/output.data",rundir)
   pioncor <- readcmicor(filename)
