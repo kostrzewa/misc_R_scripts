@@ -35,17 +35,17 @@ plot_oriented_plaquettes <- function(filename, start, end=-1) {
   ymax <- max(plaqdat$V2[i_start:i_end],plaqdat$V3[i_start:i_end],plaqdat$V4[i_start:i_end],plaqdat$V5[i_start:i_end],plaqdat$V6[i_start:i_end],plaqdat$V7[i_start:i_end])
   ymin <- min(plaqdat$V2[i_start:i_end],plaqdat$V3[i_start:i_end],plaqdat$V4[i_start:i_end],plaqdat$V5[i_start:i_end],plaqdat$V6[i_start:i_end],plaqdat$V7[i_start:i_end])
   
-  plot(t='p',ylab="oriented <P>",xlab=expression(t[HMC]),
+  plot(t='l',ylab="oriented <P>",xlab=expression(t[HMC]),
     x=seq(start,i_end-1,1),
     y=plaqdat$V2[i_start:i_end],
     ylim=c(ymin,ymax),
     pch='.')
 
-  points(x=seq(start,i_end-1,1),y=plaqdat$V3[i_start:i_end],col="red",pch='.')
-  points(x=seq(start,i_end-1,1),y=plaqdat$V4[i_start:i_end],col="green",pch='.')
-  points(x=seq(start,i_end-1,1),y=plaqdat$V5[i_start:i_end],col="blue",pch='.')
-  points(x=seq(start,i_end-1,1),y=plaqdat$V6[i_start:i_end],col="cyan",pch='.')
-  points(x=seq(start,i_end-1,1),y=plaqdat$V7[i_start:i_end],col="magenta",pch='.')
+  lines(x=seq(start,i_end-1,1),y=plaqdat$V3[i_start:i_end],col="red",pch='.')
+  lines(x=seq(start,i_end-1,1),y=plaqdat$V4[i_start:i_end],col="green",pch='.')
+  lines(x=seq(start,i_end-1,1),y=plaqdat$V5[i_start:i_end],col="blue",pch='.')
+  lines(x=seq(start,i_end-1,1),y=plaqdat$V6[i_start:i_end],col="cyan",pch='.')
+  lines(x=seq(start,i_end-1,1),y=plaqdat$V7[i_start:i_end],col="magenta",pch='.')
 
   title <- name[[1]][length(name[[1]])-1]
   print(title)

@@ -3,7 +3,7 @@
 
 my.strip <- function(which.given, which.panel, ...) {
   strip.labels <- 
-    c("CG iterations (lightest)",expression(m[PCAC]),"<P>")
+    c("CG iterations (lightest)",expression(am[PCAC]),"<P>")
     panel.rect(0, 0, 1, 1, col="#aabbff", border=1)
     panel.text(x=0.5, y=0.5, adj=c(0.5, 0.55), cex=0.95,
     lab=strip.labels[which.panel[which.given]])
@@ -18,7 +18,7 @@ my.strip <- function(which.given, which.panel, ...) {
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
 
-outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudelta=0,addon="",cg_col,plaquette=TRUE,dH=TRUE,oneplot=FALSE)
+outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudelta=0,addon="",cg_col,plaquette=TRUE,dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE)
 {
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   rundir <- NULL
@@ -43,9 +43,21 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
   filename <- sprintf("%s/piononline.dat",rundir)
   outfile <- sprintf("%s/output.data",rundir)
   pioncor <- readcmicor(filename)
+
+  if(debug){
+    pion(pioncor,mu=mu,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
+  }
+
   onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mu,skip=skip,method="uwerr")
 
   print(onlineout)
+
+  filelabel <- NULL
+  if(trajlabel){
+    filelabel <- sprintf("%s_traj%d-%d",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
+  } else {
+    filelabel <- sprintf("%s",rundir) 
+  }
 
   # we are plotting histories of the plaquette, PCAC mass and the number of acceptance CG iterations 
   # if we want to make one plot we will use the "lattice" package, in particular xyplot
@@ -70,8 +82,8 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     summary(combined)
     print(length(combined))
 
-    algo_filename <- sprintf("algo_%s_traj%d-%d.pdf",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
-    
+    algo_filename <- sprintf("algo_%s.pdf",filelabel)
+
     require(lattice)
     pdf(algo_filename,family="Palatino",height=5,width=8)
 
@@ -108,10 +120,14 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     dev.off()
   
   } else {
-    dpaopp_filename <- sprintf("dpaopp_%s_traj%d-%d.pdf",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
-    pdf(dpaopp_filename)
+    dpaopp_filename <- sprintf("dpaopp_%s.pdf",filelabel)
+    pdf(dpaopp_filename,width=plotsize,height=plotsize)
     op <- par(family="Palatino")
-    plot(x=seq(skip+1,(skip+length(onlineout$MChist.dpaopp)),1),onlineout$MChist.dpaopp,t='l',ylab=expression(am[PCAC]),xlab=expression(t[HMC]))
+    plot(x=seq(skip+1,(skip+length(onlineout$MChist.dpaopp)),1),
+      onlineout$MChist.dpaopp,t='l',
+      ylab=expression(am[PCAC]),
+      xlab=expression(t[HMC]),
+      main=rundir)
     
     rect(xleft=(skip-50),
       xright=(skip+length(onlineout$MChist.dpaopp)+50),
@@ -134,18 +150,31 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     
     if(plaquette) {
       outdat <- read.table(outfile)
-      plaquette_filename <- sprintf("plaquette_%s_traj%d-%d.pdf",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
-      pdf(plaquette_filename)
+      plaquette_filename <- sprintf("plaquette_%s.pdf",filelabel)
+      pdf(plaquette_filename,width=plotsize,height=plotsize)
       op <- par(family="Palatino")
-      plot(x=seq(skip+shift,length(outdat$V2),1),outdat$V2[skip:length(outdat$V2)],t='l',ylab=expression("<P>"),xlab=expression(t[HMC]))
+      plot(x=seq(skip+shift,length(outdat$V2),1),outdat$V2[skip:length(outdat$V2)],t='l',ylab=expression("<P>"),xlab=expression(t[HMC]),main=rundir)
       dev.off()
     }
     if(dH) {
-      dH_filename <- sprintf("dH_%s_traj%d-%d.pdf",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
-      pdf(dH_filename)
+      dH_filename <- sprintf("dH_%s.pdf",filelabel)
+      pdf(dH_filename,width=plotsize,height=plotsize)
       op <- par(family="Palatino")
-      plot(x=seq(skip+shift,length(outdat$V3),1),outdat$V3[skip:length(outdat$V3)],t='l',ylab=expression(paste(delta,"H")),xlab=expression(t[HMC])) 
+      plot(x=seq(skip+shift,length(outdat$V3),1),outdat$V3[skip:length(outdat$V3)],t='l',ylab=expression(paste(delta,"H")),xlab=expression(t[HMC]),main=rundir) 
       dev.off()
+
+      expdH_filename <- sprintf("expdH_%s.pdf",filelabel)
+      pdf(expdH_filename,width=plotsize,height=plotsize)
+      op <- par(family="Palatino")
+      plot(x=seq(skip+shift,length(outdat$V4),1),outdat$V4[skip:length(outdat$V4)],t='l',ylab=expression(paste(paste("exp(-",delta),"H)")),xlab=expression(t[HMC]),main=rundir) 
+      dev.off()
+      
+      uw.dH <- uwerrprimary(outdat$V3[skip:length(outdat$V3)])
+      uw.expdH <- uwerrprimary(outdat$V4[skip:length(outdat$V4)])
+      print("uw.dH")
+      summary(uw.dH)
+      print("uw.exp(-dH)")
+      summary(uw.expdH)
     }
   }
 }
