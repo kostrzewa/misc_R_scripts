@@ -1,14 +1,24 @@
 # function fits to 
 
-hbarc <- 197.326972
-dhbarc <-  0.000005
+# to get a fit in physical units, simply replace with the physical hbarc 
 
-a <- 0.091
-da <- 0.006
+#hbarc <- 197.326972
+#dhbarc <-  0.000005
 
-m_ps_phys <- 130.4 
+hbarc <- 1
+dhbarc <- 0
 
-eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,plateau.t2=t2,debug=FALSE)
+a <- 1
+da <- 0
+
+#a <- 0.091
+#da <- 0.006
+
+# m_ps_phys <- 130.4 
+
+m_ps_phys <- 0
+
+eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,plateau.t2=t2,debug=FALSE,sym=FALSE)
 {
   Tover2 <- floor(T/2)
 
@@ -55,9 +65,9 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
     Cpp.error <- c(Cpp.error,errorval)
   }
   
-  # function to solve for effective mass in symmetric manner
+  # function to solve for effective mass in symmetric or non-symmetric manner
   # the 'value' input is for finding the root of f(E,t) - value(t) = 0
-  corratio_fun <- function(E,value=0,t,N_t,sym=TRUE) {
+  corratio_fun <- function(E,value=0,t,N_t) {
     Thalf <- N_t/2 
     if(sym){
       return( ( cosh((Thalf-t-1)*E) - cosh((Thalf-t+1)*E) ) / ( cosh((Thalf-t)*E) ) - value )
@@ -67,7 +77,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
   }
   
   # remember that array index [1] is equivalent to t=0!
-  corratio_val <- function(t,sym=TRUE) {
+  corratio_val <- function(t) {
     if(sym) {
       return( ( Cpp.mean[t+2] - Cpp.mean[t] ) / Cpp.mean[t+1] )
     } else {
@@ -75,7 +85,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
     }
   }
 
-  corratio_err <- function(t,sym=TRUE) {
+  corratio_err <- function(t) {
     if(sym) {
       return( (1/Cpp.mean[t+1])*(Cpp.error[t+2] - Cpp.error[t] - Cpp.error[t+1]*corratio_val(t)))
     } else {
@@ -83,19 +93,25 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
     }
   } 
 
-  uniroot_boot <- function(data,t_val,sym=TRUE) {
+  uniroot_boot <- function(data,t_val) {
     if(sym) {
       val <- (mean(data[,t_val+2]) - mean(data[,t_val]))/ mean( data[,t_val+1] )
     } else {
       val <- (mean(data[,t_val+1])/mean(data[,t_val+2]))
     }
-    solution <- uniroot(corratio_fun,sym=sym,value=val,t=t_val,N_t=T,lower=0,upper=3)
+    solution <- uniroot(corratio_fun,value=val,t=t_val,N_t=T,lower=0,upper=3)
     return(solution$root)
   }
 
-  uniroot_uwerr <- function(data,t_val,sym=TRUE) {
-    val <- (data[1]-data[2])/data[3]
-    solution <- uniroot(corratio_fun,sym=sym,value=val,t=t_val,N_t=T,lower=0,upper=3)
+  # data should be in the form data[1]=C(t+1),data[2]=C(t-1),data[3]=C(t)
+  uniroot_uwerr <- function(data,t_val) {
+    val <- NULL
+    if(sym) {
+      val <- (data[1]-data[2])/data[3]
+    } else {
+      val <- (data[3]/data[1])
+    }
+    solution <- uniroot(corratio_fun,value=val,t=t_val,N_t=T,lower=0,upper=3)
     return(solution$root)
   }
 
@@ -110,7 +126,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
   if(debug) {
     for(t in plateau.t1:plateau.t2) {
       print(sprintf("plotting 'f(E,t) - value(t)' for t = %d",t))
-      plot(function(x) corratio_fun(x,value=corratio_val(t,sym=TRUE),t=t,N_t=T,sym=TRUE),xlim=c(-1,3),ylab="C(E,t)-value(t)",xlab="E")
+      plot(function(x) corratio_fun(x,value=corratio_val(t),t=t,N_t=T),xlim=c(-1,3),ylab="C(E,t)-value(t)",xlab="E")
       abline(h=0,col='gray')
       readline("press any key for next plot")
     }
@@ -137,7 +153,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
     }
     # -- debug end
     
-    solution <- uniroot(corratio_fun,value=corratio_val(t,sym=TRUE),sym=TRUE,t=t,N_t=T,lower=0,upper=6,tol=10e-4)
+    solution <- uniroot(corratio_fun,value=corratio_val(t),t=t,N_t=T,lower=0,upper=6,tol=10e-4)
     m_eff <- c(m_eff,solution$root)
     # do bootstrap analysis for effective mass value for each timeslice
     # boots <- tsboot(Cpp.raw,statistic=uniroot_boot,sim="fixed",l=floor(NROW(Cpp.raw)/10),R=1200,t_val=t,sym=TRUE)
@@ -155,6 +171,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
     print(c(m_eff=temp$value,dm_eff=temp$dvalue,tauint_m_eff=temp$tauint,dtauint_m_eff=temp$dtauint))
     m_eff.estimate.uwerr <- c(m_eff.estimate.uwerr,(temp$value*hbarc/a))
     m_eff.error.uwerr <- c(m_eff.error.uwerr,sqrt( (temp$dvalue*hbarc/a)^2 + (temp$value*dhbarc/a)^2 + (temp$value*hbarc*da/a^2)^2 ) )
+    
     #m_eff <- c(m_eff,log(Cpp.mean[t]/Cpp.mean[t+1]))
     #m_eff.error <- c(m_eff.error, abs(Cpp.error[t]/Cpp.mean[t])+abs(Cpp.error[t+1]/Cpp.mean[t+1])) 
   }
@@ -240,11 +257,11 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
     ylim=c(meffmin,meffmax),
     xlim=c(t1,t2),
     y=m_eff.estimate.uwerr,dy=m_eff.error.uwerr,
-    ylab=expression(paste(m[PS](t),"  MeV")),xlab="t",
+    ylab=expression(am[PS](t)),xlab="t",
     xaxp=c(0,T-2,T-2))
 
-  arrows(y0=130.4,x0=4.7,x1=3.7,pch=8,cex=2,angle=20,length=0.1,lwd=2)
-  text(y=129.8,x=6.8,expression(M[symbol("P")[exp]]),cex=1.3)
+  #arrows(y0=130.4,x0=4.7,x1=3.7,pch=8,cex=2,angle=20,length=0.1,lwd=2)
+  #text(y=129.8,x=6.8,expression(M[symbol("P")[exp]]),cex=1.3)
 
   #m_ps <- mean(m_eff[(plateau.t1+1-t1):(plateau.t2+1-t1)])
   #dm_ps <- sqrt(var(m_eff[(plateau.t1+1-t1):(plateau.t2+1-t1)])/(plateau.t2-plateau.t1)+mean(m_eff.error[(plateau.t1+1-t1):(plateau.t2+1-t1)]/sqrt(plateau.t2-plateau.t1))^2)
