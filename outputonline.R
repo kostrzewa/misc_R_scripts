@@ -18,23 +18,30 @@ my.strip <- function(which.given, which.panel, ...) {
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
 
-outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudelta=0,addon="",cg_col,plaquette=TRUE,dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE)
+outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudelta=0,addon="",cg_col,plaquette=TRUE,dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,title=FALSE,pl=FALSE,method="uwerr",fit.routine="optim")
 {
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   rundir <- NULL
-  rundir <- sprintf("%s_b%g-L%dT%d",type,beta,L,T)
+  rundir <- sprintf("%s_b%s-L%dT%d",type,beta,L,T)
 
   if(csw!=0) {
-    rundir <- sprintf("%s-csw%g",rundir,csw)
+    rundir <- sprintf("%s-csw%s",rundir,csw)
   }
 
-  rundir <- sprintf("%s-k%g-mu%g",rundir,kappa,mu)
+  rundir <- sprintf("%s-k%s-mu%s",rundir,kappa,mu)
+  
+  titletext <- NULL
+  if(title) {
+    titletext <- rundir
+  } else {
+    titletext <- ""
+  }
 
   if(musigma!=0){
-    rundir <- sprintf("%s-musigma%g",rundir,musigma)
+    rundir <- sprintf("%s-musigma%s",rundir,musigma)
   }
   if(mudelta!=0){
-    rundir <- sprintf("%s-mudelta%g",rundir,mudelta)
+    rundir <- sprintf("%s-mudelta%s",rundir,mudelta)
   }
   if(addon!=""){
     rundir <- sprintf("%s_%s",rundir,addon)
@@ -48,7 +55,7 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     pion(pioncor,mu=mu,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
   }
 
-  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mu,skip=skip,method="uwerr")
+  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mu,skip=skip,method=method,pl=pl,fit.routine=fit.routine)
 
   print(onlineout)
 
@@ -118,16 +125,18 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     # finally, we need to actually draw the plot
     plot(pl.obj)
     dev.off()
-  
+
+
   } else {
     dpaopp_filename <- sprintf("dpaopp_%s.pdf",filelabel)
     pdf(dpaopp_filename,width=plotsize,height=plotsize)
     op <- par(family="Palatino")
+    par(mgp=c(2,1,0))
     plot(x=seq(skip+1,(skip+length(onlineout$MChist.dpaopp)),1),
       onlineout$MChist.dpaopp,t='l',
-      ylab=expression(am[PCAC]),
+      ylab=expression("dpaopp effective mass"),
       xlab=expression(t[HMC]),
-      main=rundir)
+      main=titletext)
     
     rect(xleft=(skip-50),
       xright=(skip+length(onlineout$MChist.dpaopp)+50),
@@ -139,6 +148,43 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     lengthdpaopp <- length(onlineout$MChist.dpaopp)
     mindpaopp <- min(onlineout$MChist.dpaopp)
     maxdpaopp <- max(onlineout$MChist.dpaopp)
+    dev.off()
+    
+    dpaopp_plateau_filename <- sprintf("dpaopp_plateau_%s.pdf",filelabel)
+    pdf(dpaopp_plateau_filename,width=plotsize,height=plotsize)
+    op <- par(family="Palatino")
+    par(mgp=c(2,1,0))
+    plotwitherror(x=onlineout$dpaopp$t,
+      y=onlineout$dpaopp$mass,dy=onlineout$dpaopp$dmass,t='p',
+      ylab=expression("dpaopp effective mass"),
+      xlab=expression(t),
+      main=titletext)
+    rect(xleft=t1,
+      xright=t2,
+      ytop=onlineout$uwerrresultmpcac$value+onlineout$uwerrresultmpcac$dvalue,
+      ybottom=onlineout$uwerrresultmpcac$value-onlineout$uwerrresultmpcac$dvalue,border=FALSE,col=errorband_color)
+    abline(h=onlineout$uwerrresultmpcac$value,col="black")
+    dev.off()
+    
+    mpi_plateau_filename <- sprintf("mpi_plateau_%s.pdf",filelabel)
+    pdf(mpi_plateau_filename,width=plotsize,height=plotsize)
+    op <- par(family="Palatino")
+    par(mgp=c(2,1,0))
+
+    ploterror <- try(plotwitherror(x=onlineout$effmass$t,
+      y=onlineout$effmass$m,dy=onlineout$effmass$dm,t='p',
+      ylab=expression(am[PS]),
+      xlab=expression(t),
+      main=titletext),silent=FALSE)
+
+    if(inherits(ploterror,"try-error")) { 
+      plot(x=onlineout$effmass$t,y=onlineout$effmass$m)
+    }
+    rect(xleft=t1,
+      xright=t2,
+      ytop=onlineout$uwerrresultmps$value+onlineout$uwerrresultmps$dvalue,
+      ybottom=onlineout$uwerrresultmps$value-onlineout$uwerrresultmps$dvalue,border=FALSE,col=errorband_color)
+    abline(h=onlineout$uwerrresultmps$value,col="black")
     dev.off()
     
     # something in the skip computation is odd, let's just solve it like this
@@ -153,20 +199,23 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
       plaquette_filename <- sprintf("plaquette_%s.pdf",filelabel)
       pdf(plaquette_filename,width=plotsize,height=plotsize)
       op <- par(family="Palatino")
-      plot(x=seq(skip+shift,length(outdat$V2),1),outdat$V2[skip:length(outdat$V2)],t='l',ylab=expression("<P>"),xlab=expression(t[HMC]),main=rundir)
+      par(mgp=c(2,1,0))
+      plot(x=seq(skip+shift,length(outdat$V2),1),outdat$V2[skip:length(outdat$V2)],t='l',ylab=expression("<P>"),xlab=expression(t[HMC]),main=titletext)
       dev.off()
     }
     if(dH) {
       dH_filename <- sprintf("dH_%s.pdf",filelabel)
       pdf(dH_filename,width=plotsize,height=plotsize)
       op <- par(family="Palatino")
-      plot(x=seq(skip+shift,length(outdat$V3),1),outdat$V3[skip:length(outdat$V3)],t='l',ylab=expression(paste(delta,"H")),xlab=expression(t[HMC]),main=rundir) 
+      par(mgp=c(2,1,0))
+      plot(x=seq(skip+shift,length(outdat$V3),1),outdat$V3[skip:length(outdat$V3)],t='l',ylab=expression(paste(delta,"H")),xlab=expression(t[HMC]),main=titletext) 
       dev.off()
 
       expdH_filename <- sprintf("expdH_%s.pdf",filelabel)
       pdf(expdH_filename,width=plotsize,height=plotsize)
       op <- par(family="Palatino")
-      plot(x=seq(skip+shift,length(outdat$V4),1),outdat$V4[skip:length(outdat$V4)],t='l',ylab=expression(paste(paste("exp(-",delta),"H)")),xlab=expression(t[HMC]),main=rundir) 
+      par(mgp=c(2,1,0))
+      plot(x=seq(skip+shift,length(outdat$V4),1),outdat$V4[skip:length(outdat$V4)],t='l',ylab=expression(paste(paste("exp(-",delta),"H)")),xlab=expression(t[HMC]),main=titletext) 
       dev.off()
       
       uw.dH <- uwerrprimary(outdat$V3[skip:length(outdat$V3)])
