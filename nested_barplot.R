@@ -46,7 +46,7 @@
 
 library(reshape)
 
-nested_barplot <- function(datafile,namefile,debug=T,normalize=T) {
+nested_barplot <- function(datafile,namefile,title="",debug=T,normalize=T,legend=T) {
   rawdat <- read.table(datafile,header=T)
 
   # order the raw data file by the bar number
@@ -96,25 +96,32 @@ nested_barplot <- function(datafile,namefile,debug=T,normalize=T) {
 
   # we want the legend to appear next to the plot, so we need to adjust the plot margins
   # and turn clipping off
-  par(mar=c(8, 3, 4, 13), xpd=TRUE, family="Palatino")
+  rightmar <- 0
+  if(legend) {
+    rightmar <- 13
+  }
+  
+  par(mar=c(8, 3, 4, rightmar), xpd=TRUE, family="Palatino")
 
-  bp <- barplot(twide,names=namedat$name,xlab="",xaxt="n",col=cols,border=NA)
+  bp <- barplot(twide,names=namedat$name,xlab="",xaxt="n",col=cols,border=NA,main=title)
 
-  # add legends (one for each bar)
-  # this x coordinate seems to work well for varying numbers of bars (tested 3 and 7)
-  lxcoord <- max(bp)+max(bp)/(2*length(bp))
-  # we start paining the legend at the very top of the page and then go down
-  ypos <- 1.3*norm
-  for( i in unique(ordat$barnum) ) {
-    # number of elements in bar number i
-    elements <- length(ordat[ordat$barnum==i,]$name)
-    # we will also use this criterion to choose the colours from the cols vector using which
-    # the legend writes top to bottom so we reverse the order, so that it matches
-    # the way the stacks are drawn
-    # the barplot function wraps around the colour vector, so we do the same here
-    legend(x=lxcoord,y=ypos,legend=rev(ordat[ordat$barnum==i,]$name),bty="n",fill=rev(cols[(which(ordat$barnum==i)-1)%%9+1]))
-    # 0.11 seems to be a good increment, draw the next legend further down
-    ypos <- ypos - norm*0.08*elements - 0.07
+  if(legend) {
+    # add legends (one for each bar)
+    # this x coordinate seems to work well for varying numbers of bars (tested 3 and 7)
+    lxcoord <- max(bp)+max(bp)/(2*length(bp))
+    # we start paining the legend at the very top of the page and then go down
+    ypos <- 1.3*norm
+    for( i in unique(ordat$barnum) ) {
+      # number of elements in bar number i
+      elements <- length(ordat[ordat$barnum==i,]$name)
+      # we will also use this criterion to choose the colours from the cols vector using which
+      # the legend writes top to bottom so we reverse the order, so that it matches
+      # the way the stacks are drawn
+      # the barplot function wraps around the colour vector, so we do the same here
+      legend(x=lxcoord,y=ypos,legend=rev(ordat[ordat$barnum==i,]$name),bty="n",fill=rev(cols[(which(ordat$barnum==i)-1)%%9+1]))
+      # 0.11 seems to be a good increment, draw the next legend further down
+      ypos <- ypos - norm*0.08*elements - 0.07
+    }
   }
 
   # add slanted labels so that they fit and draw an axis
