@@ -34,10 +34,6 @@
 # the data is grouped by the "barnum" column and the bars
 # are plotted from left to right with increasing "barnum" number
 
-# the largest recommended number of divisions is 12 (i.e. 12 bar elements
-# in total) because of the colour selection, but the code falls
-# back onto "rainbow()" for more than 12 colours
-
 # the namefile contains one line per nesting level which will serve as the
 # label of the corresponding bar on the plot. For the example above, this file would look as follows:
 
@@ -56,7 +52,7 @@ nested_barplot <- function(datafile,namefile,debug=T,normalize=T) {
   # order the raw data file by the bar number
   # this is important for the legend to work correctly
   ordat <- rawdat[sort(rawdat$barnum,index.return=T)$ix,]
-
+  
   rm(rawdat)
   
   
@@ -90,23 +86,19 @@ nested_barplot <- function(datafile,namefile,debug=T,normalize=T) {
     print(twide)
     }
 
-  # generate some colours for the plot using RColorBrewer
-  n <- length(ordat$barnum)
-  cols <- NULL
-  # the largest set of colours returned by RColorBrewer has twelve colours
-  # so we fall back to rainbow if we have more than 12 elements in total
-  # we also fall back on rainbow if RColorBrewer is not available
-  if(n <= 12 && require(RColorBrewer) ) {
-    cols <- brewer.pal(n=n,name="Spectral")
+  # generate 9 colours for the plot using RColorBrewer
+  # fall back on rainbow if RColorBrewer is not available
+  if( require(RColorBrewer) ) {
+    cols <- brewer.pal(n=9,name="Set1")
   } else {
-    cols <- rainbow(n=n)
+    cols <- rainbow(n=9)
   }
 
   # we want the legend to appear next to the plot, so we need to adjust the plot margins
   # and turn clipping off
   par(mar=c(8, 3, 4, 13), xpd=TRUE, family="Palatino")
 
-  bp <- barplot(twide,names=namedat$name,xlab="",xaxt="n",col=cols)
+  bp <- barplot(twide,names=namedat$name,xlab="",xaxt="n",col=cols,border=NA)
 
   # add legends (one for each bar)
   # this x coordinate seems to work well for varying numbers of bars (tested 3 and 7)
@@ -119,9 +111,10 @@ nested_barplot <- function(datafile,namefile,debug=T,normalize=T) {
     # we will also use this criterion to choose the colours from the cols vector using which
     # the legend writes top to bottom so we reverse the order, so that it matches
     # the way the stacks are drawn
-    legend(x=lxcoord,y=ypos,legend=rev(ordat[ordat$barnum==i,]$name),bty="n",fill=rev(cols[which(ordat$barnum==i)]))
+    # the barplot function wraps around the colour vector, so we do the same here
+    legend(x=lxcoord,y=ypos,legend=rev(ordat[ordat$barnum==i,]$name),bty="n",fill=rev(cols[(which(ordat$barnum==i)-1)%%9+1]))
     # 0.11 seems to be a good increment, draw the next legend further down
-    ypos <- ypos - norm*0.11*elements
+    ypos <- ypos - norm*0.08*elements - 0.07
   }
 
   # add slanted labels so that they fit and draw an axis
