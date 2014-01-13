@@ -1,13 +1,17 @@
 
+coderoot <- "~/code/R/misc_R_scripts"
+
 # this function is used by xyplot to split the panels and give titles as given in strip.labels
 
 my.strip <- function(which.given, which.panel, ...) {
   strip.labels <- 
-    c("CG iterations (lightest)",expression(am[PCAC]),"<P>")
+    c(expression(am[PCAC]),"<P>")
     panel.rect(0, 0, 1, 1, col="#aabbff", border=1)
     panel.text(x=0.5, y=0.5, adj=c(0.5, 0.55), cex=0.95,
     lab=strip.labels[which.panel[which.given]])
 }
+
+source(paste(coderoot,"/plot_timeseries.R",sep=""))
 
 # convenience function for analyzing online data from a tmLQCD run
 ### the various parameters are used to build a directory name into which R descends to read
@@ -18,7 +22,10 @@ my.strip <- function(which.given, which.panel, ...) {
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
 
-outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudelta=0,addon="",cg_col,plaquette=TRUE,dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,title=FALSE,pl=FALSE,method="uwerr",fit.routine="optim")
+outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
+  csw=0,musigma=0,mudelta=0,muh=0,addon="",cg_col,plaquette=TRUE,
+  dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,
+  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F)
 {
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   rundir <- NULL
@@ -28,15 +35,19 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     rundir <- sprintf("%s-csw%s",rundir,csw)
   }
 
-  rundir <- sprintf("%s-k%s-mu%s",rundir,kappa,mu)
-  
-  titletext <- NULL
-  if(title) {
-    titletext <- rundir
+  # silly sprintf prints numbers smaller than 0.001 in scientific notation unless g is used
+  # on the other hand, for larger numbers, trailing zeroes are added...
+  # so we use %g only in the former case and pass mu as a string otherwise!
+  if(mu >= 1e-3) {
+    rundir <- sprintf("%s-k%s-mu%s",rundir,kappa,mu)
   } else {
-    titletext <- ""
+    rundir <- sprintf("%s-k%s-mu%g",rundir,kappa,mu)
   }
 
+  if(muh != 0) {
+    rundir <- sprintf("%s-muh%s",rundir,muh)
+  }
+  
   if(musigma!=0){
     rundir <- sprintf("%s-musigma%s",rundir,musigma)
   }
@@ -45,6 +56,13 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
   }
   if(addon!=""){
     rundir <- sprintf("%s_%s",rundir,addon)
+  }
+  
+  titletext <- NULL
+  if(title) {
+    titletext <- rundir
+  } else {
+    titletext <- ""
   }
 
   filename <- sprintf("%s/piononline.dat",rundir)
@@ -55,7 +73,7 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     pion(pioncor,mu=mu,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
   }
 
-  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mu,skip=skip,method=method,pl=pl,fit.routine=fit.routine)
+  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mu,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm)
 
   print(onlineout)
 
@@ -63,14 +81,14 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
   if(trajlabel){
     filelabel <- sprintf("%s_traj%d-%d",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
   } else {
-    filelabel <- sprintf("%s",rundir) 
+    filelabel <- rundir
   }
 
-  # we are plotting histories of the plaquette, PCAC mass and the number of acceptance CG iterations 
+  # we are plotting histories of the plaquette and the PCAC mass 
   # if we want to make one plot we will use the "lattice" package, in particular xyplot
   # in order to feed it with data we need to make a data frame which will
   if(oneplot) {
-    print("making one plot with three rows")
+    print("making one plot with two rows")
     # these are the upper boundaries of the PCAC history and contents of output.data, respectively
     # they are different because skip is passed directly to onlinemeas above while the whole of output.data is read 
     l_max <- length(onlineout$MChist.dpaopp) 
@@ -83,8 +101,7 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     combined <- data.frame( 
       t=seq(skip,l_skip_max),
       mpcac=onlineout$MChist.dpaopp[0:l_max],
-      plaq=outdat[skip:l_skip_max,2],
-      cg=outdat[skip:l_skip_max,cg_col])
+      plaq=outdat[skip:l_skip_max,2])
     
     summary(combined)
     print(length(combined))
@@ -92,7 +109,7 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     algo_filename <- sprintf("algo_%s.pdf",filelabel)
 
     require(lattice)
-    pdf(algo_filename,family="Palatino",height=5,width=8)
+    pdf(algo_filename,family="Palatino",height=3,width=9,title=filelabel)
 
     # xyplot is a really annoying function to use! The plot here is based on 
     # http://www.sr.bham.ac.uk/~ajrs/R/gallery/plot_midday_weather_profiles.txt
@@ -103,11 +120,11 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     ### in order: bottom to top (for some insane reason) 
     # the "outer" argument causes the plots to be done in different panels, as described by layout
     # the my.strip function gives the correct titles for the panels and draws the grids etc. in REVERSE ORDER
-    pl.obj <- xyplot(cg + mpcac + plaq ~ t,
+    pl.obj <- xyplot(mpcac + plaq ~ t,
       data=combined,outer=T,ylab="",xlab=expression(t[HMC]),
       scales=list(y="free",rot=0),
       strip=my.strip,
-      layout=c(1,3),
+      layout=c(1,2),
       # here the actual plotting is done for each panel
       # the function is executed line by line just like a normal function elsewhere
       # so for each data set y passed, xyplot, abline and rect will be executed
@@ -128,35 +145,29 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
 
 
   } else {
-    dpaopp_filename <- sprintf("dpaopp_%s.pdf",filelabel)
-    pdf(dpaopp_filename,width=plotsize,height=plotsize)
-    op <- par(family="Palatino")
-    par(mgp=c(2,1,0))
-    plot(x=seq(skip+1,(skip+length(onlineout$MChist.dpaopp)),1),
-      onlineout$MChist.dpaopp,t='l',
-      ylab=expression("dpaopp effective mass"),
-      xlab=expression(t[HMC]),
-      main=titletext)
+    dpaopp_filename <- sprintf("01_dpaopp_%s.pdf",filelabel)
     
-    rect(xleft=(skip-50),
-      xright=(skip+length(onlineout$MChist.dpaopp)+50),
-      ytop=onlineout$uwerrresultmpcac$value+onlineout$uwerrresultmpcac$dvalue,
-      ybottom=onlineout$uwerrresultmpcac$value-onlineout$uwerrresultmpcac$dvalue,border=FALSE,col=errorband_color)
-    
-    abline(h=onlineout$uwerrresultmpcac$value,col="black")
-    
+    plot_timeseries(dat=onlineout$MChist.dpaopp,
+      trange=c(skip+1,(skip+length(onlineout$MChist.dpaopp))),
+      pdf.filename=dpaopp_filename,
+      ylab=expression(am[PCAC]),
+      name="am_PCAC (MC history)",
+      plotsize=plotsize,
+      filelabel=filelabel,
+      titletext=titletext,
+      errorband_color=errorband_color)    
+  
     lengthdpaopp <- length(onlineout$MChist.dpaopp)
     mindpaopp <- min(onlineout$MChist.dpaopp)
     maxdpaopp <- max(onlineout$MChist.dpaopp)
-    dev.off()
     
-    dpaopp_plateau_filename <- sprintf("dpaopp_plateau_%s.pdf",filelabel)
-    pdf(dpaopp_plateau_filename,width=plotsize,height=plotsize)
-    op <- par(family="Palatino")
+    dpaopp_plateau_filename <- sprintf("02_dpaopp_plateau_%s.pdf",filelabel)
+    pdf(dpaopp_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
+    op <- par(family="Palatino",cex.main=0.8)
     par(mgp=c(2,1,0))
     plotwitherror(x=onlineout$dpaopp$t,
       y=onlineout$dpaopp$mass,dy=onlineout$dpaopp$dmass,t='p',
-      ylab=expression("dpaopp effective mass"),
+      ylab=expression(am[PCAC]),
       xlab=expression(t),
       main=titletext)
     rect(xleft=t1,
@@ -166,9 +177,9 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
     abline(h=onlineout$uwerrresultmpcac$value,col="black")
     dev.off()
     
-    mpi_plateau_filename <- sprintf("mpi_plateau_%s.pdf",filelabel)
-    pdf(mpi_plateau_filename,width=plotsize,height=plotsize)
-    op <- par(family="Palatino")
+    mpi_plateau_filename <- sprintf("03_mpi_plateau_%s.pdf",filelabel)
+    pdf(mpi_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
+    op <- par(family="Palatino",cex.main=0.8)
     par(mgp=c(2,1,0))
 
     ploterror <- try(plotwitherror(x=onlineout$effmass$t,
@@ -194,36 +205,59 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,csw=0,musigma=0,mudel
       shift <- 0
     }
     
-    if(plaquette) {
+    outdat <- NULL
+    trange <- NULL
+    if( plaquette || dH ) {
       outdat <- read.table(outfile)
-      plaquette_filename <- sprintf("plaquette_%s.pdf",filelabel)
-      pdf(plaquette_filename,width=plotsize,height=plotsize)
-      op <- par(family="Palatino")
-      par(mgp=c(2,1,0))
-      plot(x=seq(skip+shift,length(outdat$V2),1),outdat$V2[skip:length(outdat$V2)],t='l',ylab=expression("<P>"),xlab=expression(t[HMC]),main=titletext)
-      dev.off()
+      trange <- c(skip+shift,length(outdat$V2))
+    }
+
+    if(plaquette) {
+      plaquette_filename <- sprintf("04_plaquette_%s.pdf",filelabel,title=filelabel)
+      plot_timeseries(dat=outdat$V2[trange[1]:trange[2]],
+        trange=trange,
+        pdf.filename=plaquette_filename,
+        ylab=expression("<P>"),
+        name="plaquette",
+        plotsize=plotsize,
+        filelabel=filelabel,
+        titletext=titletext,
+        errorband_color=errorband_color)
     }
     if(dH) {
-      dH_filename <- sprintf("dH_%s.pdf",filelabel)
-      pdf(dH_filename,width=plotsize,height=plotsize)
-      op <- par(family="Palatino")
-      par(mgp=c(2,1,0))
-      plot(x=seq(skip+shift,length(outdat$V3),1),outdat$V3[skip:length(outdat$V3)],t='l',ylab=expression(paste(delta,"H")),xlab=expression(t[HMC]),main=titletext) 
-      dev.off()
-
-      expdH_filename <- sprintf("expdH_%s.pdf",filelabel)
-      pdf(expdH_filename,width=plotsize,height=plotsize)
-      op <- par(family="Palatino")
-      par(mgp=c(2,1,0))
-      plot(x=seq(skip+shift,length(outdat$V4),1),outdat$V4[skip:length(outdat$V4)],t='l',ylab=expression(paste(paste("exp(-",delta),"H)")),xlab=expression(t[HMC]),main=titletext) 
-      dev.off()
-      
-      uw.dH <- uwerrprimary(outdat$V3[skip:length(outdat$V3)])
-      uw.expdH <- uwerrprimary(outdat$V4[skip:length(outdat$V4)])
-      print("uw.dH")
-      summary(uw.dH)
-      print("uw.exp(-dH)")
-      summary(uw.expdH)
+      dH_filename <- sprintf("05_dH_%s.pdf",filelabel)
+      plot_timeseries(dat=outdat$V3[trange[1]:trange[2]],
+        trange=trange,
+        pdf.filename=dH_filename,
+        ylab=expression(paste(delta,"H",sep="")),
+        name="dH",
+        plotsize=plotsize,
+        filelabel=filelabel,
+        titletext=titletext,
+        errorband_color=errorband_color)
+        
+      expdH_filename <- sprintf("06_expdH_%s.pdf",filelabel)  
+      plot_timeseries(dat=outdat$V4[trange[1]:trange[2]],
+        trange=trange,
+        pdf.filename=expdH_filename,
+        ylab=expression(paste(paste("exp(-",delta),"H)")),
+        name="expdH",
+        plotsize=plotsize,
+        filelabel=filelabel,
+        titletext=titletext,
+        errorband_color=errorband_color)
+    }
+    if( exists("cg_col") ) {
+      cg_filename <- sprintf("07_cg_iter_%s.pdf", filelabel)
+      plot_timeseries(dat=outdat[trange[1]:trange[2],cg_col],
+        trange=trange,
+        pdf.filename=cg_filename,
+        ylab="CG iterations",
+        name="CG iterations",
+        plotsize=plotsize,
+        filelabel=filelabel,
+        titletext=titletext,
+        errorband_color=errorband_color)
     }
   }
 }
