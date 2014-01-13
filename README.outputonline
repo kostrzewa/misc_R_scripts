@@ -1,0 +1,231 @@
+TOC:
+
+DESCRIPTION
+OUTPUT
+PREREQUISITES
+PARAMETERS
+EXAMPLE
+
+DESCRIPTION:
+------------
+
+outputonline is a convenience function for plotting data from online measurements
+and output.data for a given simulation run
+
+It uses the 'onlinemeas' and 'uwerr' function from the hadron package by Carsten Urbach
+The resulting value for m_ps is therefore not from an effective mass plateau fit
+but rather from a fit to the functional form using three parameters of the AP/4PP correlator
+ratio which gives f_ps and m_ps at the same time.
+
+OUTPUT:
+-------
+
+Using the "Gamma" method (or Ulli Wolff method - "uwerr"), data and error analysis is given for 
+m_ps, f_ps, m_PCAC, the plaquette, dH, exp(-dH) and CG iterations in a given column.
+
+Two values of m_PCAC are computed: one is a constant fit (over "Monte Carlo time")
+to the Monte Carlo history of AP[t+1]-AP[t-1]/4PP[t] (i.e. (dA^0/dx_0 P)(t) / 2PP(t) ) 
+while the other emerges from a ChiSqr minimization to a three parameter functional form
+of the above.
+The two have differing O(a) artefacts and are only seen to coincide at maximal twist. 
+The former is usually larger in absolute value.
+
+a number of PDF files with timeseries for m_PCAC, plaquette, dH, exp(-dH), CG iterations
+(all with histograms) are produced in addition to analysis results. These will be
+produced in the directory from which R is started.
+
+In addition, a pion plateau plot and a m_PCAC plateau plot are provided.
+
+On all plots (timeseries, histograms and plateaus), the mean and one-sigma error band
+for the uwerr analysis are indicated. In the case of the plateaus, it is important
+to note that the indicated mean and error bands DO NOT CORRESPOND to a constant
+fit for the effective mass shown but are the result of the ChiSqr minimization
+with three parameters discussed above!
+
+PREREQUISITES:
+------------
+The function expects output.data and piononline.dat in a subdirectory which is constructed
+from the parameters explained below. To generate piononline.data, putonlinetogether.sh
+from the hadron package has to be executed in the directory containing the online
+measurements.
+
+PARAMETERS:
+-----------
+
+The function expects output.data and piononline.data in a subdirectory which
+is constructed from the parameters to the function in the following way:
+
+REQUIRED
+
+type - type of gauge action, 'iwa', for example (string)
+beta - numerical value of coupling strength (float)
+L - spatial lattice extent (unsigned int)
+T - temporal lattice extent (unsigned int)
+mu - light twisted quark mass (float)
+kappa - the kappa parameter for the run (float)
+t1 - starting timeslice for fit (unsigned int)
+t2 - ending timeslice for fit (unsigned int)
+skip - how many measurements to skip from the beginning of the data, note that
+if online measurements were done with a stepsize larger than 1, there will
+be a discrepancy between output.data and the online measurements and outputonline cannot
+really be used
+
+OPTIONAL
+
+csw - Sheikoleslami-Wohlert improvement parameter (float)
+musigma - for Nf=2+1+1, twisted mass (float) 
+mudelta - for Nf=2+1+1, shift mass (float) 
+muh - for Nf=2+2, heavy degenerate doublet twisted mass (float)
+addon - text which is appended to subdirectory name, such as "rep1", for example (string) 
+plaquette - whether to plot the plaquette (boolean) [def=TRUE]
+dH - whether to plot dH (boolean) [def=TRUE]
+cg_col - whether to plot the CG iterations in the column provided by this parameter
+         if it is not provided, no CG iterations will be plotted (unsigned int) [def=undefined]
+plotsize - the plots that are produced are square with plotsize (cm) sidelength (float) [def=5]
+title - whether each plot should have a title (boolean) [def=TRUE]
+oneplot - produce a fancy but boring plot with only the plaquette and m_PCAC histories
+          on one wide plot (boolean) [def=FALSE]
+debug - show some debugging information (boolean) [def=FALSE]
+trajlabel - whether the trajectory numbers should be appended to the filenames (boolean) [def=FALSE]
+pl - whether the onlinemeas function should show its own on-screen plots (boolean) [def=FALSE]
+method - choice between bootstrap and uwerr error analysis, only for m_PCAC, m_PS and f_PS (string) [def="uwerr"]
+fit.routine - choice between GSL or R minimization routines (string) [def="optim"]
+oldnorm - use correlator normalization for online measurements from tmLQCD version < 5.2.0 (boolean) [def=FALSE]
+
+EXAMPLE:
+--------
+
+we start R from a directory which contains the "iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009"
+subdirectory with our online measurements (piononline.dat) and output.data
+
+~/dir $ ls -1
+backup
+iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009
+iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009_rep1
+nf2_csw_online.tar.gz
+plots
+tuning
+tuning_iwab2.1-L48T96-csw1.57551-mu0.0009.dat
+
+~/dir $ R
+
+# we now "source" the script
+> source("~/code/R/misc_R_scripts/outputonline.R"); 
+# and exectute the analysis / plotting routines
+> outputonline(type="iwa",beta=2.1,L=48,T=96,kappa=0.13729,mu=0.0009,csw=1.57551,
+            t1=8,t2=47,skip=300,cg_col=11,addon="",title=T)
+            
+# (for the replica we would specify addon="rep1")
+            
+EXAMPLE OUTPUT:
+
+time = 96 Thalf = 48 
+mpi = 0.06232221  fpi = 0.06033005 
+mu        =  9e-04 
+kappa     =  0.13729 
+Nr of measurements =  2850 
+No of replica =  1 
+no or measurements per replicum:  2850 
+fitrange  =  8 - 47 
+chi^2     =  14.55325 
+dof       =  77 
+chi^2/dof =  0.1890033 
+
+mass     =  0.06223329 
+mpcac    =  8.512258e-05 
+
+P_L      =  2.682584 
+A_L      =  0.007338468 
+
+--- Autocorrelation analysis for m_ps ---
+
+S        =  1.5 
+mass     =  0.06223329 
+dmass    =  0.0001082253 
+ddmass   =  2.482860e-06 
+tauint   =  0.4951554 
+dtauint  =  0.0185951 
+Wopt     =  1 
+
+--- Autocorrelation analysis for f_ps ---
+
+S        =  1.5 
+fps      =  0.06038731 
+dfps     =  0.0001493035 
+ddfps    =  4.421988e-06 
+tauint   =  0.4992401 
+dtauint  =  0.02645541 
+Wopt     =  2 
+
+--- Autocorrelation analysis for m_pcac ---
+
+S        =  1.5 
+mpcac    =  8.512258e-05 
+dmpcac   =  1.325119e-05 
+ddmpcac  =  1.150937e-06 
+tauint   =  3.734995 
+dtauint  =  0.5897667 
+Wopt     =  21 
+[1] "uw.am_PCAC (MC history)"
+Error analysis with Gamma method
+based on 2850 measurements
+The Gamma function was summed up until Wopt= 26 
+
+value    = 8.031569e-05 
+dvalue   = 1.386972e-05 
+ddvalue  = 1.337421e-06 
+tauint   = 4.786451 
+dtauint  = 0.8355773 
+[1] "uw.plaquette"
+Error analysis with Gamma method
+based on 2853 measurements
+The Gamma function was summed up until Wopt= 58 
+
+value    = 0.6035274 
+dvalue   = 4.61121e-06 
+ddvalue  = 6.60301e-07 
+tauint   = 12.88944 
+dtauint  = 3.259461 
+[1] "uw.dH"
+Error analysis with Gamma method
+based on 2853 measurements
+The Gamma function was summed up until Wopt= 3 
+
+value    = 0.3576465 
+dvalue   = 0.04689918 
+ddvalue  = 0.001642663 
+tauint   = 0.546371 
+dtauint  = 0.03515966 
+[1] "uw.expdH"
+Error analysis with Gamma method
+based on 2853 measurements
+The Gamma function was summed up until Wopt= 1 
+
+value    = 1.014432 
+dvalue   = 0.01534280 
+ddvalue  = 0.0003518029 
+tauint   = 0.5003839 
+dtauint  = 0.01873264 
+[1] "uw.CG iterations"
+Error analysis with Gamma method
+based on 2853 measurements
+The Gamma function was summed up until Wopt= 1 
+
+value    = 33259.68 
+dvalue   = 15.95459 
+ddvalue  = 0.3658309 
+tauint   = 0.500486 
+dtauint  = 0.01873551 
+null device 
+          1 
+          
+EXAMPLE PLOTS:
+
+01_dpaopp_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+02_dpaopp_plateau_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+03_mpi_plateau_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+04_plaquette_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+05_dH_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+06_expdH_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+07_cg_iter_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+
