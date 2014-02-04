@@ -248,7 +248,6 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
         errorband_color=errorband_color)
     }
     if( !missing("cg_col") ) {
-      print( missing("cg_col") )
       cg_filename <- sprintf("07_cg_iter_%s.pdf", filelabel)
       plot_timeseries(dat=outdat[trange[1]:trange[2],cg_col],
         trange=trange,
