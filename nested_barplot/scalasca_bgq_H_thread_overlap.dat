@@ -1,0 +1,17 @@
+name barnum value
+"Hopping_Matrix self" 1 2.87e4
+"omp parallel" 1 2.79e5
+"omp parallel self" 2 3.40e4
+"omp for surface" 2 4.62e4
+"omp single" 2 5.48e3
+"omp for body" 2 1.15e5
+"omp for post" 2 7.64e4
+"omp parallel ibarrier" 2 1.24e3
+"omp for surface self" 3 3.74e4
+"omp for surface ibarrier" 3 8.8e3
+"omp single self" 4 3.67e3
+"xchange_halffield" 4 1.81e3
+"omp for body self" 5 2.50e4
+"omp for body ibarrier" 5 9e4
+"omp for post self" 6 3.77e4
+"omp for post ibarrier" 6 3.87e4

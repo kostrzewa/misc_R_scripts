@@ -1,0 +1,6 @@
+name offset
+"Hopping_Matrix" 0
+"omp parallel" 2.28e4
+"omp for pre" 2.28e4+2.65e4
+"omp single (comm)" 2.28e4+3.1e4+6.82e3+2.65e4
+"omp for post" 2.28e4+3.1e4+6.82e3+3.37e3+1.17e3+7.33e4+2.65e4

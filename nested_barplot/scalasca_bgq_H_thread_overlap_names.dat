@@ -1,0 +1,7 @@
+name offset
+"Hopping_Matrix" 0
+"omp parallel" 2.87e4
+"omp for surface" 3.40e4+2.87e4
+"omp single (comm start+wait)" 3.40e4+2.87e4+3.74e4+8.8e3
+"omp for body" 3.40e4+2.87e4+3.74e4+8.8e3+3.67e3+1.81e3
+"omp for post" 2.50e4+9e4+3.40e4+2.87e4+3.74e4+8.8e3+3.67e3+1.81e3
