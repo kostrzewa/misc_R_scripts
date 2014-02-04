@@ -1,0 +1,12 @@
+name comm nocomm
+"Pure MPI (32 proc/node)" 30336 45344
+"Pure MPI (64 proc/node)" 28352 62656
+"OpenMP/MPI (no overlap)" 29126 42008
+"OpenMP/SPI (no overlap)" 41412 50570
+"OpenMP/MPI (start/wait)" 32275 51275
+"OpenMP/MPI (start+wait, static)" 32673 52039
+"OpenMP/MPI (start+wait, guided)" 35268 48186
+"OpenMP/SPI (start/wait)" 48261 50637
+"OpenMP/SPI (start+wait, guided)" 46539 48367
+"OpenMP/SPI (start+wait, static)" 44501 51886
+"OpenMP/SPI (orphaned, start/wait)" 50600 60243

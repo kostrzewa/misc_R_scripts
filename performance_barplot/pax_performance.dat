@@ -1,0 +1,9 @@
+name comm nocomm
+"OpenMP (full-spinor, 1 node)" 0 43000
+"OpenMP (half-spinor, 1 node)" 0 34944
+"MPI (full-spinor, 1 node)" 31224 44192
+"MPI (half-spinor, 1 node)" 33152 41880
+"Hybrid (full-spinor, 8 nodes)"  13988 41480
+"Hybrid (half-spinor, 8 nodes)" 23052 30976
+"MPI (full-spinor, 8 nodes)" 17400 43032 
+"MPI (half-spinor, 8 nodes)" 25576 42248
