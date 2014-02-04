@@ -23,9 +23,9 @@ source(paste(coderoot,"/plot_timeseries.R",sep=""))
 # cg_col indicates which column in output.data should be used 
 
 outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
-  csw=0,musigma=0,mudelta=0,muh=0,addon="",cg_col,plaquette=TRUE,
+  csw=0,musigma=0,mudelta=0,muh=0,addon="",plaquette=TRUE,
   dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,
-  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F)
+  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,cg_col)
 {
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   rundir <- NULL
@@ -247,7 +247,8 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
         titletext=titletext,
         errorband_color=errorband_color)
     }
-    if( exists("cg_col") ) {
+    if( !missing("cg_col") ) {
+      print( missing("cg_col") )
       cg_filename <- sprintf("07_cg_iter_%s.pdf", filelabel)
       plot_timeseries(dat=outdat[trange[1]:trange[2],cg_col],
         trange=trange,
@@ -260,6 +261,7 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
         errorband_color=errorband_color)
     }
   }
+  
   if( Sys.which("pdfcat") != "" ) {
     command <- sprintf("pdfcat analysis_%s.pdf 0?*_%s.pdf",filelabel,filelabel)
     print(paste("calling",command))
