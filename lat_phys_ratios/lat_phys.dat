@@ -1,0 +1,38 @@
+# 1:name | 2:lattice value | 3:lattice error | 4:phys value (PDG) | 5:phys error (PDG) | 6:phys value (FLAG) | 7:phys error (FLAG)
+m_pi          0.06260   0.00022       NA      NA      134.8      0.3
+f_pi         0.05980   0.00029      130.4      0.2      NA      NA
+
+#m_pi/f_pi     1.039     NA            NA      NA      NA      NA
+
+m_K(a)        0.22631   0.00053 NA NA 494.2 0.5
+f_K(a)        0.07223   0.00023 156.1 0.8 NA NA
+
+#m_K/f_pi(a)   3.628     NA NA NA NA NA
+#f_K/f_pi(a)   NA        NA NA NA NA NA
+
+m_K(b)        0.22925 0.00063 NA NA 494.2 0.5 
+f_K(b)        0.07225 0.00029 156.1 0.8 NA NA 
+
+#m_K/f_pi(b)   3.820     NA NA NA NA NA 
+#f_K/f_pi(a)   NA        NA NA NA NA NA
+
+m_D(a) 0.8327 0.0042 1864.86 0.13 NA NA 
+f_D(a) 0.0991 0.0023 206.7 8.9 NA NA 
+
+m_D(b) 0.8513 0.0056 1864.86 0.13 NA NA 
+f_D(b) 0.0978 0.0038 206.7 8.9 NA NA 
+
+m_Ds(a,a) 0.8805 0.0010 1968.49 0.32 NA NA 
+f_Ds(a,a) 0.1212 0.0012 260.0 5.4 NA NA
+
+m_Ds(b,b) 0.8897 0.0004 1968.49 0.32 NA NA 
+f_Ds(b,b) 0.1205 0.0005 260.0 5.4 NA NA
+
+#f_Ds/f_D(a,a;a) NA NA NA NA NA NA 
+
+# Dina's nucleon data (23/07/2013)
+m_N 0.46 0.01 938 1 NA NA
+<x> 0.2036326 0.0355566 0.1646 0.0027 NA NA
+g_A 1.3313362 0.1175816 1.267 0.001 NA NA
+
+unity 1 0 1 0 1 0
