@@ -260,4 +260,11 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
         errorband_color=errorband_color)
     }
   }
+  if( Sys.which("pdfcat") != "" ) {
+    command <- sprintf("pdfcat analysis_%s.pdf 0?*_%s.pdf",filelabel,filelabel)
+    print(paste("calling",command))
+    system(command=command)
+  } else {
+    print("pdfcat not found, not concatenating plots!")
+  }
 }
