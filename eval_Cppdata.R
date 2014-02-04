@@ -48,9 +48,10 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
   }
 
   if(length(Cpp.missing)>0) {
-    print("There were missing files!")
+    print(sprintf("There were %d missing files!",length(Cpp.missing)))
   }
 
+  nomeas <- length(Cpp.raw[,1])
   Cpp.mean <- NULL
   Cpp.error <- NULL
   m_eff <- NULL
@@ -60,7 +61,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
   m_eff.error.uwerr <- NULL # do gamma method error analysis for comparison
   for(t in 1:T){
     meanval <- mean(Cpp.raw[,t])
-    errorval <- sqrt(var(Cpp.raw[,t])/(i_end-i_start))
+    errorval <- sqrt(var(Cpp.raw[,t])/(nomeas))
     Cpp.mean <- c(Cpp.mean,meanval)
     Cpp.error <- c(Cpp.error,errorval)
   }
@@ -155,13 +156,15 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
     
     solution <- uniroot(corratio_fun,value=corratio_val(t),t=t,N_t=T,lower=0,upper=6,tol=10e-4)
     m_eff <- c(m_eff,solution$root)
-    # do bootstrap analysis for effective mass value for each timeslice
-    # boots <- tsboot(Cpp.raw,statistic=uniroot_boot,sim="fixed",l=floor(NROW(Cpp.raw)/10),R=1200,t_val=t,sym=TRUE)
     
-    # -- debug begin
-    #plot(density(boots$t),main="density of m_eff as measured on bootstrap")
-    #readline()
-    # -- debug end
+    
+    
+    # do bootstrap analysis for effective mass value for each timeslice
+    #if(debug) { 
+    #  boots <- tsboot(Cpp.raw,statistic=uniroot_boot,sim="fixed",l=floor(NROW(Cpp.raw)/10),R=1200,t_val=t)
+    #  plot(density(boots$t),main="density of m_eff as measured on bootstrap distribution")
+    #  readline()
+    #}
     
     # m_eff.error <- c(m_eff.error,sd(boots$t))
     # m_eff.estimate <- c(m_eff.estimate,mean(boots$t))
@@ -192,7 +195,9 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
   
   # debug statements
   #print(Cppdata)
-  #print(Cpp.mean)
+  if(debug) {
+    print(cbind(Cpp.mean,Cpp.error))
+  }
   
   # plot raw correlator data points 
   cppmax <- max(Cpp.mean)
@@ -205,7 +210,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
 
   pp_filename <- sprintf("pp_correl_%s_traj%d-%d.pdf",prefix,i_start,i_end);
 
-  pdf(pp_filename)
+  pdf(pp_filename,title=prefix)
   op <- par(family="Palatino")
   plotwitherror(x=seq(0,T-1,1),
     ylim=c(cppmin,1.2*cppmax),
@@ -251,7 +256,7 @@ eval_Cppdata <- function(prefix,T,i_start,i_end,addon,t1,t2,plateau.t1=t1,platea
 
   eff_mass_filename <- sprintf("pion_eff_mass_%s_traj%d-%d.pdf",prefix,i_start,i_end);
 
-  pdf(eff_mass_filename)
+  pdf(eff_mass_filename,title=prefix)
   op <- par(family="Palatino")
   plotwitherror(x=seq(t1,t2,1),
     ylim=c(meffmin,meffmax),
