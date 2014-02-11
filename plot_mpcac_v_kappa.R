@@ -19,6 +19,8 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,...)
   plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
     xlab=expression(paste("1/2",kappa)), ylab=expression(~am[PCAC]), col=pcacdat$colour, ... )
 
+  abline(h=0,lty=2)
+
   # attempt to extract some coordinates for the legend 
   # from variable parameter list
   var_params <- list(...)
@@ -40,6 +42,6 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,...)
     legend.ypos <- 0
   }
 
-  legend( x=legend.xpos, y=legend.ypos, col=unique(pcacdat$colour), legend=unique(pcacdat$mu), pch=1 )
+  legend( x=legend.xpos, y=legend.ypos, col=unique(pcacdat$colour), legend=paste( "mu =", unique( pcacdat$mu ) ), pch=1 )
 
 }
