@@ -121,7 +121,7 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,debug=F,basen
   }
 
   plotfilename <- sprintf("plots/%s_%s.pdf",name,directory)
-  pdf(plotfilename,onefile=T,title=name)
+  pdf(plotfilename,onefile=T,title=paste(name, directory, sep=" "))
   
   files <- getorderedfilelist(basename=basename,path=directory)
   # prepend directory name
