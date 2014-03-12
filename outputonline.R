@@ -95,7 +95,10 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
     l_skip_max <- (skip-1+length(onlineout$MChist.dpaopp))
 
     # read output.data
-    outdat <- as.matrix(read.table(outfile))
+    # determine maximum number of columns in output.data (when the mass preconditioning is changed,
+    # the number of columns may change) 
+    no_columns <- max(count.fields(outfile))
+    outdat <- as.matrix(read.table(outfile,fill=TRUE,col.names=1:no_columns))
 
     # create a data frame for xyplot
     combined <- data.frame( 
@@ -208,7 +211,11 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
     outdat <- NULL
     trange <- NULL
     if( plaquette || dH ) {
-      outdat <- read.table(outfile)
+      # read output.data
+      # determine maximum number of columns in output.data (when the mass preconditioning is changed,
+      # the number of columns may change) 
+      no_columns <- max(count.fields(outfile))
+      outdat <- read.table(outfile,fill=TRUE,col.names=paste("V",1:no_columns,sep=""))
       trange <- c(skip+shift,length(outdat$V2))
     }
 
