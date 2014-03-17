@@ -23,7 +23,7 @@ source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
 
-outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
+outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
   csw=0,musigma=0,mudelta=0,muh=0,addon="",plaquette=TRUE,
   dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,
   title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,cg_col,
@@ -40,10 +40,10 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
   # silly sprintf prints numbers smaller than 0.001 in scientific notation unless g is used
   # on the other hand, for larger numbers, trailing zeroes are added...
   # so we use %g only in the former case and pass mu as a string otherwise!
-  if(mu >= 1e-3) {
-    rundir <- sprintf("%s-k%s-mul%s",rundir,kappa,mu)
+  if(mul >= 1e-3) {
+    rundir <- sprintf("%s-k%s-mul%s",rundir,kappa,mul)
   } else {
-    rundir <- sprintf("%s-k%s-mul%g",rundir,kappa,mu)
+    rundir <- sprintf("%s-k%s-mul%g",rundir,kappa,mul)
   }
 
   if(muh != 0) {
@@ -72,7 +72,7 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
   pioncor <- readcmicor(filename)
 
   if(debug){
-    pion(pioncor,mu=mu,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
+    pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
   }
 
   onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mu,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm)
