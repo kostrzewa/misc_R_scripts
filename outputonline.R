@@ -1,4 +1,4 @@
-
+# to use this script, change this to the location where the helper scripts are located!
 coderoot <- "~/code/R/misc_R_scripts"
 
 # this function is used by xyplot to split the panels and give titles as given in strip.labels
@@ -12,6 +12,7 @@ my.strip <- function(which.given, which.panel, ...) {
 }
 
 source(paste(coderoot,"/plot_timeseries.R",sep=""))
+source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 
 # convenience function for analyzing online data from a tmLQCD run
 ### the various parameters are used to build a directory name into which R descends to read
@@ -25,7 +26,8 @@ source(paste(coderoot,"/plot_timeseries.R",sep=""))
 outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
   csw=0,musigma=0,mudelta=0,muh=0,addon="",plaquette=TRUE,
   dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,
-  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,cg_col)
+  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,cg_col,
+  evals)
 {
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   rundir <- NULL
@@ -39,9 +41,9 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
   # on the other hand, for larger numbers, trailing zeroes are added...
   # so we use %g only in the former case and pass mu as a string otherwise!
   if(mu >= 1e-3) {
-    rundir <- sprintf("%s-k%s-mu%s",rundir,kappa,mu)
+    rundir <- sprintf("%s-k%s-mul%s",rundir,kappa,mu)
   } else {
-    rundir <- sprintf("%s-k%s-mu%g",rundir,kappa,mu)
+    rundir <- sprintf("%s-k%s-mul%g",rundir,kappa,mu)
   }
 
   if(muh != 0) {
@@ -266,8 +268,21 @@ outputonline <- function(type,beta,L,T,kappa,mu,t1,t2,skip,
         titletext=titletext,
         errorband_color=errorband_color)
     }
+    if( !missing("evals") ) {
+      ev_pdf_filename <- sprintf("08_evals_%02d_%s.pdf", evals, filelabel )
+      ev_filename <- sprintf("%s/monomial-%02d.data", rundir, evals )
+      evaldata <- read.table(ev_filename)
+      plot_eigenvalue_timeseries(dat=evaldata[trange[1]:trange[2],],
+         trange=trange,
+         pdf.filename = ev_pdf_filename,
+         ylab = "eigenvalue",
+         plotsize=plotsize,
+         filelabel=filelabel,
+         titletext=titletext,
+         errorband_color=errorband_color )
+    }
   }
-  
+
   if( Sys.which("pdfcat") != "" ) {
     command <- sprintf("pdfcat analysis_%s.pdf 0?*_%s.pdf",filelabel,filelabel)
     print(paste("calling",command))
