@@ -1,16 +1,23 @@
-correls_bunches <- function(dir,skip,debug=F) {
-  filename <- sprintf("%s/piononline.dat",dir)
+correls_bunches <- function(dir,skip,debug=F,filename="piononline.dat") {
+  filename <- sprintf("%s/%s",dir,filename)
   omeas <- read.table(filename)
   Thalf <- max(omeas$V3)
-  increment <- omeas[(omeas$V1==1 & omeas$V3==0),6][2]-omeas[(omeas$V1==1 & omeas$V3==0),6][1]
+  increment <- omeas[(omeas$V1==1 & omeas$V2==1 & omeas$V3==0),6][2]-omeas[(omeas$V1==1 & omeas$V2==1 & omeas$V3==0),6][1]
   max_sample <- max(omeas$V6)-1
   min_sample <- min(omeas$V6)+skip*increment
-  pp_norm <- max(omeas[(omeas$V6>min_sample & omeas$V6<max_sample & omeas$V1==1),4])
-  pp_min <- min(omeas[(omeas$V6>min_sample & omeas$V6<max_sample & omeas$V1==1),4])/pp_norm
 
-  pa_norm <- max(omeas[(omeas$V6>min_sample & omeas$V6<max_sample & omeas$V1==2),4])
+  # remove negative values for log plot...
+  omeas[(omeas$V1==1 & omeas$V2==1 & omeas$V4 <= 0),4] <- 0.000001
+  omeas[(omeas$V1==1 & omeas$V2==1 & omeas$V5 <= 0),5] <- 0.000001
+  
+  pp_norm <- max(omeas[(omeas$V6>min_sample & omeas$V6<max_sample & omeas$V1==1 & omeas$V2==1),4])
+  pp_min <- min(omeas[(omeas$V6>min_sample & omeas$V6<max_sample & omeas$V1==1 & omeas$V2==1),4])/pp_norm
+  pa_norm <- max(omeas[(omeas$V6>min_sample & omeas$V6<max_sample & omeas$V1==2 & omeas$V2==1),4])
+
 
   if(debug) {
+    print( sprintf("First correlator: %d",min_sample) );
+    print( sprintf("Last correlatorL %d", max_sample) );
     print( sprintf("Measurements taken every %d trajectories",increment) )
     print( sprintf("PP normalization: %g",pp_norm) )
     print( sprintf("PP minimum: %g",pp_min) )
@@ -25,13 +32,13 @@ correls_bunches <- function(dir,skip,debug=F) {
   par(mfrow=c(1,2),family="Palatino")
   for( i in seq(from=min_sample,to=max_sample,by=step) ) {
     if(debug) { print(i) }
-    plot(x=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==1),3],
-         y=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==1),4]/pp_norm,
+    plot(x=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==1 & omeas$V2==1 ),3],
+         y=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==1 & omeas$V2==1 ),4]/pp_norm,
          log='y',ylim=c(pp_min,1.2),
          main=paste("PP ",i),xlab="t",ylab=expression(C[PP])) 
-    plot(x=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==2 & omeas$V3 > 1),3],
-         y=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==2 & omeas$V3 > 1),4]/pa_norm,
-         main=paste("PA ",i),xlab="t",ylab=expression(C[PA]))
+#    plot(x=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==2 & omeas$V3 > 1),3],
+#         y=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==2 & omeas$V3 > 1),4]/pa_norm,
+#        main=paste("PA ",i),xlab="t",ylab=expression(C[PA]))
          #,ylim=c(-0.02,0.04))
 #         log='y') 
   }
