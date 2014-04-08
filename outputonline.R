@@ -168,7 +168,7 @@ outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
     
     dpaopp_plateau_filename <- sprintf("02_dpaopp_plateau_%s.pdf",filelabel)
     pdf(dpaopp_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
-    op <- par(family="Palatino",cex.main=0.8)
+    op <- par(family="Palatino",cex.main=0.6,font.main=1)
     par(mgp=c(2,1,0))
     plotwitherror(x=onlineout$dpaopp$t,
       y=onlineout$dpaopp$mass,dy=onlineout$dpaopp$dmass,t='p',
@@ -184,7 +184,7 @@ outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
     
     mpi_plateau_filename <- sprintf("03_mpi_plateau_%s.pdf",filelabel)
     pdf(mpi_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
-    op <- par(family="Palatino",cex.main=0.8)
+    op <- par(family="Palatino",cex.main=0.6,font.main=1)
     par(mgp=c(2,1,0))
 
     ploterror <- try(plotwitherror(x=onlineout$effmass$t,
