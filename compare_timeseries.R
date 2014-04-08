@@ -70,7 +70,7 @@ compare_timeseries <- function(path,filename,ylim,leg.labels,columns=c(1,2),name
   
   plot(NA,xlim=c(0,xmax),ylim=ylim,xlab=expression(t[HMC]),ylab=name,main=name)
   for( i in 1:length(files) ) {
-    lines(x=ts[[i]][,columns[1]],y=ts[[i]][,columns[2]],col=colors[i])
+    lines(x=ts[[i]][,columns[1]],y=ts[[i]][,columns[2]],col=colors[i],lwd=1.3)
   }
  
   legend(x=xmax/3,y=ylim[2],col=colors,legend=leg.labels,lty=rep(1,length(files)),bg="white")
