@@ -13,7 +13,7 @@ plot_eigenvalue_timeseries <- function(dat,trange,stepsize=1,pdf.filename,
   summary(uw.max_ev)
 
   pdf(pdf.filename,width=plotsize,height=plotsize,title=filelabel)
-  op <- par(family="Palatino",cex.main=0.8)
+  op <- par(family="Palatino",cex.main=0.6,font.main=1)
   par(mgp=c(2,1,0))
 
   # plot the timeseries
