@@ -8,7 +8,7 @@
 #   analyses
 # objects must be edited
 
-analysis_conn_meson <- function(debug=F,pause=F,skip=0,analyses_to_be_done_input,kappa) {
+analysis_conn_meson_2pt <- function(debug=F,pause=F,skip=0,analyses_to_be_done_input,kappa) {
   # masses to be used in this analysis
   light_masses <- c(0.0009)
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
