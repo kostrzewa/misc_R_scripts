@@ -1,8 +1,8 @@
 # function to plot timeseries data, a corresponding histogram
 # and an error shading for an error analysis via uwerr
 
-plot_timeseries <- function(dat,trange,stepsize=1,pdf.filename,
-                            ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6)) {
+plot_timeseries <- function(dat,trange,pdf.filename,
+                            ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1) {
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat)
       
