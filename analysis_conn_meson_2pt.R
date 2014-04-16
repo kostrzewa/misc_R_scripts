@@ -8,7 +8,7 @@
 #   analyses
 # objects must be edited
 
-analysis_conn_meson_2pt <- function(debug=F,pause=F,skip=0,analyses_to_be_done_input,kappa) {
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=10,debug=F,pause=F,skip=0) {
   # masses to be used in this analysis
   light_masses <- c(0.0009)
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
@@ -49,8 +49,6 @@ analysis_conn_meson_2pt <- function(debug=F,pause=F,skip=0,analyses_to_be_done_i
   analyses[[4]] <- list( dirs=dirs$sc_c, name="Ds_charged", mass_diagonal=F, q_masses=mass_comb$sc,
                          t1=15, t2=47, t1_plot=8, t2_plot=48, basename="outprcv.", observables=c(1), sign=c(1) )
 
-  analysis_results <- NULL
-
   analyses_to_be_done <- NULL
   if( missing(analyses_to_be_done_input) ) {
     cat("Analyses to be done missing, doing all!\n")
@@ -59,6 +57,7 @@ analysis_conn_meson_2pt <- function(debug=F,pause=F,skip=0,analyses_to_be_done_i
     analyses_to_be_done <- analyses_to_be_done_input
   }
 
+  analysis_results <- NULL
   for( ctr_analyses in analyses_to_be_done ) {
     for( ctr_dirs in seq(1,length( analyses[[ctr_analyses]]$dirs ) ) ) {
       if(!file.exists( analyses[[ctr_analyses]]$dirs[ctr_dirs] )) {
@@ -70,7 +69,8 @@ analysis_conn_meson_2pt <- function(debug=F,pause=F,skip=0,analyses_to_be_done_i
                                   basename=analyses[[ctr_analyses]]$basename, t1=analyses[[ctr_analyses]]$t1, t2=analyses[[ctr_analyses]]$t2,
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
-                                  skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,])
+                                  skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
+                                  boot.R=boot.R, boot.l=boot.l)
       analysis_results <- rbind(analysis_results, result)
     }
   }
@@ -79,7 +79,7 @@ analysis_conn_meson_2pt <- function(debug=F,pause=F,skip=0,analyses_to_be_done_i
 }
 
 do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,
-                              debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=20,
+                              debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=10,
                               kappa, q_masses) {
 
   if(debug) {
@@ -109,8 +109,6 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,
   meson.cor.effectivemass <- fit.effectivemass(meson.cor.effectivemass, t1=t1, t2=t2, useCov=F)
   summary(meson.cor.effectivemass)
  
-  print(meson.cor.effectivemass)
-  
   rval <- data.frame(name=name, M=meson.cor.matrixfit$opt.res$par[1], dM=sd(meson.cor.matrixfit$opt.tsboot[1,]), 
                 Meff=meson.cor.effectivemass$opt.res$par[1], dMeff=sd(meson.cor.effectivemass$massfit.tsboot[,1]), 
                 P1=meson.cor.matrixfit$opt.res$par[2], dP1=sd(meson.cor.matrixfit$opt.tsboot[2,]), 
