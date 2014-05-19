@@ -61,7 +61,7 @@ type - type of gauge action, 'iwa', for example (string)
 beta - numerical value of coupling strength (float)
 L - spatial lattice extent (unsigned int)
 T - temporal lattice extent (unsigned int)
-mu - light twisted quark mass (float)
+mul - light twisted quark mass (float)
 kappa - the kappa parameter for the run (float)
 t1 - starting timeslice for fit (unsigned int)
 t2 - ending timeslice for fit (unsigned int)
@@ -99,23 +99,19 @@ we start R from a directory which contains the "iwa_b2.1-L48T96-csw1.57551-k0.13
 subdirectory with our online measurements (piononline.dat) and output.data
 
 ~/dir $ ls -1
-backup
 iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009
 iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009_rep1
-nf2_csw_online.tar.gz
-plots
-tuning
-tuning_iwab2.1-L48T96-csw1.57551-mu0.0009.dat
 
+# enter the R environment
 ~/dir $ R
 
 # we now "source" the script
 > source("~/code/R/misc_R_scripts/outputonline.R"); 
 # and exectute the analysis / plotting routines
-> outputonline(type="iwa",beta=2.1,L=48,T=96,kappa=0.13729,mu=0.0009,csw=1.57551,
+> outputonline(type="iwa",beta=2.1,L=48,T=96,kappa=0.13729,mul=0.0009,csw=1.57551,
             t1=8,t2=47,skip=300,cg_col=11,addon="",title=T)
             
-# (for the replica we would specify addon="rep1")
+# (for the replica run shown above, we would specify addon="rep1")
             
 EXAMPLE OUTPUT:
 
@@ -228,4 +224,5 @@ EXAMPLE PLOTS:
 05_dH_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
 06_expdH_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
 07_cg_iter_iwa_b2.1-L48T96-csw1.57551-k0.13729-mu0.0009.pdf
+
 
