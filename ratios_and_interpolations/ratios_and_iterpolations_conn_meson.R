@@ -1,0 +1,380 @@
+library('propagate')
+
+source("/home/bartek/code/R/misc_R_scripts/fit_extrapolate_solve.R")
+source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/utils.R")
+source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/mK_ov_fK.R")
+source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/match_mu_s_mu_c.R")
+source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/match_mu.R")
+
+ratios_and_iterpolations_conn_meson <- function(debug=F,recompute=T,loadraw=T,overview=T) {
+
+  # masses to be used in this analysis
+  strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
+  charm_masses <- c(0.2822,0.294,0.3058,0.3176)
+  light_masses <- c(0.0009)
+  
+  phys_ratios <- read.csv("phys_ratios.csv")
+  
+  # combinations of these masses
+  mass_comb <- list( ll=data.frame( m1=light_masses, m2=light_masses ),
+                     ls=expand.grid( m1=light_masses, m2=strange_masses),
+                     lc=expand.grid( m1=light_masses, m2=charm_masses),
+                     sc=expand.grid( m1=strange_masses, m2=charm_masses) )
+  
+  # File (and object) names of the data to be loaded
+  names <- list(ll_c=sprintf("ll_c.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
+                #ll_na=sprintf("lln_u_%g-d_%g",mass_comb$ll$m1,mass_comb$ll$m2),
+                #ll_nb=sprintf("lln_d_%g-u_%g",mass_comb$ll$m1,mass_comb$ll$m2),
+                ls_c=sprintf("ls_c.m%g.m%g.matrixfit",mass_comb$ls$m1,mass_comb$ls$m2),
+                lc_c=sprintf("lc_c.m%g.m%g.matrixfit",mass_comb$lc$m1,mass_comb$lc$m2),
+                sc_c=sprintf("sc_c.m%g.m%g.matrixfit",mass_comb$sc$m1,mass_comb$sc$m2) )
+
+  # single quantities
+  quants <- NULL
+  quants[["m_pi"]] <- list(name="m_pi", texlabel="$m_\\pi$", m1=light_masses, m2=light_masses, datanames=names$ll_c, type="mps" )
+  quants[["m_K"]] <- list(name="m_K", texlabel="$m_K$", m1=light_masses, m2=strange_masses, datanames=names$ls_c, type="mps" )
+  quants[["m_D"]] <- list(name="m_D", texlabel="$m_D$", m1=light_masses, m2=charm_masses, datanames=names$lc_c, type="mps" )
+  quants[["m_Ds"]] <- list(name="m_Ds", texlabel="$m_{D_s}$", m1=strange_masses, m2=charm_masses, datanames=names$sc_c, type="mps" )
+  quants[["f_pi"]] <- list(name="f_pi", texlabel="$f_\\pi$", m1=light_masses, m2=light_masses, datanames=names$ll_c, type="fps" )
+  quants[["f_K"]] <- list(name="f_K", texlabel="$f_K$", m1=light_masses, m2=strange_masses, datanames=names$ls_c, type="fps" )
+  quants[["f_D"]] <- list(name="f_D", texlabel="$f_D$", m1=light_masses, m2=charm_masses, datanames=names$lc_c, type="fps" )
+  quants[["f_Ds"]] <- list(name="f_Ds", texlabel="$f_{D_s}$", m1=strange_masses, m2=charm_masses, datanames=names$sc_c, type="fps" )
+
+  # the different ratios that we would like to compute
+  ratios <- NULL
+  ratios[["m_pi_ov_f_pi"]] <- list( name="m_pi_ov_f_pi", texlabel="$m_\\pi/f_\\pi$", dividend=quants[["m_pi"]], divisor=quants[["f_pi"]])
+  ratios[["m_K_ov_f_K"]] <- list( name="m_K_ov_f_K", texlabel="$m_K/f_K$", dividend=quants[["m_K"]], divisor=quants[["f_K"]])
+  ratios[["m_D_ov_f_D"]] <- list( name="m_D_ov_f_D", texlabel="$m_D/f_D$", dividend=quants[["m_D"]], divisor=quants[["f_D"]])
+  ratios[["m_Ds_ov_f_Ds"]] <- list( name="m_Ds_ov_f_Ds", texlabel="$m_{D_s}/f_{D_s}$", dividend=quants[["m_Ds"]], divisor=quants[["f_Ds"]])
+
+  ratios[["m_K_ov_f_pi"]] <- list( name="m_K_ov_f_pi", texlabel="$m_K/f_\\pi$", dividend=quants[["m_K"]], divisor=quants[["f_pi"]])
+  ratios[["m_D_ov_f_pi"]] <- list( name="m_D_ov_f_pi", texlabel="$m_D/f_\\pi$", dividend=quants[["m_D"]], divisor=quants[["f_pi"]])
+  ratios[["m_Ds_ov_f_pi"]] <- list( name="m_Ds_ov_f_pi", texlabel="$m_{D_s}/f_\\pi$", dividend=quants[["m_Ds"]], divisor=quants[["f_pi"]])
+
+  ratios[["m_Ds_ov_m_D"]] <- list( name="m_Ds_ov_m_D", texlabel="$m_{D_s}/m_D$", dividend=quants[["m_Ds"]], divisor=quants[["m_D"]])
+  ratios[["m_Ds_ov_m_K"]] <- list( name="m_Ds_ov_m_K", texlabel="$m_{D_s}/m_K$", dividend=quants[["m_Ds"]], divisor=quants[["m_K"]])
+  ratios[["m_Ds_ov_m_pi"]] <- list( name="m_Ds_ov_m_pi", texlabel="$m_{D_s}/m_\\pi$", dividend=quants[["m_Ds"]], divisor=quants[["m_pi"]])
+
+  ratios[["m_D_ov_m_K"]] <- list( name="m_D_ov_m_K", texlabel="$m_{D}/m_K$", dividend=quants[["m_D"]], divisor=quants[["m_K"]])
+  ratios[["m_D_ov_m_pi"]] <- list( name="m_D_ov_m_pi", texlabel="$m_{D}/m_\\pi$", dividend=quants[["m_D"]], divisor=quants[["m_pi"]])
+
+  ratios[["m_K_ov_m_pi"]] <- list( name="m_K_ov_m_pi", texlabel="$m_K/m_\\pi$", dividend=quants[["m_K"]], divisor=quants[["m_pi"]])
+
+  ratios[["f_K_ov_f_pi"]] <- list( name="f_K_ov_f_pi", texlabel="$f_K/f_\\pi$", dividend=quants[["f_K"]], divisor=quants[["f_pi"]])
+  ratios[["f_D_ov_f_pi"]] <- list( name="f_D_ov_f_pi", texlabel="$f_D/f_\\pi$", dividend=quants[["f_D"]], divisor=quants[["f_pi"]])
+  ratios[["f_Ds_ov_f_pi"]] <- list( name="f_Ds_ov_f_pi", texlabel="$f_{D_s}/f_\\pi$", dividend=quants[["f_Ds"]], divisor=quants[["f_pi"]])
+
+  ratios[["f_D_ov_f_K"]] <- list( name="f_D_ov_f_K", texlabel="$f_D/f_K$", dividend=quants[["f_D"]], divisor=quants[["f_K"]])
+  ratios[["f_Ds_ov_f_K"]] <- list( name="f_Ds_ov_f_K", texlabel="$f_{D_s}/f_K$", dividend=quants[["f_Ds"]], divisor=quants[["f_K"]])
+
+  ratios[["f_Ds_ov_f_D"]] <- list( name="f_Ds_ov_f_D", texlabel="$f_{D_s}/f_D$", dividend=quants[["f_Ds"]], divisor=quants[["f_D"]])
+
+  if(loadraw || recompute) {
+    # read all the data files
+    for( n in names ) {
+      for( file in n ) {
+        file <- sprintf("%s.Rdata",file)
+        if(debug) cat("Loading" ,file,"\n")
+        load(file)
+      }
+    }
+  }
+
+  if(recompute) {
+  
+    results <- NULL
+    
+    for( qty in quants ) {
+      for( objname in qty$datanames ) {
+        dat <- get.obs.tsboot(obj=get(objname), type=qty$type)
+        results <- compute.quant( name=qty$name, texlabel=qty$texlabel, dat=dat, res=results )
+      }
+    }
+    
+    for( r in ratios ) {
+      # there is a special case if the data of dividend and divisor are exactly the same,
+      # we don't need x*x cases but only x!
+      if(debug) cat("Computing ratio", r$name, "\n")
+      if( all(r$dividend$datanames == r$divisor$datanames) ) {
+        for( objname in r$dividend$datanames ) {
+          dividend <- get.obs.tsboot(obj=get(objname), type=r$dividend$type )
+          divisor <- get.obs.tsboot(obj=get(objname), type=r$divisor$type )
+          results <- compute.ratio(name=r$name,texlabel=r$texlabel,dividend=dividend,divisor=divisor,res=results)
+        }
+      } else {
+
+        # when any pair of mass vectors from the two observables are the same
+        # we meed to ensure that "off-diagonal" elements, where say the strange
+        # mass for the divisor and dividend are different, are skipped!
+        m1m1 <- FALSE
+        m1m2 <- FALSE
+        m2m1 <- FALSE
+        m2m2 <- FALSE
+        if( all(r$dividend$m1 == r$divisor$m1) ) {
+          m1m1 <- TRUE
+        } else if( all(r$dividend$m1 == r$divisor$m2) ) {
+          m1m2 <- TRUE
+        } else if( all(r$dividend$m2 == r$divisor$m1) ) {
+          m2m1 <- TRUE
+        } else if( all(r$dividend$m2 == r$divisor$m2) ) {
+          m2m2 <- TRUE
+        }
+
+        for( dividend.objname in r$dividend$datanames ) {
+          for( divisor.objname in r$divisor$datanames ) {
+            dividend <- get.obs.tsboot(obj=get(dividend.objname), type=r$dividend$type )
+            divisor <- get.obs.tsboot(obj=get(divisor.objname), type=r$divisor$type )
+            if( ( m1m1 && dividend$m1 == divisor$m1 ) ||
+                  ( m1m2 && dividend$m1 == divisor$m2 ) ||
+                    ( m2m1 && dividend$m2 == divisor$m1 ) ||
+                      ( m2m2 && dividend$m2 == divisor$m2 ) ||
+                        !(m1m1 || m1m2 || m2m1 || m2m2) )  {
+              results <- compute.ratio(name=r$name,texlabel=r$texlabel, dividend=dividend,divisor=divisor,res=results)
+            }
+          }
+        }
+      }
+    }
+    
+    # ratios from expressions
+    cat("Computing ratio f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD\n")
+    for( i in 1:length(mass_comb$sc[,1]) ) {
+      fDs_indices <- which(results$val.tsboot$name == "f_Ds" & 
+                          results$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+      mDs_indices <- which(results$val.tsboot$name == "m_Ds" & 
+                          results$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+      fD_indices <- which(results$val.tsboot$name == "f_D" & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+      mD_indices <- which(results$val.tsboot$name == "m_D" & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+                          
+      dividend <- compute.expression(expr=expression(a*sqrt(b)),
+                    envir=data.frame( a=results$val.tsboot$val[fDs_indices], b=results$val.tsboot$val[mDs_indices] ),
+                    m1=mass_comb$sc[i,]$m1, m2=mass_comb$sc[i,]$m2 )
+      divisor <- compute.expression(expr=expression(a*sqrt(b)),
+                    envir=data.frame( a=results$val.tsboot$val[fD_indices], b=results$val.tsboot$val[mD_indices] ),
+                    m1=0.0009, m2=mass_comb$sc[i,]$m2 )
+                    
+      results <- compute.ratio(name="f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD",texlabel="$f_{D_s}\\sqrt{m_{D_s}}/f_D\\sqrt{m_D}$",
+                               dividend=dividend, divisor=divisor, res=results )
+    }
+
+    cat("Computing ratio f_Ds_m_Ds_sqrd_ov_f_D_mD_sqrd\n")
+    for( i in 1:length(mass_comb$sc[,1]) ) {
+      fDs_indices <- which(results$val.tsboot$name == "f_Ds" & 
+                          results$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+      mDs_indices <- which(results$val.tsboot$name == "m_Ds" & 
+                          results$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+      fD_indices <- which(results$val.tsboot$name == "f_D" & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+      mD_indices <- which(results$val.tsboot$name == "m_D" & 
+                          results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+                          
+      dividend <- compute.expression(expr=expression(a*b^2),
+                    envir=data.frame( a=results$val.tsboot$val[fDs_indices], b=results$val.tsboot$val[mDs_indices] ),
+                    m1=mass_comb$sc[i,]$m1, m2=mass_comb$sc[i,]$m2 )
+      divisor <- compute.expression(expr=expression(a*b^2),
+                    envir=data.frame( a=results$val.tsboot$val[fD_indices], b=results$val.tsboot$val[mD_indices] ),
+                    m1=0.0009, m2=mass_comb$sc[i,]$m2 )
+                    
+      results <- compute.ratio(name="f_Ds_m_Ds_sqrd_ov_f_D_mD_sqrd",texlabel="$f_{D_s}m_{D_s}^2/f_D{m_D}^2$",
+                               dividend=dividend, divisor=divisor, res=results )
+    }
+    
+    
+    save(results,file="results.Rdata")
+  } else {
+    load("results.Rdata")
+  } # if(recompute)
+  
+  if(overview) {
+    # overview plots of data
+    require(tikzDevice)
+    filebase <- "data_overview"
+    texfile <- sprintf("%s.tex",filebase) 
+    pdffile <- sprintf("%s.pdf",filebase)
+    tikz(texfile, standAlone = TRUE, width=5, height=5)
+    for(name in names(quants)) {
+      if(debug) print(name)
+      #ts.indices <- which( results$res.tsboot$name == name )
+      indices <- which( results$val$name == name )
+      plotwitherror(y=results$val$val[indices], dy=results$val$dval[indices], x=results$val$m12[indices],
+                    main=results$val$texlabel[indices[1]], xlab="$\\mu$",ylab=results$val$texlabel[indices[1]])
+    }
+    for(name in names(ratios)) {
+      if(debug) print(name)
+      #ts.indices <- which( results$res.tsboot$name == name )
+      indices <- which( results$val$name == name )
+      plotwitherror(y=results$val$val[indices], dy=results$val$dval[indices], x=results$val$m12[indices],
+                    main=results$val$texlabel[indices[1]], xlab="$\\mu$",ylab=results$val$texlabel[indices[1]])
+    }
+    
+    if(debug) print("f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD")
+    indices <- which( results$val$name == "f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD" )
+    plotwitherror(y=results$val$val[indices], dy=results$val$dval[indices], x=results$val$m12[indices],
+                  main=results$val$texlabel[indices[1]], xlab="$\\mu$",ylab=results$val$texlabel[indices[1]])
+
+    if(debug) print("f_Ds_m_Ds_sqrd_ov_f_D_mD_sqrd")
+    indices <- which( results$val$name == "f_Ds_m_Ds_sqrd_ov_f_D_mD_sqrd" )
+    plotwitherror(y=results$val$val[indices], dy=results$val$dval[indices], x=results$val$m12[indices],
+                  main=results$val$texlabel[indices[1]], xlab="$\\mu$",ylab=results$val$texlabel[indices[1]])
+    
+    dev.off()
+    tools::texi2dvi(texfile,pdf=T)
+    command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
+    system(command)
+  } # if(overview)
+  
+  # demonstrate functionality on mK/fK
+  mu_s_from_mK <- mK_ov_fK.demo(results=results,strange_masses=strange_masses,debug=FALSE)
+  
+  mu_s <- data.frame( val=c(0.0009*27.46,mu_s_from_mK$mu_s), dval=c(0.44*0.0009,mu_s_from_mK$dmu_s) )
+  
+  mu_c <- data.frame( val=mu_s$val*11.85, 
+                      dval= c( 0.0009*sqrt( (11.85*0.44)^2 + (27.46*0.16)^2 ), 
+              sqrt( (mu_s_from_mK$dmu_s*11.85)^2 + (mu_s_from_mK$mu_s*0.16)^2 ) ) )
+  
+  # mDs_ov_mD
+  #name <- "m_Ds_ov_m_D"
+  #pheno <- phys_ratios[ phys_ratios$name==name,]
+  #match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+  #                   mu_s, mu_c)
+
+  # mDs_ov_mK
+  #name <- "m_Ds_ov_m_K"
+  #pheno <- phys_ratios[phys_ratios$name==name,]
+  #match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+  #                   mu_s, mu_c)
+
+  # mD_ov_mK
+  name <- "m_D_ov_m_K"
+  pheno <- phys_ratios[phys_ratios$name==name,]
+  match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s,mu_c,
+                     m11=0.0009,m12=charm_masses,
+                     m21=0.0009,m22=strange_masses,
+                     xval="m22", debug=T )
+  
+  stop()
+  
+  # mDs_ov_m_pi
+  name <- "m_Ds_ov_m_pi"
+  pheno <- phys_ratios[phys_ratios$name==name,]
+  lg.coords <- data.frame( x=0.0215, y=1.21 )
+  match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s, mu_c)
+                     
+  # mD_ov_m_pi
+  name <- "m_D_ov_m_pi"
+  pheno <- phys_ratios[phys_ratios$name==name,]
+  lg.coords <- data.frame( x=0.25, y=1.9 )
+  match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              pheno=pheno,mu=mu_c,lg.coords=lg.coords,xlab="$\\mu_c$")
+                                          
+  # fK_ov_fpi
+  name <- "f_K_ov_f_pi"
+  pheno <- phys_ratios[phys_ratios$name==name,]
+  lg.coords <- data.frame( x=0.0215, y=1.21 )
+  match_mu.1D(name=name,alldat=results,masses=strange_masses,
+              pheno=pheno,mu=mu_s,lg.coords=lg.coords,xlab="$\\mu_s$",
+              ylim=c(1.18,1.21))
+
+  # fD_ov_fpi
+  name <- "f_D_ov_f_pi"
+  pheno <- phys_ratios[phys_ratios$name==name,]
+  lg.coords <- data.frame( x=0.25, y=1.6 )
+  match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              pheno=pheno,mu=mu_c,lg.coords=lg.coords,xlab="$\\mu_c$",
+              ylim=c(1.42,1.65))
+
+  # fDs_ov_fpi
+  name <- "f_Ds_ov_f_pi"
+  pheno <- phys_ratios[phys_ratios$name==name,]
+  lg.coords <- data.frame( x=0.25, y=1.9 )
+  match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              pheno=pheno,mu=mu_c,lg.coords=lg.coords,xlab="$\\mu_c$",
+              ylim=c(1.73,2.1))
+  
+  #fDs_ov_fD.2D.demo(results=results,debug=FALSE,mu_s_from_mK=mu_s_from_mK)
+  #mDs_ov_fDs.2D.demo(results=results,debug=FALSE,mu_s_from_mK=mu_s_from_mK)
+  
+  #R1.2D.demo(results)
+  
+  #indices1 <- which( results$res$name == "m_Ds" )
+  #indices2 <- which( results$res$name == "f_Ds" )
+  #print( data.frame(val=results$res$val[indices1]/results$res$val[indices2],m1=results$res$m11[indices],m2=results$res$m12[indices]))
+}
+
+R1.2D.demo <- function(results,debug=FALSE) {
+  name <- "f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD"
+  
+  dat <- vector( mode="list", length=length(which( results$val.tsboot$name == name ))/length(mass_comb$sc[,1]))
+
+  # pre-allocate memory for list elements
+  for( d in 1:length(dat) ) {
+    dat[[d]] <- data.frame(z=vector(mode='numeric',length=16),x=vector(mode='numeric',length=16),y=vector(mode='numeric',length=16))
+  }
+  
+  weights <- vector(mode='numeric',length=16)
+
+  # loop over f_Ds mass combinations to construct list of data frames
+  for( i in 1:length(mass_comb$sc[,1]) ){
+    if(debug) print(mass_comb$sc[i,])
+    ts.indices <- which( results$val.tsboot$name == name &
+                         results$val.tsboot$m11 == mass_comb$sc[i,]$m1 &
+                         results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
+    for( j in 1:length(ts.indices) ) {
+      dat[[j]][i,] <- c( z=results$val.tsboot$val[ts.indices[j]], x=mass_comb$sc[i,]$m1, y=mass_comb$sc[i,]$m2 )
+    }
+    index <- which( results$val$name == name &
+                      results$val$m11 == mass_comb$sc[i,]$m1 &
+                      results$val$m12 == mass_comb$sc[i,]$m2 )
+    weights[i] <- (1/results$val$dval[index])^2
+  }
+  
+  indices <- which( results$val$name == name )
+  
+  test <- vector(mode="list",length=50)
+  
+  for( i in 1:50 ) {
+    test[[i]] <- dat[[i]]
+  }
+
+  fit <- fit_linear_2d( z=test, weights=weights )
+  
+  pars <- data.frame(a=vector(mode='numeric',length=length(fit$fit)),
+  b=vector(mode='numeric',length=length(fit$fit)),c=vector(mode='numeric',length=length(fit$fit)))
+  for( x in 1:length(fit$fit) ) {
+    pars[x,] <- fit$fit[[x]]$m$getPars()
+  }
+  
+  mu_s <- seq(0.021,0.03,length.out=50)
+  dmu_s <- rep(0.002,50)
+  mu_c <- 11.85*mu_s
+  dmu_c <- 0.16*mu_s 
+  
+  zeros <- rep(0,50)
+  
+  pdf("R1_mu_s.pdf")
+
+  # without error propagation (errors in predictor variables set to 0)
+  pred <- extrapolate_2d(fit=fit,predx=mu_s,predy=mu_c,dpredx=zeros,dpredy=zeros)
+  plotwitherror( y=results$val$val[indices], x=results$val$m11[indices], dy=results$val$dval[indices], 
+                 main="without error propagation", ylab="R1", xlab=expression(mu[s]) )
+  plot.confband(y=apply(X=pred$z,MARGIN=2,FUN=mean),dy=sqrt(apply(X=pred$z,MARGIN=2,FUN=sd)^2+apply(X=pred$dz,MARGIN=2,FUN=mean)^2),x=mu_s,col=rgb(red=1.0,green=0.0,blue=0.0,alpha=0.4))
+  legend(x=0.0212,y=1.26,legend=c("Measurements","mu_c = 11.85(16)*mu_s"),lty=c(0,1),col=c('black','black'),pch=c(1,NA))  
+
+  # with error propagation
+  pred <- extrapolate_2d(fit=fit,predx=mu_s,predy=mu_c,dpredx=dmu_s,dpredy=dmu_c)
+  plotwitherror( y=results$val$val[indices], x=results$val$m11[indices], dy=results$val$dval[indices], 
+                 main="with error propagation", ylab="R1", xlab=expression(mu[s]) )
+  plot.confband(y=apply(X=pred$z,MARGIN=2,FUN=mean),dy=sqrt(apply(X=pred$z,MARGIN=2,FUN=sd)^2+apply(X=pred$dz,MARGIN=2,FUN=mean)^2),x=mu_s,col=rgb(red=1.0,green=0.0,blue=0.0,alpha=0.4))
+  legend(x=0.0212,y=1.26,legend=c("Measurements","mu_c = 11.85(16)*mu_s"),lty=c(0,1),col=c('black','black'),pch=c(1,NA))
+  dev.off()
+
+}
+

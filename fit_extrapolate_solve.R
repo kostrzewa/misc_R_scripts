@@ -67,12 +67,37 @@ fit_linear_2d <- function(z,weights,type="nls",debug=F) {
       cat("Fit for bootstrap sample", index, "failed!\n")
       failed_fits <- failed_fits+1
     } else {
+      if(debug) print(temp)
       fit[[(index-failed_fits)]] <- temp
     }
   }
   
   rval <- list(fit=fit,n=(n-failed_fits))
   attr(rval, "class") <- c("fesfit_2d","fesfit_linear", class(rval))
+  return( rval )
+}
+
+fit_linear_1d.new <- function(dat,weights,type="nls",debug=F) {
+  if( type != "nls" ) {
+    stop("fit_linear_2d: Only fit type 'nls' currently supported!")
+  }
+
+  n <- length(dat)
+  fit <- NULL
+  failed_fits <- 0
+  
+  for( index in 1:n ) {
+    temp <- try(nls(y~a*x+b,data=dat[[index]],start=list(a=0.1,b=0.1),weights=weights,trace=FALSE))
+    if( any(class(temp) == "try-error" )) {
+      cat("Fit for bootstrap sample", index, "failed!\n")
+      failed_fits <- failed_fits+1
+    } else {
+      fit[[(index-failed_fits)]] <- temp
+    }
+  }
+  
+  rval <- list(fit=fit,n=(n-failed_fits))
+  attr(rval, "class") <- c("fesfit_1d","fesfit_linear", class(rval))
   return( rval )
 }
 
@@ -117,20 +142,19 @@ extrapolate_2d <- function(fit,predx,predy,dpredx,dpredy,debug=FALSE) {
   }
   
   # we want a prediction for some new values of x 
-  newz <- NULL
+  newz <- list( z=array(dim=c(fit$n,length(predx))), 
+                  dz=array(dim=c(fit$n,length(predx))) )
   
   if( missing(dpredx) && missing(dpredy) ) {
-    newz <- list( z=array(dim=c(fit$n,length(predx))), dz=NA )
     for(index in 1:fit$n) { 
       newz$z[index,] <- predict(fit$fit[[index]],newdata=data.frame(x=predx,y=predy))
+      newz$dz[index,] <- rep(0,length(predx))
     }
   } else {
     if( class(fit$fit[[1]]) != "nls" ) {
       stop("extrapolate_2d: For doing predict with an error in the predictor variables, the fit type must be \"nls\"!")
     }
     if(debug) cat("Doing predict with errors in predictor variables\n")
-    newz <- list( z=array(dim=c(fit$n,length(predx))), 
-                  dz=array(dim=c(fit$n,length(predx))) )
     for(index in 1:fit$n) {
       prednls <- predictNLS(fit$fit[[index]],newdata=data.frame(x=predx,y=predy,dx=dpredx,dy=dpredy),do.sim=FALSE,interval='prediction')$summary 
       newz$z[index,] <- prednls[,2]
