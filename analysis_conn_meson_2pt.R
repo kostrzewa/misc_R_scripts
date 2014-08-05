@@ -8,7 +8,9 @@
 #   analyses
 # objects must be edited
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
+source("~/code/R/misc_R_scripts/meson_2pt_study_fitrange.R")
+
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F,boot.fit=T) {
   # masses to be used in this analysis
 #  light_masses <- c(0.0009)
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
@@ -78,7 +80,8 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
                                   skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
-                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov,read.cor=read.cor)
+                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange,
+                                  boot.fit=boot.fit)
           
       analysis_results <- rbind(analysis_results, result)
     }
@@ -89,7 +92,7 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
 
 do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,
                               debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=10,
-                              seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
+                              seed=12345,useCov=F,read.cor=T,study.fitrange=F,boot.fit=T) {
 
   if(debug) {
     cat(sprintf("Doing %s meson analysis in %s, observable %d\n",name,directory,observable))
@@ -110,162 +113,40 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   }
   
   if(debug) {
-    cat("Performing matrixfit\n")
+    cat("Extracting observable\n")
   }
+  meson.cor <- extract.obs(cmicor, vec.obs=observable,sign.vec=sign)
 
-  meson.cor <- NULL
-  meson.cor.effectivemass <- NULL
-
-  if(study.fitrange) {
-    require("plotrix")
-    # we start off with the minimum possible number of bootstrap samples because in the first run through the data
-    # we are only interested in the effect of the choice of fit range
-    #
-    meson.cor <- extract.obs(cmicor, vec.obs=observable,sign.vec=sign)
-    meson.cor <- bootstrap.cf(meson.cor,boot.R=5,boot.l=1,seed=12345)
-    meson.cor.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=5, boot.l=1, seed=12345)
-    
-    # we will scan the possible fit ranges to estimate the effect of the choice of fit range
-    # on the value of the mass and decay constant
-    # However, we will return the result of the fit for the specified t1 and t2
-
-    results <- list()
-    i <- 1
-    count <- 1
-
-    for( T1 in 10:((meson.cor$Time/2)-1-5) ) {
-      for( T2 in (T1+5):((meson.cor$Time/2)-1) ) {
-        cat(T1, "to", T2, "\n")
-        count <- count + 1
-        
-        meson.cor.matrixfit <- try(matrixfit(meson.cor, t1=T1, t2=T2, symmetrise=T, boot.R=boot.R, boot.l=boot.l, useCov=useCov))
-        # if the fit fails, we go to the next fit range
-        if( any(class(meson.cor.matrixfit) == "try-error" )) next
-        meson.cor.matrixfit <- computefps( meson.cor.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, reduce.latarts=F )
-    
-        meson.cor.effectivemass <- try(fit.effectivemass(meson.cor.effectivemass, t1=T1, t2=T2, useCov=useCov, replace.na=TRUE))
-        if( any(class(meson.cor.effectivemass) == "try-error" )) next
-        
-        results[[i]] <- data.frame(name=name, t1=T1, t2=T2, M=meson.cor.matrixfit$opt.res$par[1], dM=sd(meson.cor.matrixfit$opt.tsboot[1,]), 
-                  Meff=meson.cor.effectivemass$opt.res$par[1], dMeff=sd(meson.cor.effectivemass$massfit.tsboot[,1]), 
-                  P1=meson.cor.matrixfit$opt.res$par[2], dP1=sd(meson.cor.matrixfit$opt.tsboot[2,]), 
-                  P2=meson.cor.matrixfit$opt.res$par[3], dP2=sd(meson.cor.matrixfit$opt.tsboot[3,]), 
-                  f=meson.cor.matrixfit$fps, df=sd(meson.cor.matrixfit$fps.tsboot), 
-                  qm1=q_masses$m1, qm2=q_masses$m2, kappa=kappa,
-                  matrixfit.ChiSqr=meson.cor.matrixfit$opt.res$value, matrixfit.dChiSqr=sd(meson.cor.matrixfit$opt.tsboot[,4]),
-                  matrixfit.dof=meson.cor.matrixfit$dof,
-                  effectivemass.ChiSqr=meson.cor.effectivemass$opt.res$value, effectivemass.dChiSqr=sd(meson.cor.effectivemass$massfit.tsboot[,2]),
-                  effectivemass.dof=meson.cor.effectivemass$dof )
-        
-        i <- i+1
-      }
-    }
-    
-    rm(i)
-
-    # need to rename object before saving to file
-    savename <- sprintf("%s.fitrange",directory)
-    assign(savename,results)
-    save(list=savename,file=sprintf("$s.Rdata",savename)) 
-    
-    matrixfit.masses <- NULL
-    effective.masses <- NULL
-    ChiSqr.ov.dof <- NULL
-    effective.ChiSqr.ov.dof <- NULL
-    matrixfit.Q <- NULL
-    effective.Q <- NULL
-    t1s <- NULL
-    t2s <- NULL
-    deltat <- NULL
-    for( i in 1:length(results) ) {
-      criterion <- results[[i]]$matrixfit.ChiSqr/results[[i]]$matrixfit.dof
-     # if( criterion <= 3 ) {
-        t1s <- c(t1s,results[[i]]$t1)
-        t2s <- c(t2s,results[[i]]$t2)
-        deltat <- c(deltat,results[[i]]$t2-results[[i]]$t1)
-        matrixfit.masses <- c(matrixfit.masses,results[[i]]$M)
-        effective.masses <- c(effective.masses,results[[i]]$Meff)
-        ChiSqr.ov.dof <- c(ChiSqr.ov.dof,criterion)
-        #matrixfit.Q <- c(matrixfit.Q,(1-pgamma(shape=(results[[i]]$matrixfit.dof-2)/2,q=results[[i]]$matrixfit.ChiSqr/2)))
-        matrixfit.Q <- c(matrixfit.Q,(1-pgamma(shape=(results[[i]]$matrixfit.dof)/2,q=results[[i]]$matrixfit.ChiSqr/2)))
-        effective.ChiSqr.ov.dof <- c(effective.ChiSqr.ov.dof,results[[i]]$effectivemass.ChiSqr/results[[i]]$effectivemass.dof)
-        #effective.Q <- c(effective.Q,(1-pgamma(shape=(results[[i]]$effectivemass.dof-2)/2,q=results[[i]]$effectivemass.ChiSqr/2)))
-        effective.Q <- c(effective.Q,(1-pgamma(shape=(results[[i]]$effectivemass.dof)/2,q=results[[i]]$effectivemass.ChiSqr/2)))
-      #}
-    }
-
-    # weighted mean and variance for the matrixfit masses
-    matrixfit.mustar <- weighted.mean(matrixfit.masses,matrixfit.Q)
-    matrixfit.varstar <- weighted.variance(matrixfit.masses,matrixfit.Q)
-    
-    # weighted mean and variance for the effective masses
-    effective.mustar <- weighted.mean(effective.masses,effective.Q)
-    effective.varstar <- weighted.variance(effective.masses,effective.Q)
-    
-    cat("Effective mass:", effective.mustar, sqrt(effective.varstar), "\n")
-    cat("Matrixfit:", matrixfit.mustar, sqrt(matrixfit.varstar), "\n")
-
-    # produce a number of plots relating to the fit range analysis 
-    pdf(sprintf("%s.fitrange.pdf",directory),title=directory) 
-
-    hist(matrixfit.masses,breaks=40,main=paste("histogram matrixfit",directory))
-    plot(density(matrixfit.masses),main=paste("matrixfit",directory))
-    abline(v=mean(matrixfit.masses),col='red')
-    abline(v=median(matrixfit.masses),col='blue')
-    plot(y=ChiSqr.ov.dof,x=matrixfit.masses,main=paste("matrixfit",directory))
-    plot(y=matrixfit.Q,x=matrixfit.masses,main=paste("matrixfit",directory))
-    weighted.hist(x=matrixfit.masses,w=matrixfit.Q,breaks=40,main=paste("weighted hist. matrixfit",directory))
-    plot(x=deltat,y=matrixfit.Q,main=paste("matrixfit",directory))
-    plot(x=t1s+t2s,y=matrixfit.Q,main=paste("matrixfit",directory))
-    plot(x=t1s,y=matrixfit.Q,main=paste("matrixfit",directory))
-    plot(x=t2s,y=matrixfit.Q,main=paste("matrixfit",directory))
-    plot(x=deltat,y=matrixfit.masses,main=paste("matrixfit",directory))
-    plot(x=t1s+t2s,y=matrixfit.masses,main=paste("matrixfit",directory))
-    plot(x=t1s,y=matrixfit.masses,main=paste("matrixfit",directory))
-    plot(x=t2s,y=matrixfit.masses,main=paste("matrixfit",directory))
-    boxplot(matrixfit.masses,main=paste("matrixfit",directory))
-    
-    hist(effective.masses,breaks=40,main=paste("histogram effective",directory))
-    plot(density(effective.masses),main=paste("effective",directory))
-    abline(v=mean(effective.masses),col='red')
-    abline(v=median(effective.masses),col='blue')
-    plot(y=effective.ChiSqr.ov.dof,x=effective.masses,main=paste("effective",directory))
-    plot(y=effective.Q,x=effective.masses,main=paste("effective",directory))
-    weighted.hist(x=effective.masses,w=effective.Q,breaks=40,main=paste("weighted hist. effective",directory))
-    plot(x=deltat,y=effective.Q,main=paste("effective",directory))
-    plot(x=t1s+t2s,y=effective.Q,main=paste("effective",directory))
-    plot(x=t1s,y=effective.Q,main=paste("effective",directory))
-    plot(x=t2s,y=effective.Q,main=paste("effective",directory))
-    plot(x=deltat,y=effective.masses,main=paste("effective",directory))
-    plot(x=t1s+t2s,y=effective.masses,main=paste("effective",directory))
-    plot(x=t1s,y=effective.masses,main=paste("effective",directory))
-    plot(x=t2s,y=effective.masses,main=paste("effective",directory))
-    boxplot(effective.masses,main=paste("effective",directory))
-
-    plot(y=dnorm(x=seq(from=min(matrixfit.masses),to=max(matrixfit.masses),length.out=500),mean=effective.mustar,sd=sqrt(effective.varstar)),
-         x=seq(from=min(matrixfit.masses),to=max(matrixfit.masses),length.out=500),lwd=3,type='l',col='blue',xlim=c(0.059,0.064))
-    lines(y=dnorm(x=seq(from=min(matrixfit.masses),to=max(matrixfit.masses),length.out=500),mean=matrixfit.mustar,sd=sqrt(matrixfit.varstar)),
-         x=seq(from=min(matrixfit.masses),to=max(matrixfit.masses),length.out=500),lwd=3,col='red',type='l')
-    plot(y=effective.masses,x=matrixfit.masses, main="effective vs. matrixfit", ylab="effective mass", xlab="matrixfit mass") 
-    plot(x=t1s,y=t2s,main=directory)
-
-    dev.off()
-  }
-
-
-  # now we redo the bootstrapping with the correct values and do the fit with our best estimate of the optimal fit range
-  # which has been given as the parameter
-  if(!study.fitrange) {
-    meson.cor <- extract.obs(cmicor, vec.obs=observable,sign.vec=sign)
+  # average LF and FL
+  meson.cor <- avg.ls.cf(meson.cor)
+  
+  if(debug) {
+    cat("Bootsrapping cf and effectivemass\n")
   }
   meson.cor <- bootstrap.cf(meson.cor,boot.R=boot.R,boot.l=boot.l,seed=seed)
-  save.matrixfit <- matrixfit(meson.cor, t1=t1, t2=t2, symmetrise=T, boot.R=boot.R, boot.l=boot.l, useCov=useCov)
-  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, reduce.latarts=F )
-  save.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed)
+  meson.cor.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed)
+    
+  if(study.fitrange) {
+    meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,debug=debug)
+  }
+
+  if(debug) {
+    cat("Performing matrixfit\n")
+  }
+  # now we fully bootstrap the fits with the fit range that we deem optimal (from the inputs t1, t2)
+  save.matrixfit <- matrixfit(meson.cor, t1=t1, t2=t2, symmetrise=T, parlist=array(c(1,1,1,2,2,2), dim=c(2,3)),
+                              matrix.size=3, boot.R=boot.R, boot.l=boot.l, useCov=useCov, boot.fit=T )
+
+  if(debug) {
+    cat("Extracting decay constant\n")
+  }
+  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='continuum')#, boot.fit=T )
+  
   if(debug) {
     cat("Performing bootstrapped effective mass fit\n")
   }
-  save.effectivemass <- fit.effectivemass(save.effectivemass, t1=t1, t2=t2, useCov=useCov, replace.na=TRUE)
+  save.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed )
+  save.effectivemass <- fit.effectivemass(save.effectivemass, t1=t1, t2=t2, useCov=useCov, replace.na=TRUE)#, boot.fit=T)
   
   # we need to rename the object before saving it to file so we can 
   # "load" matrixfit objects for multiple mesons at the same time
@@ -286,7 +167,7 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
                 P2=save.matrixfit$opt.res$par[3], dP2=sd(save.matrixfit$opt.tsboot[3,]), 
                 f=save.matrixfit$fps, df=sd(save.matrixfit$fps.tsboot), 
                 qm1=q_masses$m1, qm2=q_masses$m2, kappa=kappa,
-                matrixfit.ChiSqr=save.matrixfit$opt.res$value, matrixfit.dChiSqr=sd(save.matrixfit$opt.tsboot[,4]),
+                matrixfit.ChiSqr=save.matrixfit$opt.res$value, matrixfit.dChiSqr=sd(save.matrixfit$opt.tsboot[4,]),
                 matrixfit.dof=save.matrixfit$dof,
                 effectivemass.ChiSqr=save.effectivemass$opt.res$value, effectivemass.dChiSqr=sd(save.effectivemass$massfit.tsboot[,2]),
                 effectivemass.dof=save.effectivemass$dof )
@@ -310,8 +191,8 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   plotfilename <- sprintf("plots/%s.pdf",directory)
   pdf(plotfilename,onefile=T,title=paste(name, directory, sep=" "))
   plot(save.effectivemass, xlab=c("t/a"), ylab="aM", main=paste(name,directory,sep=" "), 
-       xlim=c(t1_plot,t2_plot), ylim=c(ymin,ymax) )
-  plot(save.matrixfit, xlab="t/a", ylab="C(t)",main=paste(name, directory,sep=" "))     
+       xlim=c(t1_plot,t2_plot), ylim=c(ymin,ymax), pch=4)
+  plot(save.matrixfit,plot.errorband=TRUE, xlab="t/a", ylab="C(t)",main=paste(name, directory,sep=" "), pch=4)     
 
   # add another plot which shows the difference between the fitted correlation function
   # and the original data
@@ -332,6 +213,18 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   abline(h=1,col="red")
   abline(v=c(t1,t2),col="blue")
   
+  ## add another two plots which shows the distribution of ChiSqr over the bootstrap samples
+  matrixfit.ChiSqr.tsboot <- save.matrixfit$opt.tsboot[length(save.matrixfit$opt.tsboot[,1]),]
+  matrixfit.ChiSqr.x <- seq(min(matrixfit.ChiSqr.tsboot),max(matrixfit.ChiSqr.tsboot),1)
+  hist(matrixfit.ChiSqr.tsboot,breaks=40,main=paste("matrixfit.ChiSqr",directory,sep=" "),freq=FALSE)
+  lines(x=matrixfit.ChiSqr.x,y=dchisq(x=matrixfit.ChiSqr.x,df=save.matrixfit$dof),lwd=3,col='red')
+
+
+  effectivemass.ChiSqr.tsboot <- save.effectivemass$massfit.tsboot[,2]
+  effectivemass.ChiSqr.x <- seq(min(effectivemass.ChiSqr.tsboot),max(effectivemass.ChiSqr.tsboot),1)
+  hist(effectivemass.ChiSqr.tsboot,breaks=40,main=paste("effectivemass.ChiSqr",directory,sep=" "),freq=FALSE)
+  lines(x=effectivemass.ChiSqr.x,y=dchisq(x=effectivemass.ChiSqr.x,df=save.effectivemass$dof),lwd=3,col='blue')
+
   dev.off();
   
   cat("\n")
