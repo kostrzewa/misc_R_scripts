@@ -2,11 +2,12 @@
 # and an error shading for an error analysis via uwerr
 
 plot_timeseries <- function(dat,trange,pdf.filename,
-                            ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1) {
+                            ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
+                            hist.breaks=30,uwerr.S=5) {
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat)
       
-  uw.data <- uwerrprimary(dat)
+  uw.data <- uwerrprimary(dat,S=uwerr.S)
   print(paste("uw.",name,sep=""))
   summary(uw.data)
   
@@ -23,7 +24,7 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   abline(h=uw.data$value,col="black")                                                                                                   
   
   # plot the corresponding histogram
-  hist.data <- hist(dat,xlim=yrange,main=paste("histogram",titletext),xlab=ylab)
+  hist.data <- hist(dat,xlim=yrange,main=paste("histogram",titletext),xlab=ylab, breaks=hist.breaks)
   rect(ytop=max(hist.data$counts),
        ybottom=0,
        xright=uw.data$value+uw.data$dvalue,
