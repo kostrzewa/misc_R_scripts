@@ -124,9 +124,11 @@ extrapolate_1d <- function(fit,predx,dpredx,debug=FALSE) {
     newy <- list( y=array(dim=c(fit$n,length(predx))), 
                   dy=array(dim=c(fit$n,length(predx))) )
     for(index in 1:fit$n) {
-      prednls <- predictNLS(fit$fit[[index]],newdata=data.frame(x=predx,dx=dpredx),do.sim=FALSE,interval='prediction')$summary 
+      sink("/dev/null")
+      prednls <- predictNLS(fit$fit[[index]],newdata=data.frame(x=predx,dx=dpredx),do.sim=FALSE,interval='prediction')$summary
       newy$y[index,] <- prednls[,2]
       newy$dy[index,] <- prednls[,4]
+      sink(NULL)
     }
   }
   return(newy)
@@ -156,9 +158,11 @@ extrapolate_2d <- function(fit,predx,predy,dpredx,dpredy,debug=FALSE) {
     }
     if(debug) cat("Doing predict with errors in predictor variables\n")
     for(index in 1:fit$n) {
-      prednls <- predictNLS(fit$fit[[index]],newdata=data.frame(x=predx,y=predy,dx=dpredx,dy=dpredy),do.sim=FALSE,interval='prediction')$summary 
+      sink("/dev/null")
+      prednls <- predictNLS(fit$fit[[index]],newdata=data.frame(x=predx,y=predy,dx=dpredx,dy=dpredy),do.sim=FALSE,interval='prediction')$summary
       newz$z[index,] <- prednls[,2]
       newz$dz[index,] <- prednls[,4]
+      sink(NULL)
     }
   }
   return(newz)
