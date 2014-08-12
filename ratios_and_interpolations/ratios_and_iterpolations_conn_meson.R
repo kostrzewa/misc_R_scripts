@@ -7,13 +7,17 @@ source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/match_mu_s_
 source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/match_mu.R")
 
 ratios_and_iterpolations_conn_meson <- function(debug=F,recompute=T,loadraw=T,overview=T) {
-
+  # certain functionality relies on stuff being strings
+  options(stringsAsFactors = FALSE)
   # masses to be used in this analysis
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
   charm_masses <- c(0.2822,0.294,0.3058,0.3176)
   light_masses <- c(0.0009)
   
-  phys_ratios <- read.csv("phys_ratios.csv")
+  phys_ratios <- read.csv("phys_ratios.csv",as.is=c("type","name"))
+  
+  pheno.col <- rgb(green=1.0,red=0.0,blue=0.0,alpha=0.3)
+  pheno.pch <- 15
   
   # combinations of these masses
   mass_comb <- list( ll=data.frame( m1=light_masses, m2=light_masses ),
@@ -104,8 +108,10 @@ ratios_and_iterpolations_conn_meson <- function(debug=F,recompute=T,loadraw=T,ov
       } else {
 
         # when any pair of mass vectors from the two observables are the same
-        # we meed to ensure that "off-diagonal" elements, where say the strange
+        # we need to ensure that "off-diagonal" elements, where say the strange
         # mass for the divisor and dividend are different, are skipped!
+        # this would be the case, for instance for a ratio involving the kaon
+        # and the D_s meson or the kaon mass and its decay constant
         m1m1 <- FALSE
         m1m2 <- FALSE
         m2m1 <- FALSE
@@ -125,10 +131,10 @@ ratios_and_iterpolations_conn_meson <- function(debug=F,recompute=T,loadraw=T,ov
             dividend <- get.obs.tsboot(obj=get(dividend.objname), type=r$dividend$type )
             divisor <- get.obs.tsboot(obj=get(divisor.objname), type=r$divisor$type )
             if( ( m1m1 && dividend$m1 == divisor$m1 ) ||
-                  ( m1m2 && dividend$m1 == divisor$m2 ) ||
-                    ( m2m1 && dividend$m2 == divisor$m1 ) ||
-                      ( m2m2 && dividend$m2 == divisor$m2 ) ||
-                        !(m1m1 || m1m2 || m2m1 || m2m2) )  {
+                ( m1m2 && dividend$m1 == divisor$m2 ) ||
+                ( m2m1 && dividend$m2 == divisor$m1 ) ||
+                ( m2m2 && dividend$m2 == divisor$m2 ) ||
+               !(m1m1 || m1m2 || m2m1 || m2m2) )  {
               results <- compute.ratio(name=r$name,texlabel=r$texlabel, dividend=dividend,divisor=divisor,res=results)
             }
           }
@@ -229,152 +235,172 @@ ratios_and_iterpolations_conn_meson <- function(debug=F,recompute=T,loadraw=T,ov
     system(command)
   } # if(overview)
   
-  # demonstrate functionality on mK/fK
-  mu_s_from_mK <- mK_ov_fK.demo(results=results,strange_masses=strange_masses,debug=FALSE)
+  # mu_s from FLAG ratio
+  mu_s <- data.frame( val=c(0.0009*27.46), dval=c(0.44*0.0009) )
   
-  mu_s <- data.frame( val=c(0.0009*27.46,mu_s_from_mK$mu_s), dval=c(0.44*0.0009,mu_s_from_mK$dmu_s) )
+  # m_K_ov_f_K
+  name <- "m_K_ov_f_K"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.0215, y=3.2 )
+  mu_s_from_f_K <- match_mu.1D(name=name,alldat=results,masses=strange_masses,
+              pheno=pheno,mu=mu_s,lg.coords=lg.coords,xlab="$\\mu_s$", solve=T)
   
+  mu_s <- rbind( mu_s, data.frame(val=mu_s_from_f_K$predmu$mu, dval=mu_s_from_f_K$predmu$dmu) )
+  
+  # mu_c from HPQCD ratio
   mu_c <- data.frame( val=mu_s$val*11.85, 
                       dval= c( 0.0009*sqrt( (11.85*0.44)^2 + (27.46*0.16)^2 ), 
-              sqrt( (mu_s_from_mK$dmu_s*11.85)^2 + (mu_s_from_mK$mu_s*0.16)^2 ) ) )
+              sqrt( (mu_s$dval[2]*11.85)^2 + (mu_s$val[2]*0.16)^2 ) ) )
+
+  cols <- c('black','red','forestgreen')
+  syms <- c(1,15:(15+length(mu_c$val)-1))
   
-  # mDs_ov_mD
-  #name <- "m_Ds_ov_m_D"
-  #pheno <- phys_ratios[ phys_ratios$name==name,]
-  #match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
-  #                   mu_s, mu_c)
+  legend.mu_s <- list( labels=c("Data","$\\mu_s$ from FLAG ratio","$\\mu_s$ from $m_K/f_K$","$\\mu_s$ from $m_K/m_\\pi$"),
+                       pch=c(syms,18), col=c(cols,'blue') )
+  legend.mu_c <- list( labels=c("Data","$\\mu_c$ from FLAG$\\cdot$HPQCD ratios",
+                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$","$\\mu_c$ from $m_D/m_\\pi$"),
+                        pch=c(syms,18), col=c(cols,'blue') )
+  
+  name <- "m_K_ov_m_pi"
+  lg.coords <- data.frame( x=0.021, y=3.77 )
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  mu_s_from_m_K <- match_mu.1D(name=name,alldat=results,masses=strange_masses,
+              pheno=pheno,mu=mu_s,xlab="$a\\mu_s$", 
+              lg=legend.mu_s,lg.coords=lg.coords,solve=T,ylim=c(3.56,3.77),
+              xlim=c(0.021,0.027))
+              
+  mu_s <- rbind( mu_s, data.frame(val=mu_s_from_m_K$predmu$mu, dval=mu_s_from_m_K$predmu$dmu) )
+              
+  name <- "m_D_ov_m_pi"
+  lg.coords <- data.frame( x=0.27, y=15.2 )
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  mu_c_from_m_D <- match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              lg=legend.mu_c,lg.coords=lg.coords,
+              pheno=pheno,mu=mu_c, xlab="$a\\mu_c$", solve=T,
+              xlim=c(0.27,0.36),ylim=c(12.8,15.2))
+  
+  mu_c <- rbind( mu_c, data.frame(val=mu_c_from_m_D$predmu$mu, dval=mu_c_from_m_D$predmu$dmu) )
 
-  # mDs_ov_mK
-  #name <- "m_Ds_ov_m_K"
-  #pheno <- phys_ratios[phys_ratios$name==name,]
-  #match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
-  #                   mu_s, mu_c)
+  cols <- c(cols,'blue')
+  syms <- c(1,15:(15+length(mu_c$val)-1))
+  
+  legend.mu_s <- list( labels=c("Data","$\\mu_s$ from FLAG ratio","$\\mu_s$ from $m_K/f_K$","$\\mu_s$ from $m_K/m_\\pi$"),
+                       pch=syms, col=cols )
+  legend.mu_c <- list( labels=c("Data","$\\mu_c$ from FLAG$\\cdot$HPQCD ratios",
+                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$","$\\mu_c$ from $m_D/m_\\pi$"),
+                        pch=syms, col=cols )
+  legend.mu_sc <- list( labels=c("Data", "$\\mu_s$ and $\\mu_c$ from FLAG/HPQCD ratios",
+                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
+                                 "$\\mu_c$ from $m_D/m_\\pi$, $\\mu_s$ from $m_K/m_\\pi$"), 
+                        pch=syms, col=cols )
 
-  # mD_ov_mK
+  pred <- list()
+  
+  name <- "m_D_ov_f_D"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.3, y=8.25 )
+  pred[[name]] <- match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              pheno=pheno,mu=mu_c,
+              lg=legend.mu_c,lg.coords=lg.coords,xlab="$a\\mu_c$", solve=F,
+              xlim=c(0.28,0.36))
+              
+  name <- "m_Ds_ov_f_Ds"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.0217, y=8.2 )
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,ylim=c(7.2,8.2))              
+  
+  name <- "m_Ds_ov_m_K"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.0209, y=4.31 )
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,ylim=c(3.7,4.31),xlim=c(0.021,0.027))  
+  
+  name <- "m_Ds_ov_m_D"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.0209, y=1.07 )
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,
+                     ylim=c(1.045,1.07),xlim=c(0.021,0.027))
+
+  name <- "f_K_ov_f_pi"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.023, y=1.22 )
+  pred[[name]] <- match_mu.1D(name=name,alldat=results,masses=strange_masses,
+              pheno=pheno,mu=mu_s,
+              lg=legend.mu_s,lg.coords=lg.coords,xlab="$a\\mu_s$",solve=F,
+              ylim=c(1.19,1.22),xlim=c(0.023,0.027))
+
+  name <- "f_D_ov_f_pi"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.255, y=1.8 )
+  pred[[name]] <- match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              pheno=pheno,mu=mu_c,
+              lg=legend.mu_c,lg.coords=lg.coords,xlab="$a\\mu_c$",
+              ylim=c(1.5,1.8))                         
+
   name <- "m_D_ov_m_K"
-  pheno <- phys_ratios[phys_ratios$name==name,]
-  match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.021, y=3.5 )
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
                      mu_s,mu_c,
                      m11=0.0009,m12=charm_masses,
                      m21=0.0009,m22=strange_masses,
-                     xval="m22", debug=T )
+                     lg=legend.mu_sc, lg.coords=lg.coords,
+                     xval="m22", debug=T,
+                     xlim=c(0.021,0.027),
+                     ylim=c(3.3,3.9) )
   
-  stop()
-  
-  # mDs_ov_m_pi
   name <- "m_Ds_ov_m_pi"
-  pheno <- phys_ratios[phys_ratios$name==name,]
-  lg.coords <- data.frame( x=0.0215, y=1.21 )
-  match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
-                     mu_s, mu_c)
-                     
-  # mD_ov_m_pi
-  name <- "m_D_ov_m_pi"
-  pheno <- phys_ratios[phys_ratios$name==name,]
-  lg.coords <- data.frame( x=0.25, y=1.9 )
-  match_mu.1D(name=name,alldat=results,masses=charm_masses,
-              pheno=pheno,mu=mu_c,lg.coords=lg.coords,xlab="$\\mu_c$")
-                                          
-  # fK_ov_fpi
-  name <- "f_K_ov_f_pi"
-  pheno <- phys_ratios[phys_ratios$name==name,]
-  lg.coords <- data.frame( x=0.0215, y=1.21 )
-  match_mu.1D(name=name,alldat=results,masses=strange_masses,
-              pheno=pheno,mu=mu_s,lg.coords=lg.coords,xlab="$\\mu_s$",
-              ylim=c(1.18,1.21))
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.023, y=15.4 )
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,
+                     xlim=c(0.023,0.027),
+                     ylim=c(13.8,15.4))
 
-  # fD_ov_fpi
-  name <- "f_D_ov_f_pi"
-  pheno <- phys_ratios[phys_ratios$name==name,]
-  lg.coords <- data.frame( x=0.25, y=1.6 )
-  match_mu.1D(name=name,alldat=results,masses=charm_masses,
-              pheno=pheno,mu=mu_c,lg.coords=lg.coords,xlab="$\\mu_c$",
-              ylim=c(1.42,1.65))
-
-  # fDs_ov_fpi
   name <- "f_Ds_ov_f_pi"
-  pheno <- phys_ratios[phys_ratios$name==name,]
-  lg.coords <- data.frame( x=0.25, y=1.9 )
-  match_mu.1D(name=name,alldat=results,masses=charm_masses,
-              pheno=pheno,mu=mu_c,lg.coords=lg.coords,xlab="$\\mu_c$",
-              ylim=c(1.73,2.1))
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.023, y=2.04 )
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s, mu_c,lg=legend.mu_sc, lg.coords=lg.coords,
+                     xlim=c(0.023,0.027),ylim=c(1.94,2.04))
+
+  name <- "f_Ds_ov_f_D"
+  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+  lg.coords <- data.frame( x=0.023, y=1.3 )
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,pheno=pheno,
+                     mu_s, mu_c,lg=legend.mu_sc,lg.coords=lg.coords,
+                     xlim=c(0.023,0.027),
+                     ylim=c(1.16,1.3))
+
+  name <- "m_K"
+  pred[[name]] <- match_mu.1D(name=name,alldat=results,masses=strange_masses,
+              mu=mu_s)
+                     
+  name <- "f_K"
+  pred[[name]] <- match_mu.1D(name=name,alldat=results,masses=strange_masses,
+              mu=mu_s)
+                     
+  name <- "m_D"
+  pred[[name]] <- match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              mu=mu_c)
+                     
+  name <- "f_D"
+  pred[[name]] <- match_mu.1D(name=name,alldat=results,masses=charm_masses,
+              mu=mu_c)
+                                   
+  name <- "m_Ds"
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,
+                  mu_s=mu_s, mu_c=mu_c)
   
-  #fDs_ov_fD.2D.demo(results=results,debug=FALSE,mu_s_from_mK=mu_s_from_mK)
-  #mDs_ov_fDs.2D.demo(results=results,debug=FALSE,mu_s_from_mK=mu_s_from_mK)
+  name <- "f_Ds"
+  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=results,mass_comb=mass_comb,
+                  mu_s=mu_s, mu_c=mu_c)
+                  
+  print(pred)
   
-  #R1.2D.demo(results)
+  write.csv(pred,file="preds.csv")
   
-  #indices1 <- which( results$res$name == "m_Ds" )
-  #indices2 <- which( results$res$name == "f_Ds" )
-  #print( data.frame(val=results$res$val[indices1]/results$res$val[indices2],m1=results$res$m11[indices],m2=results$res$m12[indices]))
+  options(stringsAsFactors = TRUE)
 }
-
-R1.2D.demo <- function(results,debug=FALSE) {
-  name <- "f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD"
-  
-  dat <- vector( mode="list", length=length(which( results$val.tsboot$name == name ))/length(mass_comb$sc[,1]))
-
-  # pre-allocate memory for list elements
-  for( d in 1:length(dat) ) {
-    dat[[d]] <- data.frame(z=vector(mode='numeric',length=16),x=vector(mode='numeric',length=16),y=vector(mode='numeric',length=16))
-  }
-  
-  weights <- vector(mode='numeric',length=16)
-
-  # loop over f_Ds mass combinations to construct list of data frames
-  for( i in 1:length(mass_comb$sc[,1]) ){
-    if(debug) print(mass_comb$sc[i,])
-    ts.indices <- which( results$val.tsboot$name == name &
-                         results$val.tsboot$m11 == mass_comb$sc[i,]$m1 &
-                         results$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-    for( j in 1:length(ts.indices) ) {
-      dat[[j]][i,] <- c( z=results$val.tsboot$val[ts.indices[j]], x=mass_comb$sc[i,]$m1, y=mass_comb$sc[i,]$m2 )
-    }
-    index <- which( results$val$name == name &
-                      results$val$m11 == mass_comb$sc[i,]$m1 &
-                      results$val$m12 == mass_comb$sc[i,]$m2 )
-    weights[i] <- (1/results$val$dval[index])^2
-  }
-  
-  indices <- which( results$val$name == name )
-  
-  test <- vector(mode="list",length=50)
-  
-  for( i in 1:50 ) {
-    test[[i]] <- dat[[i]]
-  }
-
-  fit <- fit_linear_2d( z=test, weights=weights )
-  
-  pars <- data.frame(a=vector(mode='numeric',length=length(fit$fit)),
-  b=vector(mode='numeric',length=length(fit$fit)),c=vector(mode='numeric',length=length(fit$fit)))
-  for( x in 1:length(fit$fit) ) {
-    pars[x,] <- fit$fit[[x]]$m$getPars()
-  }
-  
-  mu_s <- seq(0.021,0.03,length.out=50)
-  dmu_s <- rep(0.002,50)
-  mu_c <- 11.85*mu_s
-  dmu_c <- 0.16*mu_s 
-  
-  zeros <- rep(0,50)
-  
-  pdf("R1_mu_s.pdf")
-
-  # without error propagation (errors in predictor variables set to 0)
-  pred <- extrapolate_2d(fit=fit,predx=mu_s,predy=mu_c,dpredx=zeros,dpredy=zeros)
-  plotwitherror( y=results$val$val[indices], x=results$val$m11[indices], dy=results$val$dval[indices], 
-                 main="without error propagation", ylab="R1", xlab=expression(mu[s]) )
-  plot.confband(y=apply(X=pred$z,MARGIN=2,FUN=mean),dy=sqrt(apply(X=pred$z,MARGIN=2,FUN=sd)^2+apply(X=pred$dz,MARGIN=2,FUN=mean)^2),x=mu_s,col=rgb(red=1.0,green=0.0,blue=0.0,alpha=0.4))
-  legend(x=0.0212,y=1.26,legend=c("Measurements","mu_c = 11.85(16)*mu_s"),lty=c(0,1),col=c('black','black'),pch=c(1,NA))  
-
-  # with error propagation
-  pred <- extrapolate_2d(fit=fit,predx=mu_s,predy=mu_c,dpredx=dmu_s,dpredy=dmu_c)
-  plotwitherror( y=results$val$val[indices], x=results$val$m11[indices], dy=results$val$dval[indices], 
-                 main="with error propagation", ylab="R1", xlab=expression(mu[s]) )
-  plot.confband(y=apply(X=pred$z,MARGIN=2,FUN=mean),dy=sqrt(apply(X=pred$z,MARGIN=2,FUN=sd)^2+apply(X=pred$dz,MARGIN=2,FUN=mean)^2),x=mu_s,col=rgb(red=1.0,green=0.0,blue=0.0,alpha=0.4))
-  legend(x=0.0212,y=1.26,legend=c("Measurements","mu_c = 11.85(16)*mu_s"),lty=c(0,1),col=c('black','black'),pch=c(1,NA))
-  dev.off()
-
-}
-
