@@ -125,6 +125,11 @@ fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=F) {
   if( missing(unknown) ) {
     stop("fes_solve: 'unknown' argument must be supplied with the name of the predictor variabe which should be solved for")
   }
+  if(!missing(known) ) {
+    if( any( as.vector( outer(colnames(known),unknown,'==') ) ) {
+      stop("fes_solve: one or more column names in 'known' match the names of the unknowns, this is surely wrong!\n")
+    }
+  }
   
   solutions <- array(0.,dim=c(fesfit$n,length(y)*length(unknown)))
   for(index in 1:fesfit$n) {
@@ -149,7 +154,7 @@ fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=F) {
       x.df <- as.data.frame(t(x))
       colnames(x.df) <- unknown
       environ <- cbind(environ,x.df) 
-      # evaluate the model with all parameters, knowns and numerical values for unknowns
+      # evaluate the model with all parameters, knowns anqd numerical values for unknowns
       # the absolute value ensures that we have viable minimum
       rval <- abs(eval(rhs,envir=environ)-rootval)
       return(rval)
@@ -158,10 +163,10 @@ fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=F) {
     findroot <- function(rootval) {
       if(length(unknown)==1) {
         oval <- optimize(f=rootfun, interval=interval, rootval=rootval)
-        return(oval$minimum)
+        return( c(oval$minimum,oval$objective) )
       } else {
         oval <- optim(par=rep(0.1,times=length(unknown)), fn=rootfun, rootval=rootval)
-        return(oval$par)
+        return( c(oval$par,oval$value) )
       }
     }
 
