@@ -1,10 +1,17 @@
-correls_bunches <- function(dir,skip,debug=F,filename="piononline.dat") {
+correls_bunches <- function(dir,end,per_bunch=10,skip=0,debug=F,filename="piononline.dat") {
   filename <- sprintf("%s/%s",dir,filename)
   omeas <- read.table(filename)
   Thalf <- max(omeas$V3)
   increment <- omeas[(omeas$V1==1 & omeas$V2==1 & omeas$V3==0),6][2]-omeas[(omeas$V1==1 & omeas$V2==1 & omeas$V3==0),6][1]
-  max_sample <- max(omeas$V6)-1
+  
   min_sample <- min(omeas$V6)+skip*increment
+  max_sample <- NULL
+  if(missing('end')) {
+    max_sample <- max(omeas$V6)-1
+  } else {
+    max_sample <- end
+  }
+  
 
   # remove negative values for log plot...
   omeas[(omeas$V1==1 & omeas$V2==1 & omeas$V4 <= 0),4] <- 0.000001
@@ -25,7 +32,7 @@ correls_bunches <- function(dir,skip,debug=F,filename="piononline.dat") {
   }
   
   
-  step <- 10*increment
+  step <- per_bunch*increment
 
   # PP correlator in bunches of 10
   pdf(sprintf("%s_Pion_correls.pdf",dir),onefile=T,width=10,height=5,title=dir)
