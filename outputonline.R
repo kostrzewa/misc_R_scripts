@@ -24,10 +24,10 @@ source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 # cg_col indicates which column in output.data should be used 
 
 outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
+  cg_col, evals,
   csw=0,musigma=0,mudelta=0,muh=0,addon="",plaquette=TRUE,
   dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,
-  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,cg_col,
-  evals)
+  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,S=10)
 {
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   rundir <- NULL
@@ -75,7 +75,7 @@ outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
     pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
   }
 
-  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm)
+  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
 
   print(onlineout)
 
