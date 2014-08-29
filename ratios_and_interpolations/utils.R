@@ -48,11 +48,11 @@ append.result <- function(val,val.tsboot,res) {
 }
 
 get.obs.tsboot <- function(obj,type) {
-  rval <- list( m1=obj$mu1, m2=obj$mu2, dat=c() )
+  rval <- list( m1=obj$mu1, m2=obj$mu2, boot=c() )
   if( type == "fps" ) {
-    rval$dat <- obj$fps.tsboot
+    rval$boot <- obj$fps.tsboot
   } else if ( type == "mps" ) {
-    rval$dat <- obj$opt.tsboot[1,]
+    rval$boot <- obj$opt.tsboot[1,]
   } else {
     stop("In 'get.obs.tsboot': type '", type,"' is not known. Exiting!")
   }

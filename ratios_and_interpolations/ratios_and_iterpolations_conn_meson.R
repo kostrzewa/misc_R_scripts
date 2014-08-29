@@ -1,6 +1,7 @@
 library('propagate')
 
 source("/home/bartek/code/R/misc_R_scripts/fit_extrapolate_solve.R")
+source("/home/bartek/code/R/misc_R_scripts/fit_extrapolate_solve_MK2.R")
 source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/utils.R")
 source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/mK_ov_fK.R")
 source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/match_mu_s_mu_c.R")

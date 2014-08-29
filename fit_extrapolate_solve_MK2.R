@@ -45,6 +45,9 @@ fes_fit_linear <- function(dat,start,type="nls",debug=F) {
     }
   }
   model <- sprintf("%s+c",model)
+  if(debug) {
+    cat("For this fit, the model", model, "is being used.\n")
+  }
   
   for( index in 1:n ) {
     temp <- try(nls(as.formula(model),data=dat[[index]],start=startvals,weights=dat[[index]]$weight,trace=FALSE,model=TRUE))
@@ -65,19 +68,22 @@ fes_fit_linear <- function(dat,start,type="nls",debug=F) {
 # use predict (or predictNLS) to extrapolate a model fitted using
 # a fes_fit function to some new values of predictor variables
 
-fes_extrapolate <- function(fesfit,pred,dpred,debug=F) {
+fes_extrapolate <- function(fesfit,pred,debug=F) {
   if( !any( class(fesfit) == "fesfit" ) ) {
     stop("fes_extrapolate: 'fesfit' argument needs to be of class 'fesfit'\n")
   }
   if( class(fesfit$fit[[1]]) != "nls" ) {
     stop("fes_extrapolate: Only fit type 'nls' currently supported!\n")
   }
-  if( !missing(dpred) && ( dim(pred) != dim(dpred) ) ) {
-    stop("fes_extrapolate: dimension mismatch between pred and dpred!\n")
-  }
   
   # for predictNLS, the model fuction needs to be in the current environment
   # with the same name as it was used in fes_fit
+  # the reason is that predicNLS extracts the function from the $m$cal member
+  # which literally stores the code that was used to pass the model
+  # unfortunately, this call then only contains something like
+  # "as.formula(model)"
+  # and "model" needs to be in the environment if this is to be 
+  # evaluated successfully
   # I don't know a solution to this problem yet...
   model<-fesfit$model
   
@@ -85,27 +91,20 @@ fes_extrapolate <- function(fesfit,pred,dpred,debug=F) {
   # in pred 
   predy <- list( y=array(dim=c(fesfit$n,length(pred[,1]))), 
                  dy=array(dim=c(fesfit$n,length(pred[,1]))) )
-  
-  if( missing(dpred) ) {
-    for(index in 1:fesfit$n) { 
-      predy$y[index,] <- predict(fesfit$fit[[index]],newdata=pred)
-      predy$dy[index,] <- rep(0,length(pred[,1]))
-    }
-  } else {
-    if( class(fesfit$fit[[1]]) != "nls" ) {
-      stop("extrapolate: For doing predict with an error 'dpred' in the predictor variables, the fit type must be \"nls\"!\n")
-    }
-    if(debug) cat("Doing predict with errors in predictor variables\n")
-    for(index in 1:fesfit$n) {
-      sink("/dev/null")
-      require("propagate")
-      prednls <- predictNLS(fesfit$fit[[index]],newdata=cbind(pred,dpred),do.sim=FALSE,interval='prediction')$summary
-      # second order mean and standard deviation
-      predy$y[index,] <- prednls[,2]
-      predy$dy[index,] <- prednls[,4]
-      sink(NULL)
-    }
+
+  require("propagate")
+  # suppress some very verbose default output
+  sink("/dev/null")
+  for(index in 1:fesfit$n) {      
+    prednls <- predictNLS(fesfit$fit[[index]],newdata=pred,do.sim=FALSE,interval='prediction')$summary
+    # second order mean and standard deviation
+    predy$y[index,] <- prednls[,2]
+    predy$dy[index,] <- prednls[,4]
   }
+  # reset the output!
+  sink(NULL)
+  sink(NULL)
+  
   return(predy)
 }
 
@@ -126,22 +125,22 @@ fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=F) {
     stop("fes_solve: 'unknown' argument must be supplied with the name of the predictor variabe which should be solved for")
   }
   if(!missing(known) ) {
-    if( any( as.vector( outer(colnames(known),unknown,'==') ) ) {
+    if( any( as.vector( outer(colnames(known),unknown,'==') ) ) ) {
       stop("fes_solve: one or more column names in 'known' match the names of the unknowns, this is surely wrong!\n")
     }
   }
   
-  solutions <- array(0.,dim=c(fesfit$n,length(y)*length(unknown)))
+  # this needs to be defined in the environment for the extraction below to work
+  model <- fesfit$model
+  solutions <- array(0.,dim=c(fesfit$n,(length(y)*length(unknown)+1)))
+  
   for(index in 1:fesfit$n) {
     # extract the rhs of the fit function
-    model <- fit$model
     rhs <- as.list(eval(fesfit$fit[[index]]$call$formula))[[3]]
-    print(rhs)
     # construct a data frame to act as the environment to evaluate the rhs
     environ <- t(as.data.frame(fesfit$fit[[index]]$m$getPars()))
     if(length(known) > 0)
       environ <- cbind(environ,known)
-    print(environ)
     
     # this is the function which will be minimized with respect to x
     # at the points where it take the value "rootval"
