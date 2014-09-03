@@ -99,18 +99,27 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,...) {
   # extract plot boundaries
   lims <- par("usr")
   
+  # coordinates which are guaranteed to extend beyond plot boundaries
+  deltax <- abs(lims[2]-lims[1])
+  xleft <- lims[1]-deltax
+  xright <- lims[2]+deltax
+  
+  deltay <- abs(lims[4]-lims[3])
+  ybottom <- lims[3]-deltay
+  ytop <- lims[4]+deltay
+  
   if(!missing(pheno)){
     # remove any alpha value from pheno$col
     opaque.rgb <- col2rgb(pheno$col)/255
     opaquecolor <- rgb(red=opaque.rgb[1],green=opaque.rgb[2],blue=opaque.rgb[3])
     print(pheno)
-    rect( xleft=lims[1], xright=lims[2], ybottom=pheno$val-pheno$dval,
+    rect( xleft=xleft, xright=xright, ybottom=pheno$val-pheno$dval,
           ytop=pheno$val+pheno$dval, col=pheno$col, border=opaquecolor )    
 
     if(!missing(solutions)){
       # add band indicating solution
       print(solutions)
-      rect( xleft=solutions$val-solutions$dval, xright=solutions$val+solutions$dval, ybottom=lims[3],
+      rect( xleft=solutions$val-solutions$dval, xright=solutions$val+solutions$dval, ybottom=ybottom,
             ytop=pheno$val+pheno$dval, col=rgb(red=0.0,blue=1.0,green=0.0,alpha=0.2), border='blue' )
       # and add point on top
       plotwitherror( y=pheno$val, x=solutions$val, dx=solutions$dval, dy=pheno$dval, rep=T, col='blue', pch=18 )
@@ -127,7 +136,7 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,...) {
   
   # legend still missing
   if(!missing(lg)){
-    print("legend still missing")
+    legend(x=lims[1],y=lims[4],legend=lg$labels,pch=lg$pch,col=lg$pch,bty="n")
   }
   
   dev.off()

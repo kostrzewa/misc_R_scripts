@@ -277,9 +277,10 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
   
   #print(df)
-  plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution)
+  plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
+                  xlab="$\\mu_s$",ylab=obs[[1]]$texlabel)
   
-  stop()
+#   stop()
     
   mu_s <- rbind( mu_s, solution )
   
@@ -293,6 +294,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
                         pch=c(syms,18), col=c(cols,'blue') )
   
   name <- "m_K_ov_m_pi"
+  pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
   # asemble the data into the correct format
   obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
   pred.idx <- list(m.val=c(2),m.sea=vector())
@@ -300,8 +302,6 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
   pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
   
-  # even though we provide two values for x1, we get the same extrapolation twice...
-  # something's wrong with fes_extrapolate!
   fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
     
   extrapolations <- rbind(extrapolations, 
@@ -315,7 +315,13 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
                          y=phys_ratios[phys_ratios$name == name,]$val,
                          dy=phys_ratios[phys_ratios$name == name,]$dval )
-  
+
+  df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+  plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
+                  xlab="$\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)                       
+
+  stop()                
+                  
   mu_s <- rbind( mu_s, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_K_ov_m_pi" ) )
   
   lg.coords <- data.frame( x=0.021, y=3.77 )
