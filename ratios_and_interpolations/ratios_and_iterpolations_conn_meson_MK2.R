@@ -251,7 +251,6 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   # m_K_ov_f_K
   name <- "m_K_ov_f_K"
   pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.0215, y=3.2 )
   # asemble the data into the correct format
   obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
   pred.idx <- list(m.val=c(2),m.sea=vector())
@@ -278,20 +277,27 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   
   #print(df)
   plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
-                  xlab="$\\mu_s$",ylab=obs[[1]]$texlabel)
+                  xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)
   
 #   stop()
     
   mu_s <- rbind( mu_s, solution )
   
   cols <- c('black','red','forestgreen')
-  syms <- c(1,15:(15+length(mu_s$val)-1))
+  syms <- c(1,15:(15+length(mu_s$val)))
   
   legend.mu_s <- list( labels=c("Data","$\\mu_s$ from FLAG ratio","$\\mu_s$ from $m_K/f_K$","$\\mu_s$ from $m_K/m_\\pi$"),
                        pch=c(syms,18), col=c(cols,'blue') )
   legend.mu_c <- list( labels=c("Data","$\\mu_c$ from FLAG$\\cdot$HPQCD ratios",
-                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$","$\\mu_c$ from $m_D/m_\\pi$"),
-                        pch=c(syms,18), col=c(cols,'blue') )
+                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
+                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/m_\\pi$",
+                                "$\\mu_c$ from $m_D/m_\\pi$"),
+                        pch=c(syms,18), col=c(cols,'cyan','blue') )
+  
+  legend.mu_sc <- list( labels=c("Data", "$\\mu_s$ and $\\mu_c$ from FLAG/HPQCD ratios",
+                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
+                                 "$\\mu_c$ from $m_D/m_\\pi$, $\\mu_s$ from $m_K/m_\\pi$"), 
+                        pch=syms, col=cols )
   
   name <- "m_K_ov_m_pi"
   pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
@@ -318,18 +324,10 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
 
   df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
   plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
-                  xlab="$\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)                       
-
-  stop()                
+                  xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)                                     
                   
   mu_s <- rbind( mu_s, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_K_ov_m_pi" ) )
   
-  lg.coords <- data.frame( x=0.021, y=3.77 )
-  # plot
-  
-#   print(extrapolations)
-#   print(mu_s)
-#   readline("press key")
 
   # mu_c from HPQCD ratio, this will now contains three values of mu_c to which we will add a fourth by solving
   mu_c <- data.frame( val=mu_s$val*11.85, 
@@ -338,7 +336,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
                       name=sprintf("%s/%s",mu_s$name,"HPQCD"))
   
   name <- "m_D_ov_m_pi"
-#   lg.coords <- data.frame( x=0.27, y=15.2 )
+  pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
   obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
   pred.idx <- list(m.val=c(2),m.sea=vector())
   dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
@@ -357,6 +355,13 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
                          y=phys_ratios[phys_ratios$name == name,]$val,
                          dy=phys_ratios[phys_ratios$name == name,]$dval )
+                         
+  solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_K_ov_f_K")
+                         
+  df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+  plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
+                  xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(13,15))                
+                         
   mu_c <- rbind( mu_c, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_D_ov_m_pi") )
 
   readline("press key")
@@ -366,24 +371,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   print(mu_c)
   readline("press key")
   
-#   pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-#   mu_c_from_m_D <- match_mu.1D(name=name,alldat=hadron_obs,masses=charm_masses,
-#               lg=legend.mu_c,lg.coords=lg.coords,
-#               pheno=pheno,mu=mu_c, xlab="$a\\mu_c$", solve=T,
-#               xlim=c(0.27,0.36),ylim=c(12.8,15.2))
-
-  cols <- c(cols,'blue')
-  syms <- c(1,15:(15+length(mu_c$val)-1))
-  
-  legend.mu_s <- list( labels=c("Data","$\\mu_s$ from FLAG ratio","$\\mu_s$ from $m_K/f_K$","$\\mu_s$ from $m_K/m_\\pi$"),
-                       pch=syms, col=cols )
-  legend.mu_c <- list( labels=c("Data","$\\mu_c$ from FLAG$\\cdot$HPQCD ratios",
-                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$","$\\mu_c$ from $m_D/m_\\pi$"),
-                        pch=syms, col=cols )
-  legend.mu_sc <- list( labels=c("Data", "$\\mu_s$ and $\\mu_c$ from FLAG/HPQCD ratios",
-                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
-                                 "$\\mu_c$ from $m_D/m_\\pi$, $\\mu_s$ from $m_K/m_\\pi$"), 
-                        pch=syms, col=cols )
+  stop()
 
   pred <- list()
   

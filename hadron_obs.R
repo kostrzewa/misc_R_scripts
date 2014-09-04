@@ -85,16 +85,20 @@ extract.for.plot <- function(hadron_obs,x.name,x.idx) {
 
 # function which will produce a plot of data extracted from a hadron_obs object
 # a number of optional items can be added to the plot
-plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,...) {
+plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=FALSE,...) {
   require(tikzDevice)
   texfile <- sprintf("%s.tex",name) 
   pdffile <- sprintf("%s.pdf",name)
   tikz(texfile, standAlone = TRUE, width=4, height=4)
 
-  print(df)
+  
+  if(debug){
+    cat("Supllied data points\n")
+    print(df)
+  }
+  
   # set up plot
   plotwitherror( y=df$y, x=df$x, dy=df$dy, type='n', ... )
-  print("attempted empty plot")
   
   # extract plot boundaries
   lims <- par("usr")
@@ -112,17 +116,32 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,...) {
     # remove any alpha value from pheno$col
     opaque.rgb <- col2rgb(pheno$col)/255
     opaquecolor <- rgb(red=opaque.rgb[1],green=opaque.rgb[2],blue=opaque.rgb[3])
-    print(pheno)
+    
+    if(debug){
+      cat("Phenomenological value supplied\n")
+      print(pheno)
+    }
+    
     rect( xleft=xleft, xright=xright, ybottom=pheno$val-pheno$dval,
           ytop=pheno$val+pheno$dval, col=pheno$col, border=opaquecolor )    
 
     if(!missing(solutions)){
-      # add band indicating solution
-      print(solutions)
+      if(debug){
+        cat("Solutions supplied\n")
+        print(solutions)
+      }
+      
+      # add band indicating solution      
       rect( xleft=solutions$val-solutions$dval, xright=solutions$val+solutions$dval, ybottom=ybottom,
             ytop=pheno$val+pheno$dval, col=rgb(red=0.0,blue=1.0,green=0.0,alpha=0.2), border='blue' )
       # and add point on top
-      plotwitherror( y=pheno$val, x=solutions$val, dx=solutions$dval, dy=pheno$dval, rep=T, col='blue', pch=18 )
+      colours <- 'blue'
+      symbols <- 18
+      if(!missing(lg)) {
+        colours <- lg$col[length(lg$col)]
+        symbols <- lg$pch[length(lg$pch)]
+      }
+      plotwitherror( y=pheno$val, x=solutions$val, dx=solutions$dval, dy=pheno$dval, rep=T, col=colours, pch=symbols )
     }        
   }
   
@@ -130,13 +149,22 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,...) {
   plotwitherror( y=df$y, x=df$x, dy=df$dy, rep=T )
   
   if(!missing(extrapolations)){
-    print(extrapolations)
-    plotwitherror( y=extrapolations$val, dy=extrapolations$dval, x=extrapolations$x, dx=extrapolations$dx, col='red', rep=T )
+    if(debug){
+      cat("Extrapolated points supplied\n")
+      print(extrapolations)
+    }  
+    colours <- 'red'
+    symbols <- 16
+    if(!missing(lg)) {
+        colours <- lg$col[2:length(lg$col)]
+        symbols <- lg$pch[2:length(lg$pch)]
+    }
+    plotwitherror( y=extrapolations$val, dy=extrapolations$dval, x=extrapolations$x, dx=extrapolations$dx, col=colours, pch=symbols, rep=T )
   }
   
   # legend still missing
   if(!missing(lg)){
-    legend(x=lims[1],y=lims[4],legend=lg$labels,pch=lg$pch,col=lg$pch,bty="n")
+    legend(x=lims[1],y=lims[4],legend=lg$labels,pch=lg$pch,col=lg$col,bty="n")
   }
   
   dev.off()
