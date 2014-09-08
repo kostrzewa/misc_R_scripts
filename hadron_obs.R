@@ -159,7 +159,9 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=FALS
         colours <- lg$col[2:length(lg$col)]
         symbols <- lg$pch[2:length(lg$pch)]
     }
-    plotwitherror( y=extrapolations$val, dy=extrapolations$dval, x=extrapolations$x, dx=extrapolations$dx, col=colours, pch=symbols, rep=T )
+    plotwitherror( y=extrapolations$val, dy=extrapolations$dval, 
+                   x=extrapolations[extrapolations$plot.idx[1]], dx=extrapolations[extrapolations$plot.idx[2]], 
+                   col=colours, pch=symbols, rep=T )
   }
   
   # legend still missing
@@ -172,3 +174,28 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=FALS
   command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
   system(command)
 }
+
+# it is unclear to me whether this kind of function is useful...
+# because it would need to be provided with quite a number of arguments
+# fes.hadron_obs <- function(name, hadron_obs, ) {
+#   pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+#   obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+#   
+#   pred.idx <- list(m.val=c(2,3),m.sea=vector())
+#   dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+#   fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+#   pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+#   fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+# 
+#   extrapolations <- rbind(extrapolations, 
+#                           data.frame(name=name,
+#                                     val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+#                                     dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+#                                     x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+#                                     )
+#                         )
+# 
+#   df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+#   plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+#                   xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+# }

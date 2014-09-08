@@ -243,46 +243,48 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   # mu_s from FLAG ratio
   mu_s <- data.frame( val=c(0.0009*27.46), dval=c(0.44*0.0009), name="FLAG")
   
-  extrapolations <- data.frame(name=c(),val=c(),dval=c(),x=c(),dx=c())
+  #extrapolations <- data.frame(name=c(),val=c(),dval=c(),x=c(),dx=c())
+  extrapolations <- list()
   
   #print(phys_ratios)  
   #readline("press key")
   
   # m_K_ov_f_K
   name <- "m_K_ov_f_K"
-  pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  # asemble the data into the correct format
-  obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
-  pred.idx <- list(m.val=c(2),m.sea=vector())
-  dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-  fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
-  pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
-  fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
-  
-  extrapolations <- rbind(extrapolations, 
-                          data.frame(name=name,
-                                     val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
-                                     dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
-                                     x=mu_s[1,]$val, dx=mu_s[1,]$dval
-                                     )
-                         )
-  
-  fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
-                         y=phys_ratios[phys_ratios$name == name,]$val,
-                         dy=phys_ratios[phys_ratios$name == name,]$dval )
-  
-  solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_K_ov_f_K")
-                         
-  df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-  
-  #print(df)
-  plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
-                  xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)
-  
-#   stop()
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    # asemble the data into the correct format
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
     
-  mu_s <- rbind( mu_s, solution )
+    extrapolations[[length(extrapolations)+1]] <- cbind( 
+                                data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                           dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
+                                           pred,plot.idx=c('x2','dx2'))
+    print(extrapolations[[length(extrapolations)]])
+    
+    
+    fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
+                          y=phys_ratios[phys_ratios$name == name,]$val,
+                          dy=phys_ratios[phys_ratios$name == name,]$dval )
+    
+    solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name)
+                          
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)
+
+    mu_s <- rbind( mu_s, solution )
+  }
   
+  stop()
+    
+  # some definitions required by many of the plots below
   cols <- c('black','red','forestgreen')
   syms <- c(1,15:(15+length(mu_s$val)))
   
@@ -296,38 +298,40 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   
   legend.mu_sc <- list( labels=c("Data", "$\\mu_s$ and $\\mu_c$ from FLAG/HPQCD ratios",
                                  "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
+                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/m_\\pi$",
                                  "$\\mu_c$ from $m_D/m_\\pi$, $\\mu_s$ from $m_K/m_\\pi$"), 
-                        pch=syms, col=cols )
+                        pch=c(syms,18), col=c(cols,'cyan','blue') )
   
   name <- "m_K_ov_m_pi"
-  pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  # asemble the data into the correct format
-  obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
-  pred.idx <- list(m.val=c(2),m.sea=vector())
-  dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-  fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
-  pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
-  
-  fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    # asemble the data into the correct format
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
     
-  extrapolations <- rbind(extrapolations, 
-                          data.frame(name=name,
-                                     val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
-                                     dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
-                                     x=mu_s$val, dx=mu_s$dval
-                                     )
-                         )  
-  
-  fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
-                         y=phys_ratios[phys_ratios$name == name,]$val,
-                         dy=phys_ratios[phys_ratios$name == name,]$dval )
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+      
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=mu_s$val, dx=mu_s$dval
+                                      )
+                          )  
+    
+    fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
+                          y=phys_ratios[phys_ratios$name == name,]$val,
+                          dy=phys_ratios[phys_ratios$name == name,]$dval )
 
-  df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-  plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
-                  xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)                                     
-                  
-  mu_s <- rbind( mu_s, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_K_ov_m_pi" ) )
-  
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
+                    
+    mu_s <- rbind( mu_s, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name) )
+  }
 
   # mu_c from HPQCD ratio, this will now contains three values of mu_c to which we will add a fourth by solving
   mu_c <- data.frame( val=mu_s$val*11.85, 
@@ -336,122 +340,288 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
                       name=sprintf("%s/%s",mu_s$name,"HPQCD"))
   
   name <- "m_D_ov_m_pi"
-  pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
-  pred.idx <- list(m.val=c(2),m.sea=vector())
-  dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-  fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
-  pred <- data.frame(x1=mu_c$val,dx1=mu_c$dval)
-  fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_c$val,dx1=mu_c$dval)
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
-  extrapolations <- rbind(extrapolations, 
-                          data.frame(name=name,
-                                     val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
-                                     dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
-                                     x=mu_c[1:3,]$val, dx=mu_c[1:3,]$dval
-                                     )
-                         )  
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=mu_c[1:3,]$val, dx=mu_c[1:3,]$dval
+                                      )
+                          )  
 
-  fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
-                         y=phys_ratios[phys_ratios$name == name,]$val,
-                         dy=phys_ratios[phys_ratios$name == name,]$dval )
-                         
-  solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_K_ov_f_K")
-                         
-  df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-  plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
-                  xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(13,15))                
-                         
-  mu_c <- rbind( mu_c, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name="m_D_ov_m_pi") )
+    fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
+                          y=phys_ratios[phys_ratios$name == name,]$val,
+                          dy=phys_ratios[phys_ratios$name == name,]$dval )
 
-  readline("press key")
-  cat("Extrapolations and quark masses\n")
-  print(extrapolations)
-  print(mu_s)
-  print(mu_c)
-  readline("press key")
-  
-  stop()
+    solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name)
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(13,15))                
+
+    mu_c <- rbind( mu_c, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name) )
+  }
 
   pred <- list()
   
   name <- "m_D_ov_f_D"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.3, y=8.25 )
-  pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=charm_masses,
-              pheno=pheno,mu=mu_c,
-              lg=legend.mu_c,lg.coords=lg.coords,xlab="$a\\mu_c$", solve=F,
-              xlim=c(0.28,0.36))
-              
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_c$val,dx1=mu_c$dval)
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=mu_c$val, dx=mu_c$dval
+                                      )
+                          )
+
+    fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
+                          y=phys_ratios[phys_ratios$name == name,]$val,
+                          dy=phys_ratios[phys_ratios$name == name,]$dval )
+
+    solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name)
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(8,9.6), xlim=c(0.26,0.38))
+  }
+
+  # we could also add this value to the list of possible charm masses
+  # mu_c <- rbind( mu_c, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name) )
+
   name <- "m_Ds_ov_f_Ds"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.0217, y=8.2 )
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,pheno=pheno,
-                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,ylim=c(7.2,8.2))              
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(1,2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(1))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc, ylim=c(7.1,7.9))
+  }
+
   
   name <- "m_Ds_ov_m_K"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.0209, y=4.31 )
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,pheno=pheno,
-                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,ylim=c(3.7,4.31),xlim=c(0.021,0.027))  
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    
+    pred.idx <- list(m.val=c(2,3),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
+  
   
   name <- "m_Ds_ov_m_D"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.0209, y=1.07 )
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,pheno=pheno,
-                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,
-                     ylim=c(1.045,1.07),xlim=c(0.021,0.027))
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    
+    pred.idx <- list(m.val=c(2,3),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+    
+  #   print(fes.extrapolate)
 
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
+    
   name <- "f_K_ov_f_pi"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.023, y=1.22 )
-  pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=strange_masses,
-              pheno=pheno,mu=mu_s,
-              lg=legend.mu_s,lg.coords=lg.coords,xlab="$a\\mu_s$",solve=F,
-              ylim=c(1.19,1.22),xlim=c(0.023,0.027))
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    # asemble the data into the correct format
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
+    
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+    
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=mu_s$val, dx=mu_s$dval
+                                      )
+                          )
+    
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
+  }
 
   name <- "f_D_ov_f_pi"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.255, y=1.8 )
-  pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=charm_masses,
-              pheno=pheno,mu=mu_c,
-              lg=legend.mu_c,lg.coords=lg.coords,xlab="$a\\mu_c$",
-              ylim=c(1.5,1.8))                         
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_c$val[1:4],dx1=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=mu_c[1:4,]$val, dx=mu_c[1:4,]$dval
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],solutions=solution,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c)
+  }
+    
   name <- "m_D_ov_m_K"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.021, y=3.5 )
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,pheno=pheno,
-                     mu_s,mu_c,
-                     m11=0.0009,m12=charm_masses,
-                     m21=0.0009,m22=strange_masses,
-                     lg=legend.mu_sc, lg.coords=lg.coords,
-                     xval="m22", debug=T,
-                     xlim=c(0.021,0.027),
-                     ylim=c(3.3,3.9) )
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    
+    pred.idx <- list(m.val=c(2,3),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
   
   name <- "m_Ds_ov_m_pi"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.023, y=15.4 )
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,pheno=pheno,
-                     mu_s, mu_c, lg=legend.mu_sc, lg.coords=lg.coords,
-                     xlim=c(0.023,0.027),
-                     ylim=c(13.8,15.4))
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    
+    pred.idx <- list(m.val=c(2,3),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
 
   name <- "f_Ds_ov_f_pi"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.023, y=2.04 )
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,pheno=pheno,
-                     mu_s, mu_c,lg=legend.mu_sc, lg.coords=lg.coords,
-                     xlim=c(0.023,0.027),ylim=c(1.94,2.04))
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    
+    pred.idx <- list(m.val=c(2,3),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
 
   name <- "f_Ds_ov_f_D"
-  pheno <- cbind(phys_ratios[ phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-  lg.coords <- data.frame( x=0.023, y=1.3 )
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,pheno=pheno,
-                     mu_s, mu_c,lg=legend.mu_sc,lg.coords=lg.coords,
-                     xlim=c(0.023,0.027),
-                     ylim=c(1.16,1.3))
+  {
+    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    
+    pred.idx <- list(m.val=c(2,3),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations <- rbind(extrapolations, 
+                            data.frame(name=name,
+                                      val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                      dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ),
+                                      x=c(mu_s$val,mu_s$val[3]), dx=c(mu_s$dval,mu_s$dval[3])
+                                      )
+                          )
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[extrapolations$name==name,],#solutions=solution,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
 
   name <- "m_K"
   pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=strange_masses,
