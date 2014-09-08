@@ -159,12 +159,12 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=FALS
         colours <- lg$col[2:length(lg$col)]
         symbols <- lg$pch[2:length(lg$pch)]
     }
+    
     plotwitherror( y=extrapolations$val, dy=extrapolations$dval, 
-                   x=extrapolations[extrapolations$plot.idx[1]], dx=extrapolations[extrapolations$plot.idx[2]], 
+                   x=extrapolations[,extrapolations$plot.x.idx[1]],  dx=extrapolations[,extrapolations$plot.dx.idx[1]], 
                    col=colours, pch=symbols, rep=T )
   }
   
-  # legend still missing
   if(!missing(lg)){
     legend(x=lims[1],y=lims[4],legend=lg$labels,pch=lg$pch,col=lg$col,bty="n")
   }
