@@ -59,7 +59,11 @@ outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
   if(addon!=""){
     rundir <- sprintf("%s_%s",rundir,addon)
   }
-  
+
+  if(debug) {
+    cat("Trying to read from directory:", rundir,"\n")
+  }
+      
   titletext <- NULL
   if(title) {
     titletext <- rundir
