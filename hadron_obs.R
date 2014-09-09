@@ -85,7 +85,7 @@ extract.for.plot <- function(hadron_obs,x.name,x.idx) {
 
 # function which will produce a plot of data extracted from a hadron_obs object
 # a number of optional items can be added to the plot
-plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=FALSE,...) {
+plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=TRUE,...) {
   require(tikzDevice)
   texfile <- sprintf("%s.tex",name) 
   pdffile <- sprintf("%s.pdf",name)
