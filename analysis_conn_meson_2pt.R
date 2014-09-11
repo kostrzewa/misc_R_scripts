@@ -127,7 +127,9 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   meson.cor.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed)
     
   if(study.fitrange) {
-    meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,debug=debug)
+    meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,
+                             kappa=kappa,useCov=useCov,q_masses=q_masses,boot.fit=boot.fit,
+                             debug=debug)
   }
 
   if(debug) {
@@ -140,13 +142,13 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   if(debug) {
     cat("Extracting decay constant\n")
   }
-  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='continuum')#, boot.fit=T )
+  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='continuum', boot.fit=T )
   
   if(debug) {
     cat("Performing bootstrapped effective mass fit\n")
   }
   save.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed )
-  save.effectivemass <- fit.effectivemass(save.effectivemass, t1=t1, t2=t2, useCov=useCov, replace.na=TRUE)#, boot.fit=T)
+  save.effectivemass <- fit.effectivemass(save.effectivemass, t1=t1, t2=t2, useCov=useCov, replace.na=TRUE, boot.fit=T)
   
   # we need to rename the object before saving it to file so we can 
   # "load" matrixfit objects for multiple mesons at the same time
