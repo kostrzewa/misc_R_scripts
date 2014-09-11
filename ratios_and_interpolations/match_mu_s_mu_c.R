@@ -1,6 +1,9 @@
-match_mu_s_mu_c.2D <- function(name,alldat,mass_comb,pheno,mu_s,mu_c,m11,m12,m21,m22,xval="m11",debug=FALSE) {
+source("~/code/R/misc_R_scripts/fit_extrapolate_solve_MK2.R")
+
+match_mu_s_mu_c.2D <- function(name,alldat,mass_comb,pheno,mu_s,mu_c,m11,m12,m21,m22,
+                               lg,lg.coords,xval="m11",debug=FALSE,...) {
     
-  phenoband.x <- seq(0.02,0.03,length.out=50)
+  phenoband.x <- c(0.015,0.035)
   nmass <- length(mass_comb$sc[,1])
   indices <- vector(mode='numeric', length=nmass)
   xvals <- vector(mode='numeric', length=nmass)
@@ -11,9 +14,9 @@ match_mu_s_mu_c.2D <- function(name,alldat,mass_comb,pheno,mu_s,mu_c,m11,m12,m21
   
   # pre-allocate memory for list elements
   for( d in 1:length(dat) ) {
-    dat[[d]] <- data.frame(z=vector(mode='numeric',length=nmass),
-      x=vector(mode='numeric',length=nmass),
-      y=vector(mode='numeric',length=nmass))
+    dat[[d]] <- data.frame(y=vector(mode='numeric',length=nmass),
+      x1=vector(mode='numeric',length=nmass),
+      x2=vector(mode='numeric',length=nmass))
   }
   
   # loop over mass combinations to construct list of data frames
@@ -78,12 +81,12 @@ match_mu_s_mu_c.2D <- function(name,alldat,mass_comb,pheno,mu_s,mu_c,m11,m12,m21
     }
   }
 
-  fit <- fit_linear_2d( z=dat, weights=weights, debug=debug )
+  fit <- fes_fit_linear( z=dat, weights=weights, debug=debug )
   
   require(tikzDevice)
   texfile <- sprintf("%s.tex",name) 
   pdffile <- sprintf("%s.pdf",name)
-  tikz(texfile, standAlone = TRUE, width=5, height=5)
+  tikz(texfile, standAlone = TRUE, width=4, height=4)
   
   # with error propagation
   pred.tsboot <- extrapolate_2d(fit=fit,predx=mu_s$val,predy=mu_c$val,dpredx=mu_s$dval,dpredy=mu_c$dval)
@@ -93,24 +96,41 @@ match_mu_s_mu_c.2D <- function(name,alldat,mass_comb,pheno,mu_s,mu_c,m11,m12,m21
   
   # set up plot
   plotwitherror( y=alldat$val$val[indices], x=xvals, dy=alldat$val$dval[indices], 
-                 main="with error propagation", ylab=alldat$val$texlabel[indices[1]], xlab="$\\mu_s$", type='n')
+                 ylab=alldat$val$texlabel[indices[1]], xlab="$a\\mu_s$", type='n',...)
   # plot phenomenological value
-  plot.confband( y=rep(pheno$val,50), dy=rep(pheno$dval,50), x=phenoband.x, col=rgb(red=0.0,blue=0.0,green=1.0,alpha=0.3),
-                 line=F )
+  if(!missing(pheno)){
+    # remove any alpha value from pheno$col
+    color.rgb <- col2rgb(pheno$col)/255
+    bordercolor <- rgb(red=color.rgb[1],green=color.rgb[2],blue=color.rgb[3])
+    rect( xleft=phenoband.x[1], xright=phenoband.x[2], ybottom=pheno$val-pheno$dval,
+          ytop=pheno$val+pheno$dval, col=pheno$col, border=bordercolor )
+  }
+                 
   # add points on top of pheno value
   plotwitherror( y=alldat$val$val[indices], x=xvals, dy=alldat$val$dval[indices], rep=T )
   
   # this needs to be generalized!
-    plotwitherror( y=pred$z[1], x=mu_s$val[1], dx=mu_s$dval[1], dy=pred$dz[1], rep=T, col='red', pch=15)
-    plotwitherror( y=pred$z[2], x=mu_s$val[2], dx=mu_s$dval[2], dy=pred$dz[2], rep=T, col='blue', pch=17)
+  cols <- NULL
+  if(!missing(lg)){
+    # remove 'data' colour
+    cols <- lg$col[-1]
+  } else {
+    cols <- rainbow(n=length(pred$z))
+  }
+  plotwitherror( y=pred$z, x=mu_s$val, dx=mu_s$dval, dy=pred$dz, rep=T, col=cols, pch=15:18)
   
-  legend(x=0.0212,y=1.23,
-         legend=c("Measurements","Input: $mu_c = 0.0009*27.46(44)*11.85(16)$", "Input: $mu_c$ from $m_K/f_K=3.163(17)$","FLAG value"),
-         col=c('black','red','blue',rgb(red=0.0,blue=0.0,green=1.0,alpha=0.3)), 
-         pch=c(1,15,17,15))  
+  if( !missing(lg) ) {
+    legend(x=lg.coords$x,y=lg.coords$y,
+          legend=c(lg$labels,pheno$type),
+          col=c(lg$col,pheno$col), 
+          pch=c(lg$pch,pheno$pch), bg='white' )
+  }
+  
   dev.off()
   tools::texi2dvi(texfile,pdf=T)
   command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
   system(command)
   
+  cat(sprintf("Returning predictions for %s\n",name))
+  return( list(pred,mu_s,name) )
 }

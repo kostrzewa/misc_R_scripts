@@ -10,12 +10,13 @@
 
 source("~/code/R/misc_R_scripts/meson_2pt_study_fitrange.R")
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F,boot.fit=T) {
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,
+                                    debug=F,pause=F,skip=0,seed=12345,useCov=F,
+                                    read.cor=T,study.fitrange=F,boot.fit=T) {
   # masses to be used in this analysis
-#  light_masses <- c(0.0009)
+  light_masses <- c(0.0009)
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
   charm_masses <- c(0.2822,0.294,0.3058,0.3176)
-  light_masses <- c(0.0009)
   
   # for testing purposes
   #strange_masses <- c(0.021,0.023,0.025,0.027,0.031)
@@ -123,11 +124,14 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   if(debug) {
     cat("Bootsrapping cf and effectivemass\n")
   }
+#  meson.cor <- extractSingleCor.cf(meson.cor)
   meson.cor <- bootstrap.cf(meson.cor,boot.R=boot.R,boot.l=boot.l,seed=seed)
   meson.cor.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed)
     
   if(study.fitrange) {
-    meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,debug=debug)
+    meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,
+                             kappa=kappa,useCov=useCov,q_masses=q_masses,boot.fit=boot.fit,
+                             debug=debug)
   }
 
   if(debug) {
@@ -137,16 +141,20 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   save.matrixfit <- matrixfit(meson.cor, t1=t1, t2=t2, symmetrise=T, parlist=array(c(1,1,1,2,2,2), dim=c(2,3)),
                               matrix.size=3, boot.R=boot.R, boot.l=boot.l, useCov=useCov, boot.fit=T )
 
+ # save.matrixfit <- matrixfit(meson.cor, t1=t1, t2=t2, symmetrise=T, parlist=array(c(1,1), dim=c(2,1)),
+ #                             matrix.size=1, boot.R=boot.R, boot.l=boot.l, useCov=useCov, boot.fit=T )
+                              
   if(debug) {
     cat("Extracting decay constant\n")
   }
-  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='continuum')#, boot.fit=T )
+  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa,# normalisation="mpsexplicit",
+   disprel='continuum', boot.fit=T )
   
   if(debug) {
     cat("Performing bootstrapped effective mass fit\n")
   }
   save.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed )
-  save.effectivemass <- fit.effectivemass(save.effectivemass, t1=t1, t2=t2, useCov=useCov, replace.na=TRUE)#, boot.fit=T)
+  save.effectivemass <- fit.effectivemass(save.effectivemass, t1=t1, t2=t2, useCov=useCov, replace.na=TRUE, boot.fit=T)
   
   # we need to rename the object before saving it to file so we can 
   # "load" matrixfit objects for multiple mesons at the same time
@@ -164,10 +172,11 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
   rval <- data.frame(name=name, t1=t1, t2=t2, M=save.matrixfit$opt.res$par[1], dM=sd(save.matrixfit$opt.tsboot[1,]), 
                 Meff=save.effectivemass$opt.res$par[1], dMeff=sd(save.effectivemass$massfit.tsboot[,1]), 
                 P1=save.matrixfit$opt.res$par[2], dP1=sd(save.matrixfit$opt.tsboot[2,]), 
-                P2=save.matrixfit$opt.res$par[3], dP2=sd(save.matrixfit$opt.tsboot[3,]), 
+                #P2=save.matrixfit$opt.res$par[3], dP2=sd(save.matrixfit$opt.tsboot[3,]), 
                 f=save.matrixfit$fps, df=sd(save.matrixfit$fps.tsboot), 
                 qm1=q_masses$m1, qm2=q_masses$m2, kappa=kappa,
-                matrixfit.ChiSqr=save.matrixfit$opt.res$value, matrixfit.dChiSqr=sd(save.matrixfit$opt.tsboot[4,]),
+                matrixfit.ChiSqr=save.matrixfit$opt.res$value, 
+                matrixfit.dChiSqr=sd(save.matrixfit$opt.tsboot[length(save.matrixfit$opt.tsboot[,1]),]),
                 matrixfit.dof=save.matrixfit$dof,
                 effectivemass.ChiSqr=save.effectivemass$opt.res$value, effectivemass.dChiSqr=sd(save.effectivemass$massfit.tsboot[,2]),
                 effectivemass.dof=save.effectivemass$dof )

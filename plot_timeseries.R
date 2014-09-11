@@ -6,7 +6,7 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat)
       
-  uw.data <- uwerrprimary(dat)
+  uw.data <- uwerrprimary(dat,S=5)
   print(paste("uw.",name,sep=""))
   summary(uw.data)
   
@@ -23,7 +23,7 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   abline(h=uw.data$value,col="black")                                                                                                   
   
   # plot the corresponding histogram
-  hist.data <- hist(dat,xlim=yrange,main=paste("histogram",titletext),xlab=ylab)
+  hist.data <- hist(dat,xlim=yrange,main=paste("histogram",titletext),xlab=ylab, breaks=30)
   rect(ytop=max(hist.data$counts),
        ybottom=0,
        xright=uw.data$value+uw.data$dvalue,

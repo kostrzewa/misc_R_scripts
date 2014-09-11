@@ -75,7 +75,7 @@ outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
     pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
   }
 
-  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm)
+  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=10)
 
   print(onlineout)
 

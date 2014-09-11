@@ -1,11 +1,12 @@
-## TODO: propagate some relevant paramters or extract from cf/effmass
-
-meson_2pt_study_fitrange <- function(cf,effmass,name,debug=FALSE) {
+meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE,debug=FALSE,boot.fit=FALSE) {
   if(!any(class(cf) == "cf")) {
     stop("study_fitrange requires that 'cf' is of class 'cf'!\n")
   }
   if(!any(class(effmass) == "effectivemass")) {
     stop("study_fitrange requires that 'effmass' is of class 'effectivemass'!\n")
+  }
+  if(!cf$boot.samples) {
+    stop("study_fitrange requires cf to be bootstrapped!\n")
   }
   
   if(debug) {
@@ -13,6 +14,8 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,debug=FALSE) {
   }
   require("plotrix")
 
+  # extract some stuff from cf
+  
   res <- data.frame(name=c(), t1=c(), t2=c(), M=c(), dM=c(), 
                 Meff=c(), dMeff=c(), P1=c(), dP1=c(), 
                 P2=c(), dP2=c(), f=c(), df=c(), 
@@ -25,12 +28,13 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,debug=FALSE) {
       cat(T1, "to", T2, "\n")
       
       cf.matrixfit <- try(matrixfit(cf=cf, t1=T1, t2=T2, parlist=array(c(1,1,1,2,2,2), dim=c(2,3)),
-                                matrix.size=3, symmetrise=T, boot.R=boot.R, boot.l=boot.l, useCov=useCov, boot.fit=boot.fit))
+                                matrix.size=3, symmetrise=T, boot.R=cf$boot.R, boot.l=cf$boot.l, useCov=useCov, boot.fit=boot.fit))
       
       # if the fit fails, we go to the next fit range
       if( any(class(cf.matrixfit) == "try-error" )) next
       
-      cf.matrixfit <- computefps( cf.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='continuum', boot.fit=boot.fit )
+      cf.matrixfit <- computefps( cf.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, #normalisation="mpsexplicit",
+       disprel='continuum', boot.fit=boot.fit )
   
       effectivemass.fit <- try(fit.effectivemass(effmass, t1=T1, t2=T2, useCov=useCov, replace.na=TRUE, boot.fit=boot.fit))
       if( any(class(effectivemass.fit) == "try-error" )) next
@@ -61,9 +65,9 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,debug=FALSE) {
                 f=cf.matrixfit$fps, df=df, 
                 qm1=q_masses$m1, qm2=q_masses$m2, kappa=kappa,
                 matrixfit.ChiSqr=cf.matrixfit$opt.res$value, matrixfit.dChiSqr=matrixfit.dChiSqr,
-                matrixfit.dof=cf.matrixfit$dof,
+                matrixfit.dof=cf.matrixfit$dof, matrixfit.Q=cf.matrixfit$Qval,
                 effectivemass.ChiSqr=effectivemass.fit$opt.res$value, effectivemass.dChiSqr=effectivemass.dChiSqr,
-                effectivemass.dof=effectivemass.fit$dof ))
+                effectivemass.dof=effectivemass.fit$dof, effectivemass.Q=effectivemass.fit$Qval ))
     }
   }
 
@@ -81,65 +85,73 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,debug=FALSE) {
   outlier.indices <- which( res$M < tshld.lo | res$M > tshld.hi )
 
   res <- res[-outlier.indices,]
-  
+
   # assemble relevant data for convenient plotting
-  plotdf.matrix <- data.frame( name="matrixfit", label=expression(M[mtx]),
-                               val=res$M, t1=res$t1, t2=res$t2, 
+  l.matrix <- list(df=data.frame( val=res$M, t1=res$t1, t2=res$t2, 
                                ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof), 
-                               Q=(1-pchisq(df=res$matrixfit.dof,q=res$matrixfit.ChiSqr)) )
+                               Q=res$matrixfit.Q),
+                               label=as.expression(expression(M[mtx])),
+                               name="matrixfit" )
   
-  plotdf.effmass <- data.frame( name="effective", label=expression(M[eff]),
-                                val=res$Meff, t1=res$t1, t2=res$t2, 
+  l.effmass <- list(df=data.frame( val=res$Meff, t1=res$t1, t2=res$t2, 
                                 ChiSqr.ov.dof=(res$effectivemass.ChiSqr/res$effectivemass.dof), 
-                                Q=(1-pchisq(df=res$effectivemass.dof,q=res$effectivemass.ChiSqr)) )
+                                Q=res$effectivemass.Q),
+                                label=expression(M[eff]),
+                                name="matrixfit" )
+                            
 
   # produce a number of plots relating to the fit range analysis 
-  pdf(sprintf("%s.fitrange.pdf",directory),title=directory)
+  pdf(sprintf("%s.fitrange.pdf",name),title=name)
   
   # colours to add some timeslice information
   colours <- rainbow(n=cf$Time/2)
-  for( df in list( plotdf.matrix, plotdf.effmass ) ) {
-    title <- paste(df$name,name)
+  # colours to provide information about Q
+  Qcolours <- rainbow(n=100)
+  for( l in list( l.matrix, l.effmass ) ) {
+    df <- l$df
+    qtyname <- l$name
+    label <- l$label
+    title <- paste(qtyname,name)
     
-    hist(df$val,breaks=40,main=title,xlab=df$label)
+    hist(df$val,breaks=40,main=title,xlab=label)
     
-    plot(density(df$val),main=title, xlab=df$label)
+    plot(density(df$val),main=title, xlab=label)
     abline(v=mean(df$val),col='red')
     abline(v=median(df$val),col='blue')
     
     plot(y=df$ChiSqr.ov.dof,x=df$val,main=title,
-         col=colours[df$t2],ylab=expression(Chi^2 %/% d.o.f),xlab=df$label
+         col=colours[df$t2],ylab=expression(Chi^2 %/% d.o.f),xlab=label
         )
     
-    plot(y=df$Q,x=df$val,main=title,col=colours[df$t2],ylab='Q',xlab=df$label)
+    plot(y=df$Q,x=df$val,main=title,col=colours[df$t2],ylab='Q',xlab=label)
     
-    weighted.hist(x=df$val,w=df$Q,breaks=40,main=paste("weighted",title),xlab=df$label)
+    weighted.hist(x=df$val,w=df$Q,breaks=40,main=paste("weighted",title),xlab=label)
     
     # save some more lines by doing two sets of plots in one go
-    for( dat in list( data.frame(qty=df$Q,lab='Q'), data.frame(qty=df$val,lab=df$label) ) ) {
+    for( dat in list( list(qty=df$Q,lab='Q'), list(qty=df$val,lab=label) ) ) {
       plot(x=df$t2-df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab=expression(t[f] %-% t[i]),ylab=dat$lab)
       plot(x=df$t1+df$t2,y=df$Q,main=title,col=colours[df$t2],xlab=expression(t[i] %+% t[f]),ylab=dat$lab)
       plot(x=df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab=expression(t[i]),ylab=dat$lab)
       plot(x=df$t2,y=dat$qty,main=title,col=colours[df$t1],xlab=expression(t[f]),ylab=dat$lab)
     }
     
-    boxplot(df$val,main=title,ylab=df$label)
+    boxplot(df$val,main=title,ylab=label)
   }
   
   # weighted mean and variance for the matrixfit masses
-  matrixfit.mustar <- weighted.mean(plotdf.matrix$val,plotdf.matrix$Q)
-  matrixfit.varstar <- weighted.variance(plotdf.matrix$val,plotdf.matrix$Q)
+  matrixfit.mustar <- weighted.mean(l.matrix$df$val,l.matrix$df$Q)
+  matrixfit.varstar <- weighted.variance(l.matrix$df$val,l.matrix$df$Q)
   
   # weighted mean and variance for the effective masses
-  effective.mustar <- weighted.mean(plotdf.effective$val,plotdf.effective$Q)
-  effective.varstar <- weighted.variance(effective.masses,effective.Q)
+  effective.mustar <- weighted.mean(l.effmass$df$val,l.effmass$df$Q)
+  effective.varstar <- weighted.variance(l.effmass$df$val,l.effmass$df$Q)
   
   cat("Effective mass:", effective.mustar, sqrt(effective.varstar), "\n")
   cat("Matrixfit:", matrixfit.mustar, sqrt(matrixfit.varstar), "\n")  
   
-  effseq <- seq(from=min(effective.masses),to=max(effective.masses),length.out=500)
+  effseq <- seq(from=min(l.effmass$df$val),to=max(l.effmass$df$val),length.out=500)
   effnorm <- dnorm(x=effseq,mean=effective.mustar,sd=sqrt(effective.varstar))
-  matrixseq <- seq(from=min(matrixfit.masses),to=max(matrixfit.masses),length.out=500)
+  matrixseq <- seq(from=min(l.matrix$df$val),to=max(l.matrix$df$val),length.out=500)
   matrixnorm <- dnorm(x=matrixseq,mean=matrixfit.mustar,sd=sqrt(matrixfit.varstar))
   
   ylims <- c(0,max( c(effnorm,matrixnorm) ) )
@@ -150,11 +162,12 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,debug=FALSE) {
   
   lines(y=matrixnorm, x=matrixseq,lwd=3,col='red',type='l')
 
-  plot(y=plotdf.effmass$val,x=plotdf.matrix$val, main="effective vs. matrixfit", 
-       ylab="effective mass", xlab="matrixfit mass",col=colours[plotdf.effmass$t2])  
+  plot(y=l.effmass$df$val,x=l.matrix$df$val, main="effective vs. matrixfit", 
+       ylab="effective mass", xlab="matrixfit mass",col=colours[l.effmass$df$t2])  
 
-  plot(x=plotdf.matrix$t1,y=plotdf.matrix$t2,main=sprintf("chosen fitranges %s", name),
-       xlab=expression(t[i]),ylab=expression(t[f]),col=colurs[plotdf.matrix$t2])
+  # plot chosen fit ranges, indicating the Q value with a 
+  plot(x=l.matrix$df$t1,y=l.matrix$df$t2,main=sprintf("chosen fitranges %s", name),
+       xlab=expression(t[i]),ylab=expression(t[f]),col=Qcolours[as.integer(100*l.matrix$df$Q)])
 
   dev.off()
   

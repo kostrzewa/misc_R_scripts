@@ -1,4 +1,4 @@
-source("compute_ratio.R")
+source("~/code/R/misc_R_scripts/lat_phys_ratios/compute_ratio.R")
 
 # extract an observable from table produced by read.table from the format agree upon
 # ....
@@ -92,51 +92,53 @@ lat_phys_ratios <- function(filename,ratios,xlim=c(0.8,1.2),labelpos=1.15,debug=
 plot_lat_phys_ratios <- function(filename,debug=FALSE) {
   #pdf("light_strange_ratios.pdf",width=2.7,height=5)
   require(tikzDevice)
-  tikz('light_strange_ratios.tex', standAlone = TRUE, width=2.36, height=4)
+  tikz('lattice_2013_some_ratios.tex', standAlone = TRUE, width=3, height=5)
   ratios <- data.frame(dividend_name="m_pi",divisor_name="f_pi",ratio_name="$m_\\pi/f_\\pi$")
   
-  #ratios <- rbind(ratios,data.frame(dividend_name="m_K(a)",divisor_name="m_pi",ratio_name="m[K]/m[Pi] (a)"))
-  #ratios <- rbind(ratios,data.frame(dividend_name="f_K(a)",divisor_name="f_pi",ratio_name="f[K]/f[Pi] (a)"))
+#  ratios <- rbind(ratios,data.frame(dividend_name="m_K(a)",divisor_name="m_pi",ratio_name="$m_K/m_\\pi$ (a)"))
+#  ratios <- rbind(ratios,data.frame(dividend_name="m_K(a)",divisor_name="f_pi",ratio_name="$m_K/f_\\pi$ (a)"))
+#  ratios <- rbind(ratios,data.frame(dividend_name="f_K(a)",divisor_name="f_pi",ratio_name="$f_K/f_\\pi$ (a)"))
  
   ratios <- rbind(ratios,data.frame(dividend_name="m_K(b)",divisor_name="m_pi",ratio_name="$m_K/m_\\pi$"))
+#  ratios <- rbind(ratios,data.frame(dividend_name="m_K(b)",divisor_name="f_pi",ratio_name="$m_K/f_\\pi$"))
   ratios <- rbind(ratios,data.frame(dividend_name="f_K(b)",divisor_name="f_pi",ratio_name="$f_K/f_\\pi$"))
 
-  #ratios <- rbind(ratios,data.frame(dividend_name="m_N",divisor_name="m_pi",ratio_name="m[N]/m[Pi]"))
+#  ratios <- rbind(ratios,data.frame(dividend_name="m_N",divisor_name="m_pi",ratio_name="$m_N/m_\\pi$"))
   #ratios <- rbind(ratios,data.frame(dividend_name="g_A",divisor_name="unity",ratio_name="g[A]"))
   #ratios <- rbind(ratios,data.frame(dividend_name="<x>",divisor_name="unity",ratio_name="x[ud]"))
 
-  lat_phys_ratios(filename,ratios,xlim=c(0.995,1.032),labelpos=1.026,debug=debug)
+  #lat_phys_ratios(filename,ratios,xlim=c(0.995,1.032),labelpos=1.026,debug=debug)
 
-  dev.off()
-  tools::texi2dvi("light_strange_ratios.tex",pdf=T)
-  system("pdfcrop light_strange_ratios.pdf light_strange_ratios.pdf")
+  #dev.off()
+  #tools::texi2dvi("light_strange_ratios.tex",pdf=T)
+  #system("pdfcrop light_strange_ratios.pdf light_strange_ratios.pdf")
 
   #pdf("heavylight_charm_ratios.pdf",height=5,width=5)
-  tikz('heavylight_charm_ratios.tex', standAlone = TRUE, width=4.1, height=4)
+  #tikz('heavylight_charm_ratios.tex', standAlone = TRUE, width=4.1, height=4)
   #ratios <- data.frame(dividend_name="m_D(a)",divisor_name="m_pi",ratio_name="m[D]/m[Pi] (a)")
-  #ratios <- rbind(ratios,data.frame(dividend_name="f_D(a)",divisor_name="f_pi",ratio_name="f[D]/f[Pi] (a)"))
+  
+ # ratios <- rbind(ratios,data.frame(dividend_name="m_D(a)",divisor_name="m_pi",ratio_name="$m_D/m_\\pi$ (a)"))
+ # ratios <- rbind(ratios,data.frame(dividend_name="m_D(a)",divisor_name="f_pi",ratio_name="$m_D/f_\\pi$ (a)"))
+ # ratios <- rbind(ratios,data.frame(dividend_name="f_D(a)",divisor_name="f_pi",ratio_name="$f_D/f_\\pi$ (a)"))
 
-  ratios <- data.frame(dividend_name="m_D(b)",divisor_name="f_pi",ratio_name="$m_D/f_\\pi$")
+  #ratios <- rbind(ratios,data.frame(dividend_name="m_D(b)",divisor_name="m_pi",ratio_name="$m_D/m_\\pi$ (b)"))
+  ratios <- rbind(ratios,data.frame(dividend_name="m_D(b)",divisor_name="f_pi",ratio_name="$m_D/f_\\pi$"))
   ratios <- rbind(ratios,data.frame(dividend_name="f_D(b)",divisor_name="f_pi",ratio_name="$f_D/f_\\pi$"))
 
-  #ratios <- rbind(ratios,data.frame(dividend_name="m_Ds(a,a)",divisor_name="m_pi",ratio_name="m[Ds]/m[Pi] (a)"))
-  #ratios <- rbind(ratios,data.frame(dividend_name="f_Ds(a,a)",divisor_name="f_pi",ratio_name="f[Ds]/f[Pi] (a)"))
-  #ratios <- rbind(ratios,data.frame(dividend_name="f_Ds(a,a)",divisor_name="f_D(a)",ratio_name="f[Ds]/f[D] (a,a)"))
+  #ratios <- rbind(ratios,data.frame(dividend_name="m_Ds(a,a)",divisor_name="m_pi",ratio_name="$m_{D_s}/m_\\pi$ (a)"))
+  #ratios <- rbind(ratios,data.frame(dividend_name="f_Ds(a,a)",divisor_name="f_pi",ratio_name="$f_{D_s}/f_\\pi$ (a)"))
+  #ratios <- rbind(ratios,data.frame(dividend_name="f_Ds(a,a)",divisor_name="f_D(a)",ratio_name="$f_{D_s}/f_D$ (a,a)"))
    
+  #ratios <- rbind(ratios,data.frame(dividend_name="m_Ds(b,b)",divisor_name="m_pi",ratio_name="$m_{D_s}/m_\\pi$ (b,b)"))
   ratios <- rbind(ratios,data.frame(dividend_name="m_Ds(b,b)",divisor_name="f_pi",ratio_name="$m_{D_s}/f_\\pi$")) 
   ratios <- rbind(ratios,data.frame(dividend_name="f_Ds(b,b)",divisor_name="f_pi",ratio_name="$f_{D_s}/f_\\pi$")) 
-  ratios <- rbind(ratios,data.frame(dividend_name="f_Ds(b,b)",divisor_name="f_D(b)",ratio_name="$f_{D_s}/f_D$"))                     
-  
-  # ratios for the nucleon sector  
-  #ratios <- rbind(ratios,data.frame(dividend_name="m_N",divisor_name="m_pi",ratio_name="m[N]/m[Pi]"))
-  #ratios <- rbind(ratios,data.frame(dividend_name="m_N",divisor_name="f_pi",ratio_name="m[N]/f[Pi]"))
-  #ratios <- rbind(ratios,data.frame(dividend_name="g_A",divisor_name="unity",ratio_name="g[A]"))
-  #ratios <- rbind(ratios,data.frame(dividend_name="<x>",divisor_name="unity",ratio_name="x[ud]"))
 
-  lat_phys_ratios(filename,ratios,xlim=c(0.9,1.13),labelpos=1.11,debug=debug)
+  lat_phys_ratios(filename,ratios,xlim=c(0.8,1.2),labelpos=1.15,debug=debug)
 
   dev.off()
-  tools::texi2dvi("heavylight_charm_ratios.tex",pdf=T)
-  system("pdfcrop heavylight_charm_ratios.pdf heavylight_charm_ratios.pdf")
+  #tools::texi2dvi("heavylight_charm_ratios.tex",pdf=T)
+  #system("pdfcrop heavylight_charm_ratios.pdf heavylight_charm_ratios.pdf")
+  tools::texi2dvi("lattice_2013_some_ratios.tex",pdf=T)
+  system("pdfcrop lattice_2013_some_ratios.pdf lattice_2013_some_ratios.pdf")
 }
 
