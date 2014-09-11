@@ -9,17 +9,11 @@
 \author{Bartosz Kostrzewa}
 \title{Documentation: meson\_2pt analysis tools}
 \begin{document}
-This document describes the design of the library of R scripts for the analysis
-of meson 2 point functions. The software is structured as a set of modules which
-are to be called from within a user-defined driver function for which an example
-is provided with the tool. This driver function loads .Rdata files produced by
-the {\ttfamily analysis\_conn\_meson\_2pt} script and organizes the analysis
-results into a list of lists of the data type {\ttfamily hadron\_obs}.
+This document describes the design of the library of R scripts for the analysis of meson 2 point functions. The software is structured as a set of modules which are to be called from within a user-defined driver function for which an example is provided with the tool.
+This driver function loads .Rdata files produced by the {\ttfamily analysis\_conn\_meson\_2pt} script and organizes the analysis results into a list of lists of the data type {\ttfamily hadron\_obs}.
 
 \begin{section}{{\ttfamily hadron\_obs} data type}
-This is a list of lists, the outermost index of which is numbered. Each list
-element contains the elements: {\tt name, texlabel, m.val, m.sea, mean, err,
-boot}
+This is a list of lists, the outermost index of which is numbered. Each list element contains the elements: {\tt name, texlabel, m.val, m.sea, mean, err, boot}
 
 { \centering
 \begin{tabular}{|p{0.25\linewidth}|p{0.65\linewidth}|}
@@ -27,12 +21,9 @@ boot}
 \multicolumn{2}{|c|}{ {\tt hadron\_obs} data type } \\
 \hline \hline \textbf{member name} & \textbf{description} \\ \hline
 {\tt name} & string, name of the quantity being stored \\ 
-{\tt texlabel}  & string, appropriately escaped (La)TeX code for labelling this
-quantity  \\ 
-{\tt m.val} & numeric vector of valence quark masses that this quantity depends
-on \\
-{\tt m.sea} & numeric vector of sea quark masses that this quantity depends on
-\\
+{\tt texlabel}  & string, appropriately escaped (La)TeX code for labelling this quantity  \\ 
+{\tt m.val} & numeric vector of valence quark masses that this quantity depends on \\
+{\tt m.sea} & numeric vector of sea quark masses that this quantity depends on \\
 {\tt mean} & single number, mean of the quantity \\
 {\tt err} & single number, error on the quantity \\
 {\tt boot} & numeric vector of bootstrap samples of this quantity \\
@@ -41,9 +32,9 @@ on \\
 } % \centering
 
 \begin{subsection}{{\tt select.hadron\_obs} function}
-The flexibility of the list data type has the drawback that R's nice indexing
-methods fail to work here. This function is used to extract a subset from the
-complete list.
+The flexibility of the list data type has the drawback that R's nice indexing methods fail to work here.
+An alternative would have been to still use a data frame and simply accomodate for a dependence on $N$ valence and $M$ sea quark masses and fill slots that are not used with {\tt NA}.
+This function is used to extract a subset from the complete list.
 
 { \centering
 \begin{tabular}{|p{0.25\linewidth}|p{0.65\linewidth}|}
@@ -52,11 +43,9 @@ complete list.
 \hline \hline \textbf{argument name} & \textbf{description} \\
 \hline {\tt hadron\_obs} & object of the {\tt hadron\_obs} type \\ 
 {\tt by} & string, name of the field that the selection should be based on \\ 
-{\tt filter} & depends on data type of the field specified by {\tt by}, the
-value that should be matched \\ 
+{\tt filter} & depends on data type of the field specified by {\tt by}, the value that should be matched \\ 
 \hline \hline
-\textbf{return value} & if there are no matches then this returns an empty list,
-otherwise an object of class {\tt hadron\_obs} \\
+\textbf{return value} & if there are no matches then this returns an empty list, otherwise an object of class {\tt hadron\_obs} \\
 \hline
 \end{tabular}
 } % \centering
@@ -64,10 +53,8 @@ otherwise an object of class {\tt hadron\_obs} \\
 \end{subsection}
 
 \begin{subsection}{ {\tt as.data.frame.hadron\_obs} function }
-{\tt select.hadron\_obs} can be used to extract a consistent set of data; i.e.,
-one where each list element has named elements of the same length, say e.g. the
-same number of valence masses). This function can be used to transform the list
-into a data frame which can then be passed on to actual analysis routines.
+{\tt select.hadron\_obs} can be used to extract a consistent set of data; i.e., one where each list element has named elements of the same length, say e.g. the same number of valence masses).
+This function can be used to transform the list into a data frame which can then be passed on to actual analysis routines.
 
 { \centering
 \begin{tabular}{|p{0.25\linewidth}|p{0.65\linewidth}|}
@@ -87,28 +74,23 @@ into a data frame which can then be passed on to actual analysis routines.
 \begin{section}{The F.E.S. utility functions}
 
 \begin{subsection}{ {\tt fes\_fit\_linear} function }
-Routine which carries out a linear fit in an arbitrary number of variables of
-the form:
+Routine which carries out a linear fit in an arbitrary number of variables of the form:
 
 \begin{equation}
 y=a_1 x_1 + a_2 x_2 + \ldots + a_n x_n + c.
 \end{equation}
 
-The fit function is constructed automatically based on the number of columns in
-the {\tt dat} argument.
+The fit function is constructed automatically based on the number of columns in the {\tt dat} argument.
 
 { \centering
 \begin{tabular}{|p{0.25\linewidth}|p{0.65\linewidth}|}
 \hline
 \multicolumn{2}{|c|}{ {\tt as.data.frame.hadron\_obs} } \\
 \hline \hline \textbf{argument name} & \textbf{description} \\ \hline
-{\tt dat} & List of data frames, the outermost index of which enumerates the
-bootstrap samples.
-The data frames must have column names: {\tt y, x1, x2, \ldots, xN, weight}, in
-this order. \\
+{\tt dat} & List of data frames, the outermost index of which enumerates the bootstrap samples.
+The data frames must have column names: {\tt y, x1, x2, \ldots, xN, weight}, in this order. \\
 \hline 
-\textbf{return value} & Object of the classes {\tt fesfit} and {\tt
-fesfit\_linear}. \\
+\textbf{return value} & Object of the classes {\tt fesfit} and {\tt fesfit\_linear}. \\
 \hline
 \end{tabular}
 } % \centering
@@ -116,8 +98,7 @@ fesfit\_linear}. \\
 \end{subsection}
 
 \begin{subsection}{ {\tt fesfit\_linear} data type }
-Return value data type of the {\tt fes\_fit\_linear} function consisting of the
-elements: {\tt fit}, {\tt n} and {\tt model}.
+Return value data type of the {\tt fes\_fit\_linear} function consisting of the elements: {\tt fit}, {\tt n} and {\tt model}.
 
 { \centering
 \begin{tabular}{|p{0.25\linewidth}|p{0.65\linewidth}|}
@@ -125,10 +106,8 @@ elements: {\tt fit}, {\tt n} and {\tt model}.
 \multicolumn{2}{|c|}{ {\tt fesfit\_linear} data type } \\
 \hline \hline \textbf{member name} & \textbf{description} \\ \hline
 {\tt fit} & numbered list of {\tt nls} objects \\ 
-{\tt n}  & number of elements in {\tt fit}, specifies for how many bootstrap
-samples the given fit worked \\ 
-{\tt model} & string of the form {\tt y $\sim$ a1*x2 + a2*x2 + \ldots + c} which
-can be passed to {\tt as.formula} \\
+{\tt n}  & number of elements in {\tt fit}, specifies for how many bootstrap samples the given fit worked \\ 
+{\tt model} & string of the form {\tt y $\sim$ a1*x2 + a2*x2 + \ldots + c} which can be passed to {\tt as.formula} \\
 \hline 
 \end{tabular}
 } % \centering
@@ -137,11 +116,7 @@ can be passed to {\tt as.formula} \\
 
 \begin{subsection}{ {\tt fes\_extrapolate} function }
 
-Taking a fit of the {\tt fesfit} family and some predictor variables (possibly
-also errors) as input, this function uses the {\tt
-propagate}\footnote{\url{
-http://cran.r-project.org/web/packages/propagate/index.html}} library by Andrej
-Spiess to extrapolate the model with full error propagation.
+Taking a fit of the {\tt fesfit} family and some predictor variables (possibly also errors) as input, this function uses the {\tt propagate}\footnote{\url{http://cran.r-project.org/web/packages/propagate/index.html}} library by Andrej Spiess to extrapolate the model with full error propagation.
 
 { \centering
 \begin{tabular}{|p{0.25\linewidth}|p{0.65\linewidth}|}
@@ -164,13 +139,9 @@ have the same geometry as the data frame of predictor variables. \\
 \end{subsection}
 
 \begin{subsection}{ {\tt fes\_solve} }
-Given an object of class {\tt fesfit}, this function will attempt to find
-predictor variables to match a given value $y+dy$ of the model response. The
-error {\tt dy} on the value {\tt y} is optional. Given that a model can have an
-arbitrary number of predictor variables, this function is passed the {\tt known}
-and {\tt unknown} arguments which specify which predictor variables should be
-kept constant (or which are "known", in other words) and which ones should be
-attempted to be found. The function will then attempt to solve the equation:
+Given an object of class {\tt fesfit}, this function will attempt to find predictor variables to match a given value $y+dy$ of the model response.
+The error {\tt dy} on the value {\tt y} is optional.
+Given that a model can have an arbitrary number of predictor variables, this function is passed the {\tt known} and {\tt unknown} arguments which specify which predictor variables should be kept constant (or which are "known", in other words) and which ones should be attempted to be found. The function will then attempt to solve the equation:
 \begin{equation}
 	| f(x_1, x_2, \ldots , x_n) - y | = 0,
 \end{equation}
@@ -182,13 +153,9 @@ for each value of $y$ supplied.
 \multicolumn{2}{|c|}{ {\tt fes\_solve} } \\
 \hline \hline \textbf{argument name} & \textbf{description} \\
 \hline {\tt fesfit} & object of the {\tt fesfit} class \\ 
-{\tt unknown} & Vector of strings indicating the names (i.e. "x1", "x2") of the
-predictor variables which should be searched for. \\ 
-{\tt known} & (optional) Data frame with a single row corresponding to values of
-some of the predictor variables which should be kept fixed while solving for the
-unknowns. This has to be supplied with the correct column names. \\ 
-{\tt y} & Numeric vector giving the values of the response variable of the model
-at which the {\tt unknown} predictor variables should be found. \\
+{\tt unknown} & Vector of strings indicating the names (i.e. "x1", "x2") of the predictor variables which should be searched for. \\ 
+{\tt known} & (optional) Data frame with a single row corresponding to values of some of the predictor variables which should be kept fixed while solving for the unknowns. This has to be supplied with the correct column names. \\
+{\tt y} & Numeric vector giving the values of the response variable of the model at which the {\tt unknown} predictor variables should be found. \\
 {\tt dy} & Errors on the values {\tt y}. \\
 {\tt debug} & boolean specifying if debugging information should be printed \\
 \hline \hline
@@ -202,8 +169,7 @@ at which the {\tt unknown} predictor variables should be found. \\
 \end{section} 
 
 
-\begin{section}{Fitting and Inter-/Extrapolating observables, finding quark
-masses corresponding to a given value of the observable, plotting}
+\begin{section}{Fitting and Inter-/Extrapolating observables, finding quark masses corresponding to a given value of the observable, plotting}
 
 \begin{subsection}{{\tt fit.hadron\_obs} function}
 aa
