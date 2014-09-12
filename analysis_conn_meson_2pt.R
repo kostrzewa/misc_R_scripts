@@ -10,7 +10,7 @@
 
 source("~/code/R/misc_R_scripts/meson_2pt_study_fitrange.R")
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F,boot.fit=T) {
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
   # masses to be used in this analysis
 #  light_masses <- c(0.0009)
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
@@ -80,8 +80,8 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
                                   skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
-                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange,
-                                  boot.fit=boot.fit)
+                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange
+                                 )
           
       analysis_results <- rbind(analysis_results, result)
     }
@@ -92,7 +92,7 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
 
 do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,
                               debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=10,
-                              seed=12345,useCov=F,read.cor=T,study.fitrange=F,boot.fit=T) {
+                              seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
 
   if(debug) {
     cat(sprintf("Doing %s meson analysis in %s, observable %d\n",name,directory,observable))
@@ -109,7 +109,10 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
     cmicor <- readcmidatafiles(files[skip+1:length(files)])
     save(cmicor,file=sprintf("%s.cor.Rdata",directory))
   } else {
-    load(sprintf("%s.cor.Rdata",directory))
+    archivename <- sprintf("%s.cor.Rdata",directory)
+    wmesg <- sprintf("Warning, archived correlators are being read\ from: %s\nIf you changed a relevant option like 'skip' or the size of the ensemble, then you should specify 'read.cor=TRUE'!\n",archivename)
+    cat(wmesg)
+    load(archivename)
   }
   
   if(debug) {
@@ -128,7 +131,7 @@ do_meson_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masse
     
   if(study.fitrange) {
     meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,
-                             kappa=kappa,useCov=useCov,q_masses=q_masses,boot.fit=boot.fit,
+                             kappa=kappa,useCov=useCov,q_masses=q_masses,boot.fit=F,
                              debug=debug)
   }
 
