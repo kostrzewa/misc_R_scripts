@@ -9,10 +9,26 @@
 \author{Bartosz Kostrzewa}
 \title{Documentation: meson\_2pt analysis tools}
 \begin{document}
-This document describes the design of the library of R scripts for the analysis of meson 2 point functions. The software is structured as a set of modules which are to be called from within a user-defined driver function for which an example is provided with the tool.
-This driver function loads .Rdata files produced by the {\ttfamily analysis\_conn\_meson\_2pt} script and organizes the analysis results into a list of lists of the data type {\ttfamily hadron\_obs}.
+\maketitle
 
-\begin{section}{{\ttfamily hadron\_obs} data type}
+\begin{section}{Introduction}
+This document describes the design of a library of R scripts for the analysis of meson 2 point functions. The software is structured as a set of modules which are to be called from within a user-defined driver function for which an example is provided with the tool.
+This driver function loads .Rdata files produced by the {\ttfamily analysis\_conn\_meson\_2pt} script and organizes the analysis results into a list of lists of the data type {\ttfamily hadron\_obs}.
+\end{section} %Introduction
+
+\begin{section}{Dependencies}
+ The dependencies on other R packages of this toolset are as follows:
+\begin{itemize}
+  \item the {\tt hadron} package\footnote{\url{https://github.com/etmc/hadron}} by the European Twisted Mass Collaboration is used for a number of reasons
+  \item the {\tt tikzDevice} package\footnote{\url{https://github.com/yihui/tikzDevice}} is used to embellish the plots with \LaTeX labels
+  \item the {\tt propagate } package\footnote{\url{http://cran.r-project.org/web/packages/propagate/index.html}} by Andrej Spiess is used for error propagation using second-order Taylor expansions for {\tt nls} fits through the {\tt predictNLS} function
+\end{itemize}
+
+\end{section} %Dependencies
+
+\begin{section}{Functionalities}
+
+\begin{subsection}{{\ttfamily hadron\_obs} data type}
 This is a list of lists, the outermost index of which is numbered. Each list element contains the elements: {\tt name, texlabel, m.val, m.sea, mean, err, boot}
 
 { \centering
@@ -21,7 +37,7 @@ This is a list of lists, the outermost index of which is numbered. Each list ele
 \multicolumn{2}{|c|}{ {\tt hadron\_obs} data type } \\
 \hline \hline \textbf{member name} & \textbf{description} \\ \hline
 {\tt name} & string, name of the quantity being stored \\ 
-{\tt texlabel}  & string, appropriately escaped (La)TeX code for labelling this quantity  \\ 
+{\tt texlabel}  & string, appropriately escaped \LaTeX\, code for labelling this quantity on plots \\
 {\tt m.val} & numeric vector of valence quark masses that this quantity depends on \\
 {\tt m.sea} & numeric vector of sea quark masses that this quantity depends on \\
 {\tt mean} & single number, mean of the quantity \\
@@ -31,7 +47,7 @@ This is a list of lists, the outermost index of which is numbered. Each list ele
 \end{tabular}
 } % \centering
 
-\begin{subsection}{{\tt select.hadron\_obs} function}
+\begin{subsubsection}{{\tt select.hadron\_obs} function}
 The flexibility of the list data type has the drawback that R's nice indexing methods fail to work here.
 An alternative would have been to still use a data frame and simply accomodate for a dependence on $N$ valence and $M$ sea quark masses and fill slots that are not used with {\tt NA}.
 This function is used to extract a subset from the complete list.
@@ -50,9 +66,13 @@ This function is used to extract a subset from the complete list.
 \end{tabular}
 } % \centering
 
-\end{subsection}
+\textbf{Example}
 
-\begin{subsection}{ {\tt as.data.frame.hadron\_obs} function }
+\
+
+\end{subsubsection}
+
+\begin{subsubsection}{ {\tt as.data.frame.hadron\_obs} function }
 {\tt select.hadron\_obs} can be used to extract a consistent set of data; i.e., one where each list element has named elements of the same length, say e.g. the same number of valence masses).
 This function can be used to transform the list into a data frame which can then be passed on to actual analysis routines.
 
@@ -67,13 +87,16 @@ This function can be used to transform the list into a data frame which can then
 \end{tabular}
 } % \centering
 
-\end{subsection}
+\end{subsubsection}
 
-\end{section} %meson_obs
+\end{subsection} %hadron_obs
 
-\begin{section}{The F.E.S. utility functions}
+\begin{subsection}{The F.E.S. utility functions}
 
-\begin{subsection}{ {\tt fes\_fit\_linear} function }
+These are a general set of functions for fitting, value matching and extrapolations with error propagation and with an emphasis on carrying out these fits on resampled data.
+The {\tt hadron\_obs} data type comes with a function which prepares data for passing to F.E.S. functions. 
+
+\begin{subsubsection}{ {\tt fes\_fit\_linear} function }
 Routine which carries out a linear fit in an arbitrary number of variables of the form:
 
 \begin{equation}
@@ -85,7 +108,7 @@ The fit function is constructed automatically based on the number of columns in 
 { \centering
 \begin{tabular}{|p{0.25\linewidth}|p{0.65\linewidth}|}
 \hline
-\multicolumn{2}{|c|}{ {\tt as.data.frame.hadron\_obs} } \\
+\multicolumn{2}{|c|}{ {\tt fes\_fit\_linear} } \\
 \hline \hline \textbf{argument name} & \textbf{description} \\ \hline
 {\tt dat} & List of data frames, the outermost index of which enumerates the bootstrap samples.
 The data frames must have column names: {\tt y, x1, x2, \ldots, xN, weight}, in this order. \\
@@ -95,9 +118,9 @@ The data frames must have column names: {\tt y, x1, x2, \ldots, xN, weight}, in 
 \end{tabular}
 } % \centering
 
-\end{subsection}
+\end{subsubsection}
 
-\begin{subsection}{ {\tt fesfit\_linear} data type }
+\begin{subsubsection}{ {\tt fesfit\_linear} data type }
 Return value data type of the {\tt fes\_fit\_linear} function consisting of the elements: {\tt fit}, {\tt n} and {\tt model}.
 
 { \centering
@@ -112,9 +135,9 @@ Return value data type of the {\tt fes\_fit\_linear} function consisting of the 
 \end{tabular}
 } % \centering
 
-\end{subsection}
+\end{subsubsection}
 
-\begin{subsection}{ {\tt fes\_extrapolate} function }
+\begin{subsubsection}{ {\tt fes\_extrapolate} function }
 
 Taking a fit of the {\tt fesfit} family and some predictor variables (possibly also errors) as input, this function uses the {\tt propagate}\footnote{\url{http://cran.r-project.org/web/packages/propagate/index.html}} library by Andrej Spiess to extrapolate the model with full error propagation.
 
@@ -136,9 +159,9 @@ have the same geometry as the data frame of predictor variables. \\
 \end{tabular}
 }
 
-\end{subsection}
+\end{subsubsection}
 
-\begin{subsection}{ {\tt fes\_solve} }
+\begin{subsubsection}{ {\tt fes\_solve} }
 Given an object of class {\tt fesfit}, this function will attempt to find predictor variables to match a given value $y+dy$ of the model response.
 The error {\tt dy} on the value {\tt y} is optional.
 Given that a model can have an arbitrary number of predictor variables, this function is passed the {\tt known} and {\tt unknown} arguments which specify which predictor variables should be kept constant (or which are "known", in other words) and which ones should be attempted to be found. The function will then attempt to solve the equation:
@@ -164,17 +187,19 @@ for each value of $y$ supplied.
 \end{tabular}
 } %\centering
 
-\end{subsection}
+\end{subsubsection} %fes_solve
 
-\end{section} 
+\end{subsection} % F,E,S utility functions 
 
 
-\begin{section}{Fitting and Inter-/Extrapolating observables, finding quark masses corresponding to a given value of the observable, plotting}
+\begin{subsection}{Fitting and Inter-/Extrapolating observables, finding quark masses corresponding to a given value of the observable, plotting}
 
-\begin{subsection}{{\tt fit.hadron\_obs} function}
+\begin{subsubsection}{{\tt fit.hadron\_obs} function}
 aa
-\end{subsection}
+\end{subsubsection}
 
-\end{section} %fit extrapolate etc..
+\end{subsection} %fit extrapolate etc..
+
+\end{section} %functionalities
 
 \end{document}
