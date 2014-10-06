@@ -2,18 +2,21 @@ library('propagate')
 
 source("/home/bartek/code/R/misc_R_scripts/fit_extrapolate_solve_MK2.R")
 source("~/code/R/misc_R_scripts/hadron_obs.R")
-source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/utils.R")
 source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/utils_MK2.R")
-source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/mK_ov_fK.R")
-source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/match_mu_s_mu_c.R")
-source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/match_mu.R") 
+source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/definitions.R")
 
+# this is a template for a driver script for the analysis involving interpolations
+# in the strange and charm quark masses and subsequent extra-/interpolations
+# for any other quantities
 
-# TODO: move entire toolset from m1/m2 mass specification to 
+# in practice one would modify 
 
-ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=T,overview=T) {
+ratios_and_iterpolations_conn_meson_mk2 <- function(analyses="all",debug=F,recompute=T,loadraw=T,overview=T) {
   # certain functionality relies on stuff being strings
   options(stringsAsFactors = FALSE)
+
+
+  ### EDIT FROM HERE
   # masses to be used in this analysis
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
   charm_masses <- c(0.2822,0.294,0.3058,0.3176)
@@ -32,56 +35,24 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
                      sc=expand.grid( m1=strange_masses, m2=charm_masses) )               
   
   # File (and object) names of the data to be loaded
-  names <- list(ll_c=sprintf("ll_c.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
+  datanames <- list(ll_c=sprintf("ll_c.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
                 #ll_na=sprintf("lln_u_%g-d_%g",mass_comb$ll$m1,mass_comb$ll$m2),
                 #ll_nb=sprintf("lln_d_%g-u_%g",mass_comb$ll$m1,mass_comb$ll$m2),
                 ls_c=sprintf("ls_c.m%g.m%g.matrixfit",mass_comb$ls$m1,mass_comb$ls$m2),
                 lc_c=sprintf("lc_c.m%g.m%g.matrixfit",mass_comb$lc$m1,mass_comb$lc$m2),
                 sc_c=sprintf("sc_c.m%g.m%g.matrixfit",mass_comb$sc$m1,mass_comb$sc$m2) )
 
+  ### TO HERE
+  
   # single quantities
-  quants <- NULL
-  quants[["m_pi"]] <- list(name="m_pi", texlabel="$m_\\pi$", m1=light_masses, m2=light_masses, datanames=names$ll_c, type="mps" )
-  quants[["m_K"]] <- list(name="m_K", texlabel="$m_K$", m1=light_masses, m2=strange_masses, datanames=names$ls_c, type="mps" )
-  quants[["m_D"]] <- list(name="m_D", texlabel="$m_D$", m1=light_masses, m2=charm_masses, datanames=names$lc_c, type="mps" )
-  quants[["m_Ds"]] <- list(name="m_Ds", texlabel="$m_{D_s}$", m1=strange_masses, m2=charm_masses, datanames=names$sc_c, type="mps" )
-  quants[["f_pi"]] <- list(name="f_pi", texlabel="$f_\\pi$", m1=light_masses, m2=light_masses, datanames=names$ll_c, type="fps" )
-  quants[["f_K"]] <- list(name="f_K", texlabel="$f_K$", m1=light_masses, m2=strange_masses, datanames=names$ls_c, type="fps" )
-  quants[["f_D"]] <- list(name="f_D", texlabel="$f_D$", m1=light_masses, m2=charm_masses, datanames=names$lc_c, type="fps" )
-  quants[["f_Ds"]] <- list(name="f_Ds", texlabel="$f_{D_s}$", m1=strange_masses, m2=charm_masses, datanames=names$sc_c, type="fps" )
+  quants <- define.meson.quants(datanames=datanames,light_masses=light_masses,strange_masses=strange_masses,charm_masses=charm_masses)
 
   # the different ratios that we would like to compute
-  ratios <- NULL
-  ratios[["m_pi_ov_f_pi"]] <- list( name="m_pi_ov_f_pi", texlabel="$m_\\pi/f_\\pi$", dividend=quants[["m_pi"]], divisor=quants[["f_pi"]])
-  ratios[["m_K_ov_f_K"]] <- list( name="m_K_ov_f_K", texlabel="$m_K/f_K$", dividend=quants[["m_K"]], divisor=quants[["f_K"]])
-  ratios[["m_D_ov_f_D"]] <- list( name="m_D_ov_f_D", texlabel="$m_D/f_D$", dividend=quants[["m_D"]], divisor=quants[["f_D"]])
-  ratios[["m_Ds_ov_f_Ds"]] <- list( name="m_Ds_ov_f_Ds", texlabel="$m_{D_s}/f_{D_s}$", dividend=quants[["m_Ds"]], divisor=quants[["f_Ds"]])
+  ratios <- define.meson.ratios(quants=quants)
 
-  ratios[["m_K_ov_f_pi"]] <- list( name="m_K_ov_f_pi", texlabel="$m_K/f_\\pi$", dividend=quants[["m_K"]], divisor=quants[["f_pi"]])
-  ratios[["m_D_ov_f_pi"]] <- list( name="m_D_ov_f_pi", texlabel="$m_D/f_\\pi$", dividend=quants[["m_D"]], divisor=quants[["f_pi"]])
-  ratios[["m_Ds_ov_f_pi"]] <- list( name="m_Ds_ov_f_pi", texlabel="$m_{D_s}/f_\\pi$", dividend=quants[["m_Ds"]], divisor=quants[["f_pi"]])
-
-  ratios[["m_Ds_ov_m_D"]] <- list( name="m_Ds_ov_m_D", texlabel="$m_{D_s}/m_D$", dividend=quants[["m_Ds"]], divisor=quants[["m_D"]])
-  ratios[["m_Ds_ov_m_K"]] <- list( name="m_Ds_ov_m_K", texlabel="$m_{D_s}/m_K$", dividend=quants[["m_Ds"]], divisor=quants[["m_K"]])
-  ratios[["m_Ds_ov_m_pi"]] <- list( name="m_Ds_ov_m_pi", texlabel="$m_{D_s}/m_\\pi$", dividend=quants[["m_Ds"]], divisor=quants[["m_pi"]])
-
-  ratios[["m_D_ov_m_K"]] <- list( name="m_D_ov_m_K", texlabel="$m_{D}/m_K$", dividend=quants[["m_D"]], divisor=quants[["m_K"]])
-  ratios[["m_D_ov_m_pi"]] <- list( name="m_D_ov_m_pi", texlabel="$m_{D}/m_\\pi$", dividend=quants[["m_D"]], divisor=quants[["m_pi"]])
-
-  ratios[["m_K_ov_m_pi"]] <- list( name="m_K_ov_m_pi", texlabel="$m_K/m_\\pi$", dividend=quants[["m_K"]], divisor=quants[["m_pi"]])
-
-  ratios[["f_K_ov_f_pi"]] <- list( name="f_K_ov_f_pi", texlabel="$f_K/f_\\pi$", dividend=quants[["f_K"]], divisor=quants[["f_pi"]])
-  ratios[["f_D_ov_f_pi"]] <- list( name="f_D_ov_f_pi", texlabel="$f_D/f_\\pi$", dividend=quants[["f_D"]], divisor=quants[["f_pi"]])
-  ratios[["f_Ds_ov_f_pi"]] <- list( name="f_Ds_ov_f_pi", texlabel="$f_{D_s}/f_\\pi$", dividend=quants[["f_Ds"]], divisor=quants[["f_pi"]])
-
-  ratios[["f_D_ov_f_K"]] <- list( name="f_D_ov_f_K", texlabel="$f_D/f_K$", dividend=quants[["f_D"]], divisor=quants[["f_K"]])
-  ratios[["f_Ds_ov_f_K"]] <- list( name="f_Ds_ov_f_K", texlabel="$f_{D_s}/f_K$", dividend=quants[["f_Ds"]], divisor=quants[["f_K"]])
-
-  ratios[["f_Ds_ov_f_D"]] <- list( name="f_Ds_ov_f_D", texlabel="$f_{D_s}/f_D$", dividend=quants[["f_Ds"]], divisor=quants[["f_D"]])
-
+  # read all the data files
   if(loadraw || recompute) {
-    # read all the data files
-    for( n in names ) {
+    for( n in datanames ) {
       for( file in n ) {
         file <- sprintf("%s.Rdata",file)
         if(debug) cat("Loading" ,file,"\n")
@@ -90,122 +61,17 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
     }
   }
 
+  # now we compute expectation values and errors from the bootstrap samples for the "quants" and "ratios"
   if(recompute) {
-  
-    hadron_obs <- construct.empty.hadron_obs()
-    
-    for( qty in quants ) {
-      for( objname in qty$datanames ) {
-        dat <- get.obs.tsboot_mk2(obj=get(objname), m.sea=m.sea, type=qty$type)
-        hadron_obs[[length(hadron_obs)+1]] <- compute.quant_mk2( name=qty$name, texlabel=qty$texlabel, dat=dat )
-      }
+    if(debug) {
+      cat("ratios_and_interpolations_conn_meson: computing hadron_obs!\n")
     }
-    
-    for( r in ratios ) {
-      # there is a special case if the data of dividend and divisor are exactly the same,
-      # we don't need x*x cases but only x! This would be the case for a meson mass
-      # and its decay constant, for example
-      if(debug) cat("Computing ratio", r$name, "\n")
-      if( all(r$dividend$datanames == r$divisor$datanames) ) {
-        for( objname in r$dividend$datanames ) {
-          dividend <- get.obs.tsboot_mk2(obj=get(objname), type=r$dividend$type, m.sea=m.sea )
-          divisor <- get.obs.tsboot_mk2(obj=get(objname), type=r$divisor$type, m.sea=m.sea )
-          hadron_obs[[length(hadron_obs)+1]] <- compute.ratio_mk2(name=r$name,texlabel=r$texlabel,dividend=dividend,divisor=divisor)
-        }
-      } else {
-
-        # when any pair of mass vectors from the two observables are the same
-        # we need to ensure that "off-diagonal" elements, where say the strange
-        # mass for the divisor and dividend are different, are skipped!
-        # this would be the case, for instance for a ratio involving the kaon
-        # and the D_s meson
-         m1m1 <- FALSE
-         m1m2 <- FALSE
-         m2m1 <- FALSE
-         m2m2 <- FALSE
-         if( all(r$dividend$m1 == r$divisor$m1) ) {
-           m1m1 <- TRUE
-         } else if( all(r$dividend$m1 == r$divisor$m2) ) {
-          m1m2 <- TRUE
-         } else if( all(r$dividend$m2 == r$divisor$m1) ) {
-           m2m1 <- TRUE
-         } else if( all(r$dividend$m2 == r$divisor$m2) ) {
-           m2m2 <- TRUE
-         }
-
-        for( dividend.objname in r$dividend$datanames ) {
-          for( divisor.objname in r$divisor$datanames ) {
-            dividend <- get.obs.tsboot_mk2(obj=get(dividend.objname), type=r$dividend$type, m.sea=m.sea )
-            divisor <- get.obs.tsboot_mk2(obj=get(divisor.objname), type=r$divisor$type, m.sea=m.sea )
-            
-            # note the second condition: if no two mass vectors are the same
-            if( any(as.vector(outer(divisor$m.val,dividend$m.val,'=='))) ||
-               !(m1m1 || m1m2 || m2m1 || m2m2) )  {
-              hadron_obs[[length(hadron_obs)+1]] <- compute.ratio_mk2(name=r$name,texlabel=r$texlabel,dividend=dividend,divisor=divisor)
-            }
-          }
-        }
-      }
-    }
-    
-#    # ratios from expressions
-#    cat("Computing ratio f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD\n")
-#    for( i in 1:length(mass_comb$sc[,1]) ) {
-#      fDs_indices <- which(hadron_obs$val.tsboot$name == "f_Ds" & 
-#                          hadron_obs$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#      mDs_indices <- which(hadron_obs$val.tsboot$name == "m_Ds" & 
-#                          hadron_obs$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#      fD_indices <- which(hadron_obs$val.tsboot$name == "f_D" & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#      mD_indices <- which(hadron_obs$val.tsboot$name == "m_D" & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#                          
-#      dividend <- compute.expression(expr=expression(a*sqrt(b)),
-#                    envir=data.frame( a=hadron_obs$val.tsboot$val[fDs_indices], b=hadron_obs$val.tsboot$val[mDs_indices] ),
-#                    m1=mass_comb$sc[i,]$m1, m2=mass_comb$sc[i,]$m2 )
-#      divisor <- compute.expression(expr=expression(a*sqrt(b)),
-#                    envir=data.frame( a=hadron_obs$val.tsboot$val[fD_indices], b=hadron_obs$val.tsboot$val[mD_indices] ),
-#                    m1=0.0009, m2=mass_comb$sc[i,]$m2 )
-#                    
-#      hadron_obs <- compute.ratio(name="f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD",texlabel="$f_{D_s}\\sqrt{m_{D_s}}/f_D\\sqrt{m_D}$",
-#                               dividend=dividend, divisor=divisor, res=hadron_obs )
-#    }
-
-#    cat("Computing ratio f_Ds_m_Ds_sqrd_ov_f_D_mD_sqrd\n")
-#    for( i in 1:length(mass_comb$sc[,1]) ) {
-#      fDs_indices <- which(hadron_obs$val.tsboot$name == "f_Ds" & 
-#                          hadron_obs$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#      mDs_indices <- which(hadron_obs$val.tsboot$name == "m_Ds" & 
-#                          hadron_obs$val.tsboot$m11 == mass_comb$sc[i,]$m1 & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#      fD_indices <- which(hadron_obs$val.tsboot$name == "f_D" & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#      mD_indices <- which(hadron_obs$val.tsboot$name == "m_D" & 
-#                          hadron_obs$val.tsboot$m12 == mass_comb$sc[i,]$m2 )
-#                          
-#      dividend <- compute.expression(expr=expression(a*b^2),
-#                    envir=data.frame( a=hadron_obs$val.tsboot$val[fDs_indices], b=hadron_obs$val.tsboot$val[mDs_indices] ),
-#                    m1=mass_comb$sc[i,]$m1, m2=mass_comb$sc[i,]$m2 )
-#      divisor <- compute.expression(expr=expression(a*b^2),
-#                    envir=data.frame( a=hadron_obs$val.tsboot$val[fD_indices], b=hadron_obs$val.tsboot$val[mD_indices] ),
-#                    m1=0.0009, m2=mass_comb$sc[i,]$m2 )
-#                    
-#      hadron_obs <- compute.ratio(name="f_Ds_m_Ds_sqrd_ov_f_D_mD_sqrd",texlabel="$f_{D_s}m_{D_s}^2/f_D{m_D}^2$",
-#                               dividend=dividend, divisor=divisor, res=hadron_obs )
-#    }
-    
+    hadron_obs <- compute.hadron_obs(envir=environment(),quants=quants,ratios=ratios,m.sea=m.sea,debug=debug)
     save(hadron_obs,file="hadron_obs.Rdata")
   } else {
     load("hadron_obs.Rdata")
   } # if(recompute)
-  
-#  print(select.hadron_obs(hadron_obs,by='name',filter='f_Ds'))
-#  stop("Computed all quantities and ratios!")
 
-  
   if(overview) {
     # overview plots of data
     require(tikzDevice)
@@ -223,7 +89,9 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
       plotwitherror(y=obs.df$y, dy=obs.df$dy, x=obs.df$x,
                     main=obs[[1]]$texlabel, xlab="$\\mu$",ylab=obs[[1]]$texlabel)
     }
-    
+
+
+# the expressions are not quite ready yet,,,
 #    if(debug) print("f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD")
 #    indices <- which( hadron_obs$val$name == "f_Ds_sqrt_m_Ds_ov_f_D_sqrt_mD" )
 #    plotwitherror(y=hadron_obs$val$val[indices], dy=hadron_obs$val$dval[indices], x=hadron_obs$val$m12[indices],
@@ -239,7 +107,9 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
     command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
     system(command)
   } # if(overview)
-  
+
+
+  ### EDIT FROM HERE
   # mu_s from FLAG ratio
   mu_s <- data.frame( val=c(0.0009*27.46), dval=c(0.44*0.0009), name="FLAG")
   
@@ -284,8 +154,11 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   cols <- c('black','red','forestgreen')
   syms <- c(1,15:(15+length(mu_s$val)))
   
-  legend.mu_s <- list( labels=c("Data","$\\mu_s$ from FLAG ratio","$\\mu_s$ from $m_K/f_K$","$\\mu_s$ from $m_K/m_\\pi$"),
-                       pch=c(syms,18), col=c(cols,'blue') )
+  legend.mu_s <- list( labels=c("Data",
+                                "$\\mu_s$ from FLAG ratio",
+                                "$\\mu_s$ from $m_K/f_K$",
+                                "$\\mu_s$ from $m_K/m_\\pi$"),
+                       pch=syms, col=c(cols,'blue') )
   legend.mu_c <- list( labels=c("Data","$\\mu_c$ from FLAG$\\cdot$HPQCD ratios",
                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/m_\\pi$",
@@ -301,15 +174,16 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   name <- "m_K_ov_m_pi"
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+    
     # asemble the data into the correct format
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+
     fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
     pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
-    
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
-  
     extrapolations[[length(extrapolations)+1]] <- cbind( 
                                 data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                            dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
@@ -318,12 +192,13 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
     fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
                           y=phys_ratios[phys_ratios$name == name,]$val,
                           dy=phys_ratios[phys_ratios$name == name,]$dval )
+    solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name)
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],solutions=solution,
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
                     
-    mu_s <- rbind( mu_s, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name) )
+    mu_s <- rbind( mu_s, solution )
   }
 
   # mu_c from HPQCD ratio, this will now contains three values of mu_c to which we will add a fourth by solving
@@ -357,12 +232,13 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(13,15))                
 
-    mu_c <- rbind( mu_c, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name) )
+    mu_c <- rbind( mu_c, solution )
   }
   
   pred <- list()
   
   name <- "m_D_ov_f_D"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -392,6 +268,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   # mu_c <- rbind( mu_c, data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name) )
 
   name <- "m_Ds_ov_f_Ds"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -412,6 +289,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   }
   
   name <- "m_Ds_ov_m_K"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -433,6 +311,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   }
   
   name <- "m_Ds_ov_m_D"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -456,6 +335,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   }
 
   name <- "m_Ds_ov_m_pi"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -477,6 +357,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   }
 
   name <- "m_D_ov_m_K"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -498,6 +379,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
   }
     
   name <- "f_K_ov_f_pi"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     # asemble the data into the correct format
@@ -516,10 +398,11 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
     
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
-                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s,c(1.18,1.22))
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s,ylim=c(1.18,1.22))
   }
 
   name <- "f_D_ov_f_pi"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -536,10 +419,11 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, c(1.55,1.8))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(1.55,1.85))
   }
 
   name <- "f_Ds_ov_f_pi"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -557,10 +441,11 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,c(1.92,2.1))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,ylim=c(1.94,2.15))
   }
 
   name <- "f_Ds_ov_f_D"
+  if( analyses=="all" || any(analyses==name) )
   {
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
@@ -578,38 +463,138 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(debug=F,recompute=T,loadraw=
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,c(1.15,1.3))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,ylim=c(1.15,1.3))
   }
 
-  stop()
-
   name <- "m_K"
-  pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=strange_masses,
-              mu=mu_s)
+  if( analyses=="all" || any(analyses==name) )
+  {
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
+
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations[[length(extrapolations)+1]] <- cbind(
+                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                       dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
+                                       pred,plot.x.idx='x1',plot.dx.idx='dx1')
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
+  }
                      
   name <- "f_K"
-  pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=strange_masses,
-              mu=mu_s)
+  if( analyses=="all" || any(analyses==name) )
+  {
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
+
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations[[length(extrapolations)+1]] <- cbind(
+                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                       dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
+                                       pred,plot.x.idx='x1',plot.dx.idx='dx1')
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
+  }
                      
   name <- "m_D"
-  pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=charm_masses,
-              mu=mu_c)
+  if( analyses=="all" || any(analyses==name) )
+  {
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_c$val[1:4],dx1=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations[[length(extrapolations)+1]] <- cbind(
+                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                       dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
+                                       pred,plot.x.idx='x1',plot.dx.idx='dx1')
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c)
+  }
                      
   name <- "f_D"
-  pred[[name]] <- match_mu.1D(name=name,alldat=hadron_obs,masses=charm_masses,
-              mu=mu_c)
-                                   
+  if( analyses=="all" || any(analyses==name) )
+  {
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    pred.idx <- list(m.val=c(2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_c$val[1:4],dx1=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations[[length(extrapolations)+1]] <- cbind(
+                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                       dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
+                                       pred,plot.x.idx='x1',plot.dx.idx='dx1')
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c)
+  }
+
   name <- "m_Ds"
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,
-                  mu_s=mu_s, mu_c=mu_c)
+  if( analyses=="all" || any(analyses==name) )
+  {
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+
+    pred.idx <- list(m.val=c(1,2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations[[length(extrapolations)+1]] <- cbind(
+                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                       dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
+                                       pred,plot.x.idx='x2',plot.dx.idx='dx2')
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
   
   name <- "f_Ds"
-  pred[[name]] <- match_mu_s_mu_c.2D(name=name,alldat=hadron_obs,mass_comb=mass_comb,
-                  mu_s=mu_s, mu_c=mu_c)
-                  
-  print(pred)
-  
-  write.csv(pred,file="preds.csv")
-  
+  if( analyses=="all" || any(analyses==name) )
+  {
+    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+
+    pred.idx <- list(m.val=c(1,2),m.sea=vector())
+    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4])
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+
+    extrapolations[[length(extrapolations)+1]] <- cbind(
+                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                       dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
+                                       pred,plot.x.idx='x2',plot.dx.idx='dx2')
+
+    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
+    plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+  }
+
+  ### TO HERE
+
+  print(extrapolations)
+
   options(stringsAsFactors = TRUE)
 }
