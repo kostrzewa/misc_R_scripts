@@ -169,13 +169,13 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
 
     for( s_mass in strange_masses ) {
       # select eta_ss mass measurements for the given strange mass
-      dividend <- list( value=analysis_results[[1]]$res$mass[ analysis_results[[1]]$res$m1==s_mass ]^2 , 
-                        error=2*analysis_results[[1]]$res$mass[ analysis_results[[1]]$res$m1==s_mass ]*
+      dividend <- list( val=analysis_results[[1]]$res$mass[ analysis_results[[1]]$res$m1==s_mass ]^2 , 
+                        dval=2*analysis_results[[1]]$res$mass[ analysis_results[[1]]$res$m1==s_mass ]*
                                 analysis_results[[1]]$res$dmass[ analysis_results[[1]]$res$m1==s_mass ] )
       for( c_mass in charm_masses ) {
         # select D_s mass measurements for the given strange and charm masses
-        divisor <- list( value=analysis_results[[2]]$res$mass[ ( analysis_results[[2]]$res$m1==s_mass & analysis_results[[2]]$res$m2==c_mass ) ]^2,
-                         error=2*analysis_results[[2]]$res$mass[ ( analysis_results[[2]]$res$m1==s_mass & analysis_results[[2]]$res$m2==c_mass ) ]*
+        divisor <- list( val=analysis_results[[2]]$res$mass[ ( analysis_results[[2]]$res$m1==s_mass & analysis_results[[2]]$res$m2==c_mass ) ]^2,
+                         dval=2*analysis_results[[2]]$res$mass[ ( analysis_results[[2]]$res$m1==s_mass & analysis_results[[2]]$res$m2==c_mass ) ]*
                                 analysis_results[[2]]$res$dmass[ ( analysis_results[[2]]$res$m1==s_mass & analysis_results[[2]]$res$m2==c_mass ) ] )
         if(debug) {
           #cat("Building ratio for mus_s =", s_mass,", mu_c =", c_mass, "\n")
@@ -184,13 +184,13 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
         }
         
         # if the given ratio does not exist, we skip this pair
-        if( length(divisor$value) == 0 | length(dividend$value) == 0 ) {
+        if( length(divisor$val) == 0 | length(dividend$val) == 0 ) {
           next
         }
         
         ctr_ratios <- ctr_ratios+1
         ratio <- compute_ratio(dividend=dividend, divisor=divisor, name="(M(eta_ss)/M(D_s))^2",debug=F)
-        ratios <- rbind( ratios, data.frame(value=ratio$value, error=ratio$error, s_mass=s_mass, c_mass=c_mass ) )
+        ratios <- rbind( ratios, data.frame(val=ratio$val, dval=ratio$dval, s_mass=s_mass, c_mass=c_mass ) )
       }
     }
     
@@ -210,7 +210,7 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     }
     
     chiSqr <- function(par,ratios) {
-      return( sum( ((ratios$value - fitfun(ratios$s_mass, ratios$c_mass, par[1], par[2], par[3]))/ratios$error)^2 ) )
+      return( sum( ((ratios$val - fitfun(ratios$s_mass, ratios$c_mass, par[1], par[2], par[3]))/ratios$dval)^2 ) )
     }
     opt.res <- optim(par=c(0.1,0.1,0.1), fn=chiSqr, ratios=ratios)
    
@@ -221,9 +221,9 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     
     # fit with 3 parameters and a ChiPT/HQET form
     fit_r_v_sc <- nls( #as.formula(value ~ eval(fitexpr,envir=list(s_mass=s_mass,c_mass=c_mass,a=a,b=b,c=c)))  
-                      value ~ a*s_mass/(c_mass^2+b)+c #fitfun(s_mass,c_mass,a,b,c) 
+                      val ~ a*s_mass/(c_mass^2+b)+c #fitfun(s_mass,c_mass,a,b,c) 
                       , start=list(a=opt.res$par[1],b=opt.res$par[2],c=opt.res$par[3]), 
-                      data=fitdata, weights=1/(fitdata$error^2), control=list(tol=1e-6,minFactor=1e-10,maxiter=20000) )
+                      data=fitdata, weights=1/(fitdata$dval^2), control=list(tol=1e-6,minFactor=1e-10,maxiter=20000) )
     
     # linear approximation fit
     # fit_r_v_sc <- lm( value ~ s_mass + c_mass , data=fitdata, weights=1/(fitdata$error^2) )
@@ -243,11 +243,15 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     fit_r_v_sc_dcoefs <- coef(summary(fit_r_v_sc))[, "Std. Error"]
 
     cat("Pheno (M_ss/M_sc)^2",0.348^2," +- ",2*0.348*0.004,"\n") 
+ 
+    library(tikzDevice)
+    texfile <- "plots/M_eta_ss_over_M_D_s.tex"
+    tikz(texfile, standAlone = TRUE, width=5, height=5)
   
-    pdf("plots/M_eta_ss_over_M_D_s.pdf",title="(M_ss/M_sc)^2",width=9,height=7)
+    #pdf("plots/M_eta_ss_over_M_D_s.pdf",title="(M_ss/M_sc)^2",width=9,height=7)
     par(family="Palatino")
     # plot only data that was used for the fit
-    plotwitherror(x=fitdata$s_mass,y=fitdata$value,dy=ratios$error,main="(M_ss/M_sc)^2",ylab="(M(eta_ss)/M(D_s))^2",xlab=expression(amu[s]),
+    plotwitherror(x=fitdata$s_mass,y=fitdata$val,dy=ratios$dval,main="$(M_{ss}/M_{sc})^2$",ylab="$(M(\\eta_{ss})/M(D_s))^2$",xlab="$a\\mu_s$",
                   xlim=c(min(strange_masses)-0.01,max(strange_masses)+0.008), 
                   xaxp=c(min(strange_masses)-5*0.002,max(strange_masses)+4*0.002,length(strange_masses)+9) )
 
@@ -256,7 +260,7 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     print(newdata) 
     if(length(newdata[,1])>0){
       cat("Adding new data\n")
-      plotwitherror(x=newdata$s_mass,y=newdata$value,dy=newdata$error,rep=T,col="red",pch=16)
+      plotwitherror(x=newdata$s_mass,y=newdata$val,dy=newdata$dval,rep=T,col="red",pch=16)
     }
    
         
@@ -266,15 +270,15 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     line_colours <- rainbow(length(pred_charm_masses)+2)
     # indicate fit lines and predictions on the plot with confidence intervals
     for( i in 1:length(pred_charm_masses) ) {
-      pred_points <- data.frame( s_mass=seq(min(strange_masses)-0.01, max(strange_masses)+0.01, length.out=100), 
-                                 c_mass=rep(pred_charm_masses[i],100) )
+      pred_points <- data.frame( s_mass=seq(min(strange_masses)-0.01, max(strange_masses)+0.01, length.out=40), 
+                                 c_mass=rep(pred_charm_masses[i],40) )
       preds <- NULL
       if( class(fit_r_v_sc) == 'lm' ) {
         cat("Using predict to make predictions\n")
         preds <- predict(fit_r_v_sc, newdata = pred_points, interval='confidence')
       } else if ( class(fit_r_v_sc) == 'nls' ) {
         cat("running predictNLS\n")
-        preds <- predictNLS(fit_r_v_sc, newdata = pred_points, interval='confidence')
+        preds <- predictNLS(fit_r_v_sc, newdata = pred_points, interval='confidence', do.sim=F)
       }
 
       # for the linear model we can do confidence intervals
@@ -295,14 +299,14 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     }
 
     # compute a line and confidence bands along the line mu_c = mu_c_ov_mu_s*mu_s
-    pred_s_masses <- seq(min(strange_masses)-0.015, max(strange_masses)+0.01, length.out=100)
+    pred_s_masses <- seq(min(strange_masses)-0.015, max(strange_masses)+0.01, length.out=40)
     pred_points <- data.frame( s_mass=pred_s_masses, c_mass=pred_s_masses*mu_c_ov_mu_s$val
                               ,ds_mass=rep(0,length(pred_s_masses)), dc_mass=pred_s_masses*mu_c_ov_mu_s$err )
   
     if( class(fit_r_v_sc) == 'lm' ) {
       preds <- predict(fit_r_v_sc, newdata = pred_points, interval = 'confidence')
     } else if ( class(fit_r_v_sc) == 'nls' ) {
-      preds <- predictNLS(fit_r_v_sc, newdata = pred_points, interval = 'confidence')
+      preds <- predictNLS(fit_r_v_sc, newdata = pred_points, interval = 'confidence', do.sim=F)
     }
     
     prediction <- NULL
@@ -320,15 +324,18 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     polygon(c(rev(pred_points$s_mass), pred_points$s_mass), conf_band, col = rgb(t(polycol),alpha=0.2))
 
     legend.xpos = min(strange_masses)-0.01
-    legend.ypos = max(ratios$value)+0.003
-    legend.labels = c( paste("mu_c =",pred_charm_masses), "mu_c = 11.85(16) * mu_s", "(M_ss/M_sc)^2 = 0.121(3)" )
+    legend.ypos = max(ratios$val)+0.003
+    legend.labels = c( paste( paste("$\\mu_c =",pred_charm_masses), "$") , "$\\mu_c = 11.85(16) * \\mu_s$", "$(M_{ss}/M_{sc})^2 = 0.121(3)$" )
 
     legend(x=legend.xpos,y=legend.ypos,legend=legend.labels,col=line_colours,lty=rep(1,length(pred_charm_masses)+2),bty="n")
 
     abline(h=0.348^2,col=line_colours[length(pred_charm_masses)+2])
     rect(xleft=min(strange_masses)-0.015,xright=max(strange_masses)+0.01,ytop=0.348^2+2*0.348*0.004,ybottom=0.348^2-2*0.348*0.004,
          col=rgb(t(col2rgb(line_colours[length(pred_charm_masses)+2])/255),alpha=0.3),border=NA )
+
     dev.off()
+    tools::texi2dvi(texfile,pdf=T)
+
   }
   
 }
