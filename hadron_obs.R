@@ -156,8 +156,8 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=TRUE
     colours <- 'red'
     symbols <- 16
     if(!missing(lg)) {
-        colours <- lg$col[2:length(lg$col)]
-        symbols <- lg$pch[2:length(lg$pch)]
+        colours <- lg$col[2:(2+length(extrapolations$val))]
+        symbols <- lg$pch[2:(2+length(extrapolations$val))]
     }
     
     plotwitherror( y=extrapolations$val, dy=extrapolations$dval, 
