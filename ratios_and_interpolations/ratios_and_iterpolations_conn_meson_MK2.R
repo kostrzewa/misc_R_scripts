@@ -18,6 +18,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(analyses="all",debug=F,recom
 
   ### EDIT FROM HERE
   # masses to be used in this analysis
+  analysis_name <- "iwa_b2.1-L48T96-k0.13729-mul0.0009"
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
   charm_masses <- c(0.2822,0.294,0.3058,0.3176)
   light_masses <- c(0.0009)
@@ -66,6 +67,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(analyses="all",debug=F,recom
     if(debug) {
       cat("ratios_and_interpolations_conn_meson: computing hadron_obs!\n")
     }
+    # all the data has been loaded in this environment, so we pass this along to the function
     hadron_obs <- compute.hadron_obs(envir=environment(),quants=quants,ratios=ratios,m.sea=m.sea,debug=debug)
     save(hadron_obs,file="hadron_obs.Rdata")
   } else {
@@ -591,10 +593,15 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(analyses="all",debug=F,recom
     plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
   }
-
   ### TO HERE
-
-  print(extrapolations)
+  
+  # rename objects so that they refer to the ensemble that they are based on
+  # and save to disk
+  for( objname in c("mu_s"",mu_c","extrapolations") ){
+    savename <- sprintf("%s.%s",objname,analysis_name)
+    assign(savename,get(objname))
+    save(list=savename,file=sprintf("%s.Rdata",savename))
+  }
 
   options(stringsAsFactors = TRUE)
 }
