@@ -597,7 +597,7 @@ ratios_and_iterpolations_conn_meson_mk2 <- function(analyses="all",debug=F,recom
   
   # rename objects so that they refer to the ensemble that they are based on
   # and save to disk
-  for( objname in c("mu_s"",mu_c","extrapolations") ){
+  for( objname in c("mu_s","mu_c","extrapolations") ){
     savename <- sprintf("%s.%s",objname,analysis_name)
     assign(savename,get(objname))
     save(list=savename,file=sprintf("%s.Rdata",savename))
