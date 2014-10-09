@@ -246,13 +246,15 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
  
     library(tikzDevice)
     texfile <- "plots/M_eta_ss_over_M_D_s.tex"
-    tikz(texfile, standAlone = TRUE, width=5, height=5)
+    tikz(texfile, standAlone = TRUE, width=7, height=5)
   
     #pdf("plots/M_eta_ss_over_M_D_s.pdf",title="(M_ss/M_sc)^2",width=9,height=7)
     par(family="Palatino")
     # plot only data that was used for the fit
     plotwitherror(x=fitdata$s_mass,y=fitdata$val,dy=ratios$dval,main="$(M_{ss}/M_{sc})^2$",ylab="$(M(\\eta_{ss})/M(D_s))^2$",xlab="$a\\mu_s$",
-                  xlim=c(min(strange_masses)-0.01,max(strange_masses)+0.008), 
+                  #xlim=c(min(strange_masses)-0.01,max(strange_masses)+0.008),
+                  xlim=c(0.012,max(strange_masses)+0.008),
+                  ylim=c(min(fitdata$val)-0.01,max(fitdata$val)+0.07),                   
                   xaxp=c(min(strange_masses)-5*0.002,max(strange_masses)+4*0.002,length(strange_masses)+9) )
 
     # if not all data was used for the fit, add remaining points in red
@@ -324,8 +326,8 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     polygon(c(rev(pred_points$s_mass), pred_points$s_mass), conf_band, col = rgb(t(polycol),alpha=0.2))
 
     legend.xpos = min(strange_masses)-0.01
-    legend.ypos = max(ratios$val)+0.003
-    legend.labels = c( paste( paste("$\\mu_c =",pred_charm_masses), "$") , "$\\mu_c = 11.85(16) * \\mu_s$", "$(M_{ss}/M_{sc})^2 = 0.121(3)$" )
+    legend.ypos = max(ratios$val)+0.08
+    legend.labels = c( paste( paste("$a\\mu_c =",pred_charm_masses), "$") , "$a\\mu_c = 11.85(16) * a\\mu_s$", "$(M_{ss}/M_{sc})^2 = 0.121(3)$" )
 
     legend(x=legend.xpos,y=legend.ypos,legend=legend.labels,col=line_colours,lty=rep(1,length(pred_charm_masses)+2),bty="n")
 
