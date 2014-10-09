@@ -1,10 +1,11 @@
-\documentclass[10pt,a4paper]{article}
+\documentclass[10pt,a5paper]{article}
 \usepackage[utf8x]{inputenc}
 \usepackage{ucs}
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
 \usepackage{hyperref}
+\usepackage[vmargin={10mm,15mm},hmargin={14mm,14mm}]{geometry}
 
 \author{Bartosz Kostrzewa}
 \title{Documentation: meson\_2pt analysis tools}
@@ -12,15 +13,16 @@
 \maketitle
 
 \begin{section}{Introduction}
-This document describes the design of a library of R scripts for the analysis of meson 2 point functions. The software is structured as a set of modules which are to be called from within a user-defined driver function for which an example is provided with the tool.
-This driver function loads .Rdata files produced by the {\ttfamily analysis\_conn\_meson\_2pt} script and organizes the analysis results into a list of lists of the data type {\ttfamily hadron\_obs}.
+This document describes the design of a library of R scripts for the analysis of meson 2 point functions. The software is structured as a set of modules which are to be called from within a user-defined driver function for which an example is provided in \verb|ratios_and_interpolations_conn_meson|.
+In that file, two sections of the code are marked with \verb|### EDIT FROM HERE [...] ### TO HERE|, indicating which parts need to be modified for a specific problem.
+This driver function loads .Rdata files produced by the \verb|analysis_conn_meson_2pt| script and organizes the analysis results into a list of lists of the data type \verb|hadron_obs|.
 \end{section} %Introduction
 
 \begin{section}{Dependencies}
  The dependencies on other R packages of this toolset are as follows:
 \begin{itemize}
   \item the {\tt hadron} package\footnote{\url{https://github.com/etmc/hadron}} by the European Twisted Mass Collaboration is used for a number of reasons
-  \item the {\tt tikzDevice} package\footnote{\url{https://github.com/yihui/tikzDevice}} is used to embellish the plots with \LaTeX labels
+  \item the {\tt tikzDevice} package\footnote{\url{https://github.com/yihui/tikzDevice}} is used to embellish the plots with \LaTeX\,labels
   \item the {\tt propagate } package\footnote{\url{http://cran.r-project.org/web/packages/propagate/index.html}} by Andrej Spiess is used for error propagation using second-order Taylor expansions for {\tt nls} fits through the {\tt predictNLS} function
 \end{itemize}
 
