@@ -1,8 +1,8 @@
 library('propagate')
 
-source("/home/bartek/code/R/misc_R_scripts/fit_extrapolate_solve_MK2.R")
+source("/home/bartek/code/R/misc_R_scripts/fit_extrapolate_solve.R")
 source("~/code/R/misc_R_scripts/hadron_obs.R")
-source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/utils_MK2.R")
+source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/utils.R")
 source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/definitions.R")
 
 # this is a template for a driver script for the analysis involving interpolations
@@ -11,7 +11,7 @@ source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/definitions
 
 # in practice one would modify 
 
-ratios_and_iterpolations_conn_meson_mk2 <- function(analyses="all",debug=F,recompute=T,loadraw=T,overview=T) {
+ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute=T,loadraw=T,overview=T) {
   # certain functionality relies on stuff being strings
   options(stringsAsFactors = FALSE)
 

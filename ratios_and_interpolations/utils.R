@@ -1,14 +1,14 @@
-compute.quant_mk2 <- function(name,texlabel,dat) {
+compute.quant <- function(name,texlabel,dat) {
   list( name=name, texlabel=texlabel, m.sea=sort(unique(dat$m.sea)), m.val=sort(unique(dat$m.val)),
         mean=mean(dat$boot), err=sd(dat$boot), boot=dat$boot )
 }
 
 #TODO: reimagine computation of expressions
-compute.expression_mk2 <- function(expr,envir,m1,m2){
+compute.expression <- function(expr,envir,m1,m2){
   return( list( dat=eval(expr=expr,envir=envir), m1=m1, m2=m2 ) )
 }
 
-compute.ratio_mk2 <- function(name,texlabel,dividend,divisor) {
+compute.ratio <- function(name,texlabel,dividend,divisor) {
   n <- length(dividend$boot)
   if( n != length(divisor$boot) ) {
     stop(sprintf("In compute.ratio for %s, dividend and divisor do not have the same number of bootstrap samples!\n",name))
@@ -28,8 +28,8 @@ compute.hadron_obs <- function(envir,quants,ratios,expressions,m.sea,debug=F) {
 
   for( qty in quants ) {
     for( objname in qty$datanames ) {
-      dat <- get.obs.tsboot_mk2(obj=get(objname,envir), m.sea=m.sea, type=qty$type)
-      hadron_obs[[length(hadron_obs)+1]] <- compute.quant_mk2( name=qty$name, texlabel=qty$texlabel, dat=dat )
+      dat <- get.obs.tsboot(obj=get(objname,envir), m.sea=m.sea, type=qty$type)
+      hadron_obs[[length(hadron_obs)+1]] <- compute.quant( name=qty$name, texlabel=qty$texlabel, dat=dat )
     }
   }
 
@@ -41,9 +41,9 @@ compute.hadron_obs <- function(envir,quants,ratios,expressions,m.sea,debug=F) {
       if(debug) cat("Computing ratio", r$name, "\n")
       if( all(r$dividend$datanames == r$divisor$datanames) ) {
         for( objname in r$dividend$datanames ) {
-          dividend <- get.obs.tsboot_mk2(obj=get(objname,envir), type=r$dividend$type, m.sea=m.sea )
-          divisor <- get.obs.tsboot_mk2(obj=get(objname,envir), type=r$divisor$type, m.sea=m.sea )
-          hadron_obs[[length(hadron_obs)+1]] <- compute.ratio_mk2(name=r$name,texlabel=r$texlabel,dividend=dividend,divisor=divisor)
+          dividend <- get.obs.tsboot(obj=get(objname,envir), type=r$dividend$type, m.sea=m.sea )
+          divisor <- get.obs.tsboot(obj=get(objname,envir), type=r$divisor$type, m.sea=m.sea )
+          hadron_obs[[length(hadron_obs)+1]] <- compute.ratio(name=r$name,texlabel=r$texlabel,dividend=dividend,divisor=divisor)
         }
       } else {
 
@@ -68,13 +68,13 @@ compute.hadron_obs <- function(envir,quants,ratios,expressions,m.sea,debug=F) {
 
         for( dividend.objname in r$dividend$datanames ) {
           for( divisor.objname in r$divisor$datanames ) {
-            dividend <- get.obs.tsboot_mk2(obj=get(dividend.objname,envir), type=r$dividend$type, m.sea=m.sea )
-            divisor <- get.obs.tsboot_mk2(obj=get(divisor.objname,envir), type=r$divisor$type, m.sea=m.sea )
+            dividend <- get.obs.tsboot(obj=get(dividend.objname,envir), type=r$dividend$type, m.sea=m.sea )
+            divisor <- get.obs.tsboot(obj=get(divisor.objname,envir), type=r$divisor$type, m.sea=m.sea )
 
             # note the second condition: if no two mass vectors are the same
             if( any(as.vector(outer(divisor$m.val,dividend$m.val,'=='))) ||
                 !(m1m1 || m1m2 || m2m1 || m2m2) )  {
-              hadron_obs[[length(hadron_obs)+1]] <- compute.ratio_mk2(name=r$name,texlabel=r$texlabel,dividend=dividend,divisor=divisor)
+              hadron_obs[[length(hadron_obs)+1]] <- compute.ratio(name=r$name,texlabel=r$texlabel,dividend=dividend,divisor=divisor)
             }
           }
         }
@@ -148,7 +148,7 @@ compute.hadron_obs <- function(envir,quants,ratios,expressions,m.sea,debug=F) {
 
 # the m.sea argument adds some more information about the sea quark mass
 # dependence
-get.obs.tsboot_mk2 <- function(obj, m.sea, type) {
+get.obs.tsboot <- function(obj, m.sea, type) {
   rval <- list( m.val=sort(unique(c(obj$mu1,obj$mu2))), m.sea=m.sea, boot=c() )
   if( type == "fps" ) {
     rval$boot <- obj$fps.tsboot
