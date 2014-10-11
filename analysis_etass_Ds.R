@@ -251,7 +251,7 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     #pdf("plots/M_eta_ss_over_M_D_s.pdf",title="(M_ss/M_sc)^2",width=9,height=7)
     par(family="Palatino")
     # plot only data that was used for the fit
-    plotwitherror(x=fitdata$s_mass,y=fitdata$val,dy=ratios$dval,main="$(M_{ss}/M_{sc})^2$",ylab="$(M(\\eta_{ss})/M(D_s))^2$",xlab="$a\\mu_s$",
+    plotwitherror(x=fitdata$s_mass,y=fitdata$val,dy=ratios$dval,ylab="$(M(\\eta_{ss})/M(D_s))^2$",xlab="$a\\mu_s$",
                   #xlim=c(min(strange_masses)-0.01,max(strange_masses)+0.008),
                   xlim=c(0.012,max(strange_masses)+0.008),
                   ylim=c(min(fitdata$val)-0.01,max(fitdata$val)+0.07),                   
