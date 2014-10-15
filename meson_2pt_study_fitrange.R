@@ -1,3 +1,11 @@
+# this function performs a study of all possible fit ranges starting from timeslice 3
+# for connected meson correlation functions, it systematically repeats both the direct
+# fit to the functional form of the correlator dominated by the ground state
+# as well as a constant fit to the effective mass
+
+# it takes as input: hadron cf and effectivemass objects, the kappa parameter of the simulation as well
+# as a pair of quark masses (a*mu) which are required for extracting the decay constant
+
 meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE,debug=FALSE,boot.fit=FALSE) {
   if(!any(class(cf) == "cf")) {
     stop("study_fitrange requires that 'cf' is of class 'cf'!\n")
@@ -13,6 +21,7 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE
     cat("Performing study of fit range dependence\n")
   }
   require("plotrix")
+  require("tikzDevice")
 
   # extract some stuff from cf
 
@@ -71,47 +80,57 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE
     }
   }
 
-  # need to rename object before saving to file
-  savename <- sprintf("%s.fitrange",name)
+  # need to rename object before saving to file so that it can easily be loaded
+  # and referred to in an external script
+  # we make sure that no "-" characters remain in the name because they would
+  # make it very difficult to use the objects in the future
+  savename <- sprintf("%s.fitrange",gsub("-","_",name) )
   assign(savename,res)
   save(list=savename,file=sprintf("%s.Rdata",savename))
 
   # we now remove the outliers using the usual idea of computing quartiles and the interquartile range
-
   quants <- quantile(res$M)
   tshld.hi <- quants[4] + 1.5*IQR(res$M)
   tshld.lo <- quants[2] - 1.5*IQR(res$M)
 
   outlier.indices <- which( res$M < tshld.lo | res$M > tshld.hi )
-
   res <- res[-outlier.indices,]
 
   # assemble relevant data for convenient plotting
   l.matrix <- list(df=data.frame( val=res$M, t1=res$t1, t2=res$t2,
                                ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof),
                                Q=res$matrixfit.Q),
-                               label=as.expression(expression(M[mtx])),
+                               label="$M_{\\mathrm{mtx}}$",
                                name="matrixfit" )
 
   l.effmass <- list(df=data.frame( val=res$Meff, t1=res$t1, t2=res$t2,
                                 ChiSqr.ov.dof=(res$effectivemass.ChiSqr/res$effectivemass.dof),
                                 Q=res$effectivemass.Q),
-                                label=expression(M[eff]),
-                                name="matrixfit" )
+                                label="$M_{\\mathrm{eff}}$",
+                                name="effmass" )
 
 
   # produce a number of plots relating to the fit range analysis
-  pdf(sprintf("%s.fitrange.pdf",name),title=name)
+  texfile <- sprintf("%s.fitrange.tex",name)
+  pdffile <- sprintf("%s.fitrange.pdf",name)
+  tikz(texfile, standAlone = TRUE, width=5, height=5)
+  #pdf(sprintf("%s.fitrange.pdf",name),title=name)
 
   # colours to add some timeslice information
   colours <- rainbow(n=cf$Time/2)
   # colours to provide information about Q
   Qcolours <- rainbow(n=100)
+  
   for( l in list( l.matrix, l.effmass ) ) {
     df <- l$df
     qtyname <- l$name
     label <- l$label
-    title <- paste(qtyname,name)
+    title <- sprintf("%s %s",qtyname,name)
+    # prefix all underscores with a backslash so that latex understands properly
+    # note that we need to escape the backslash twice in order to have two backslashes
+    # in the resulting string
+    title <- gsub("_","\\\\_",title)
+    print(title)
 
     hist(df$val,breaks=40,main=title,xlab=label)
 
@@ -120,19 +139,19 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE
     abline(v=median(df$val),col='blue')
 
     plot(y=df$ChiSqr.ov.dof,x=df$val,main=title,
-         col=colours[df$t2],ylab=expression(Chi^2 %/% d.o.f),xlab=label
+         col=colours[df$t2],ylab="$\\chi^2 / \\mathrm{d.o.f}$",xlab=label
         )
 
-    plot(y=df$Q,x=df$val,main=title,col=colours[df$t2],ylab='Q',xlab=label)
+    plot(y=df$Q,x=df$val,main=title,col=colours[df$t2],ylab='$Q$',xlab=label)
 
     weighted.hist(x=df$val,w=df$Q,breaks=40,main=paste("weighted",title),xlab=label)
 
     # save some more lines by doing two sets of plots in one go
     for( dat in list( list(qty=df$Q,lab='Q'), list(qty=df$val,lab=label) ) ) {
-      plot(x=df$t2-df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab=expression(t[f] %-% t[i]),ylab=dat$lab)
-      plot(x=df$t1+df$t2,y=df$Q,main=title,col=colours[df$t2],xlab=expression(t[i] %+% t[f]),ylab=dat$lab)
-      plot(x=df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab=expression(t[i]),ylab=dat$lab)
-      plot(x=df$t2,y=dat$qty,main=title,col=colours[df$t1],xlab=expression(t[f]),ylab=dat$lab)
+      plot(x=df$t2-df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab="$t_f - t_i$",ylab=dat$lab)
+      plot(x=df$t1+df$t2,y=df$Q,main=title,col=colours[df$t2],xlab="$t_i + t_f$",ylab=dat$lab)
+      plot(x=df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab="$t_i$",ylab=dat$lab)
+      plot(x=df$t2,y=dat$qty,main=title,col=colours[df$t1],xlab="$t_f$",ylab=dat$lab)
     }
 
     boxplot(df$val,main=title,ylab=label)
@@ -158,7 +177,7 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE
 
   plot(y=effnorm, x=effseq,lwd=3,type='l',col='blue',
       xlim=effective.mustar+4*c(-1,1)*sqrt(effective.varstar),ylim=ylims,xlab="mass",ylab="",
-      main=sprintf("weighted gaussians %s",name))
+      main=sprintf("weighted gaussians %s", gsub("_","\\\\_",name)))
 
   lines(y=matrixnorm, x=matrixseq,lwd=3,col='red',type='l')
 
@@ -166,10 +185,13 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE
        ylab="effective mass", xlab="matrixfit mass",col=colours[l.effmass$df$t2])
 
   # plot chosen fit ranges, indicating the Q value with a
-  plot(x=l.matrix$df$t1,y=l.matrix$df$t2,main=sprintf("chosen fitranges %s", name),
+  plot(x=l.matrix$df$t1,y=l.matrix$df$t2,main=sprintf("chosen fitranges %s", gsub("_","\\\\_",name)),
        xlab=expression(t[i]),ylab=expression(t[f]),col=Qcolours[as.integer(100*l.matrix$df$Q)])
 
-  dev.off()
+    dev.off()
+    tools::texi2dvi(texfile,pdf=T)
+    command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
+    system(command)
 
   return(invisible(res))
 }
