@@ -16,7 +16,7 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
     if(debug) {
       cat("Reading", basename, "correlators from",directory,"\n")
     }
-    cmicor <- readcmidatafiles(files[skip+1:length(files)])
+    cmicor <- readcmidatafiles(files[skip+1:length(files)],verbose=debug)
     save(cmicor,file=sprintf("%s.cor.Rdata",directory))
   } else {
     archivename <- sprintf("%s.cor.Rdata",directory)
