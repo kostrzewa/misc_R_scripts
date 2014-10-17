@@ -1,4 +1,4 @@
-source("~/code/R/misc_R_scripts/meson_2pt_study_fitrange.R")
+source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/meson_2pt_study_fitrange.R")
 
 do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,
                               debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=10,
