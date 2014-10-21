@@ -3,15 +3,16 @@
 # from the 'par' family which are in turn passed to the plotting function
 # the legend position is determined from 'xlim' and 'ylim' automatically
 
-# the data file must have a header containing (without quotes or #):
+# the data file must have a header containing (*without* quotes or #):
 # "kappa mu mpcac dmpcac colour"
 # with the corresponding values listed below, one set per row
+# colour is a string for the colour name such as "red" or "blue"
 
 plot_mpcac_v_kappa <- function(datafile,debug=F,...)
 {
   pcacdat <- read.table(file=datafile,header=T)
   if(debug) {
-    print(pcacdat)
+    print(cbind(1/(2*pcacdat$kappa),pcacdat))
   }
 
   par(family="Times")
