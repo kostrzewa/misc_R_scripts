@@ -1,10 +1,13 @@
 source("~/code/R/misc_R_scripts/lat_phys_ratios/compute_ratio.R")
 
-phys_ratios <- function(file) {
+phys_ratios <- function(file,debug=FALSE) {
+  # certain functionality relies on stuff being strings
+  options(stringsAsFactors = FALSE)
+
   dat <- read.table(file,header=T)
+  if(debug) print(dat)
   combinations <- expand.grid( dividend=dat$name, divisor=dat$name )
   ratios <- NULL
-  
   
   for( i in 1:length(combinations[,1]) ) {
     # skip combinations which are 1
@@ -48,4 +51,5 @@ phys_ratios <- function(file) {
   }
   print(ratios)
   write.csv(ratios,file="phys_ratios.csv")
+  options(stringsAsFactors = TRUE)
 }
