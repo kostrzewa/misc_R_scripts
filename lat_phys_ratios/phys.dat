@@ -1,0 +1,35 @@
+# all FLAG valus taken from arXiv:1310.8555
+
+name pdg dpdg flag dflag
+
+# the mass estimates below are calculated in isospin symmetric pure QCD,
+# in chiral perturbation theory (not sure about the inputs for this)
+
+m_pi NA NA 134.8 0.3
+
+# for the kaon mass, this is the polar average of the charged and neutral kaon
+# masses
+
+m_K NA NA 494.2 0.4
+
+# for the decay constants we use the best available FLAG
+
+f_pi 130.4 0.2 NA NA
+f_K 156.1 0.8 NA NA 
+
+
+
+
+
+
+m_D 1864.86 0.13 NA NA 
+f_D 206.7 8.9 NA NA 
+
+m_Ds 1968.49 0.32 NA NA 
+f_Ds 260.0 5.4 NA NA
+
+#m_N 938 1 NA NA
+#<x>_N 0.1646 0.0027 NA NA
+#g_A 1.267 0.001 NA NA
+
+#unity 1 0 1 0
