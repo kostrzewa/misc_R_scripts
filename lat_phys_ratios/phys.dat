@@ -2,7 +2,7 @@
 # all PDG values from 
 
 #2013 Review of Particle Physics.
-#Please use this CITATION: J. Beringer et al. (Particle Data Group), Phys. Rev. D86, 010001 (2012)
+#J. Beringer et al. (Particle Data Group), Phys. Rev. D86, 010001 (2012)
 
 name pdg dpdg flag dflag iso diso
 
