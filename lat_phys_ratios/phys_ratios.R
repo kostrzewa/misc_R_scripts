@@ -21,23 +21,25 @@ phys_ratios <- function(file) {
     dividend <- NULL
     divisor <- NULL
     
-    # prefer PDG
-    if( !is.na( dat[dividend.idx,]$pdg ) ) {
+    # prefer isospin symmetric, then PDG, then FLAG
+    if( !is.na( dat[dividend.idx,]$iso ) ) {
+      dividend <- data.frame( val=dat[dividend.idx,]$iso, dval=dat[dividend.idx,]$diso, type="ISOSYM" )
+    } else if( !is.na( dat[dividend.idx,]$pdg ) ) {
       dividend <- data.frame( val=dat[dividend.idx,]$pdg, dval=dat[dividend.idx,]$dpdg, type="PDG" )
     } else {
       dividend <- data.frame( val=dat[dividend.idx,]$flag, dval=dat[dividend.idx,]$dflag, type="FLAG" )
     }
 
-    if( !is.na( dat[divisor.idx,]$pdg ) ) {
+    if( !is.na( dat[divisor.idx,]$iso ) ) {
+      divisor <- data.frame( val=dat[divisor.idx,]$iso, dval=dat[divisor.idx,]$diso, type="ISOSYM" )
+    } else if( !is.na( dat[divisor.idx,]$pdg ) ) {
       divisor <- data.frame( val=dat[divisor.idx,]$pdg, dval=dat[divisor.idx,]$dpdg, type="PDG" )
     } else {
       divisor <- data.frame( val=dat[divisor.idx,]$flag, dval=dat[divisor.idx,]$dflag, type="FLAG" )
     }
     
-    if( divisor$type == "FLAG" && dividend$type == "FLAG" ) {
-      type <- "FLAG"
-    } else if ( divisor$type == "PDG" && dividend$type == "PDG" ) {
-      type <- "PDG"
+    if( divisor$type == dividend$type ) {
+      type <- divisor$type
     } else {
       type <- sprintf("%s/%s",dividend$type,divisor$type)
     }
