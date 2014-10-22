@@ -6,7 +6,7 @@
 # it takes as input: hadron cf and effectivemass objects, the kappa parameter of the simulation as well
 # as a pair of quark masses (a*mu) which are required for extracting the decay constant
 
-meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE,debug=FALSE,boot.fit=FALSE) {
+meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel='continuum',useCov=FALSE,debug=FALSE,boot.fit=FALSE) {
   if(!any(class(cf) == "cf")) {
     stop("study_fitrange requires that 'cf' is of class 'cf'!\n")
   }
@@ -43,7 +43,7 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,useCov=FALSE
       if( any(class(cf.matrixfit) == "try-error" )) next
 
       cf.matrixfit <- computefps( cf.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, #normalisation="mpsexplicit",
-       disprel='continuum', boot.fit=boot.fit )
+       disprel=fps.disprel, boot.fit=boot.fit )
 
       effectivemass.fit <- try(fit.effectivemass(effmass, t1=T1, t2=T2, useCov=useCov, replace.na=TRUE, boot.fit=boot.fit))
       if( any(class(effectivemass.fit) == "try-error" )) next

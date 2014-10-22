@@ -2,7 +2,7 @@ source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/meson_2pt_study_fitrange
 
 do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,
                               debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=10,
-                              seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
+                              seed=12345,useCov=F,read.cor=T,study.fitrange=F,fps.disprel='continuum') {
 
   if(debug) {
     cat(sprintf("Doing %s meson analysis in %s, observable %d\n",name,directory,observable))
@@ -42,7 +42,7 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   if(study.fitrange) {
     meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,
                              kappa=kappa,useCov=useCov,q_masses=q_masses,boot.fit=F,
-                             debug=debug)
+                             fps.disprel=fps.disprel,debug=debug)
   }
 
   if(debug) {
@@ -55,7 +55,7 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   if(debug) {
     cat("Extracting decay constant\n")
   }
-  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='continuum', boot.fit=T )
+  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='lattice', boot.fit=T )
 
   if(debug) {
     cat("Performing bootstrapped effective mass fit\n")
