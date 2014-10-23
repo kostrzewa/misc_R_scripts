@@ -51,7 +51,7 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
                          t1=15, t2=30, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
 
   analyses[[4]] <- list( dirs=dirs$sc_c, name="sc_c", mass_diagonal=F, q_masses=mass_comb$sc,
-                         t1=16, t2=35, t1_plot=8, t2_plot=48, basename="outprcv.", observables=c(1), sign=c(1) )
+                         t1=18, t2=32, t1_plot=8, t2_plot=48, basename="outprcv.", observables=c(1), sign=c(1) )
   
   analyses[[5]] <- list( dirs=dirs$ll_n_ud, name="ll_n_ud", mass_diagonal=T, q_masses=mass_comb$ll,
                          t1=11, t2=47, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1) )
