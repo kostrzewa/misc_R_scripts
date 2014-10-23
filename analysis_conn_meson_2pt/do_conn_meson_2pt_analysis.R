@@ -55,7 +55,7 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   if(debug) {
     cat("Extracting decay constant\n")
   }
-  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel='lattice', boot.fit=T )
+  save.matrixfit <- computefps( save.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, disprel=fps.disprel, boot.fit=T )
 
   if(debug) {
     cat("Performing bootstrapped effective mass fit\n")
