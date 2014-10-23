@@ -10,7 +10,8 @@
 
 source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/do_conn_meson_2pt_analysis.R")
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel='continuum',boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel='continuum',boot.R=400,boot.l=20,
+                                    debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
   ### EDIT FROM HERE
   # masses to be used in this analysis
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
