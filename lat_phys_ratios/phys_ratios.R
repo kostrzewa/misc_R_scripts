@@ -16,7 +16,7 @@ phys_ratios <- function(file,debug=FALSE,all=FALSE) {
   columns <- c(pdgcol,flagcol,isocol)
   types <- c("PDG","FLAG","ISOSYM")
   
-  savename <- "phys_ratios.cvs"
+  savename <- "phys_ratios.csv"
   if(all) savename <- sprintf("all_%s",savename) 
   
   for( i in 1:length(combinations[,1]) ) {
