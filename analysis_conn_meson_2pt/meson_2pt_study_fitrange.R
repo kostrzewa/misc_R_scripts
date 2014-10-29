@@ -111,10 +111,10 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
 
 
   # produce a number of plots relating to the fit range analysis
-  texfile <- sprintf("%s.fitrange.tex",name)
-  pdffile <- sprintf("%s.fitrange.pdf",name)
-  tikz(texfile, standAlone = TRUE, width=5, height=5)
-  #pdf(sprintf("%s.fitrange.pdf",name),title=name)
+  temp <- sprintf("%s.fitrange.%s",name,c("tex","pdf","aux","log"))
+  tikzfiles <- list(tex=temp[1],pdf=temp[2],aux=temp[3],log=temp[4])
+  rm(temp)
+  tikz(tikzfiles$tex, standAlone = TRUE, width=5, height=5)
 
   # colours to add some timeslice information
   colours <- rainbow(n=cf$Time/2)
@@ -188,10 +188,14 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
   plot(x=l.matrix$df$t1,y=l.matrix$df$t2,main=sprintf("chosen fitranges %s", gsub("_","\\\\_",name)),
        xlab=expression(t[i]),ylab=expression(t[f]),col=Qcolours[as.integer(100*l.matrix$df$Q)])
 
-    dev.off()
-    tools::texi2dvi(texfile,pdf=T)
-    command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
-    system(command)
+  dev.off()
+  tools::texi2dvi(tikzfiles$tex,pdf=T)                                                                                                                                                                         
+  # use pdfcrop tool to remove plot borders
+  command <- sprintf("pdfcrop %s %s",tikzfiles$pdf,tikzfiles$pdf)
+  system(command)
+  # remove temporary files 
+  command <- sprintf("rm %s %s %s", tikzfiles$tex, tikzfiles$log, tikzfiles$aux)
+  system(command)
 
   return(invisible(res))
 }

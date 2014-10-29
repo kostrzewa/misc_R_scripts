@@ -87,9 +87,10 @@ extract.for.plot <- function(hadron_obs,x.name,x.idx) {
 # a number of optional items can be added to the plot
 plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=TRUE,...) {
   require(tikzDevice)
-  texfile <- sprintf("%s.tex",name) 
-  pdffile <- sprintf("%s.pdf",name)
-  tikz(texfile, standAlone = TRUE, width=4, height=4)
+  temp <- sprintf("%s.%s",name,c("tex","pdf","aux","log"))
+  tikzfiles <- list(tex=temp[1],pdf=temp[2],aux=temp[3],log=temp[4])
+  rm(temp)
+  tikz(tikzfiles$tex, standAlone = TRUE, width=4, height=4)
 
   
   if(debug){
@@ -170,8 +171,12 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=TRUE
   }
   
   dev.off()
-  tools::texi2dvi(texfile,pdf=T)
-  command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
+  tools::texi2dvi(tikzfiles$tex,pdf=T)
+  # use pdfcrop tool to remove plot borders
+  command <- sprintf("pdfcrop %s %s",tikzfiles$pdf,tikzfiles$pdf)
+  system(command)
+  # remove temporary files 
+  command <- sprintf("rm %s %s %s", tikzfiles$tex, tikzfiles$log, tikzfiles$aux)
   system(command)
 }
 

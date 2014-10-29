@@ -78,9 +78,11 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     # overview plots of data
     require(tikzDevice)
     filebase <- "data_overview"
-    texfile <- sprintf("%s.tex",filebase) 
-    pdffile <- sprintf("%s.pdf",filebase)
-    tikz(texfile, standAlone = TRUE, width=5, height=5)
+    temp <- sprintf("%s.%s",filebase,c("tex","pdf","aux","log"))
+    tikzfiles <- list(tex=temp[1],pdf=temp[2],aux=temp[3],log=temp[4])
+    rm(temp)
+    tikz(tikzfiles$tex, standAlone = TRUE, width=5, height=5)
+
     for(name in c(names(quants),names(ratios))) {
       if(debug) print(name)
       #ts.indices <- which( hadron_obs$res.tsboot$name == name )
@@ -104,11 +106,13 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
 #                  main=hadron_obs$val$texlabel[indices[1]], xlab="$\\mu$",ylab=hadron_obs$val$texlabel[indices[1]])
     
     dev.off()
-    tools::texi2dvi(texfile,pdf=T)
-    command <- sprintf("pdfcrop %s %s",pdffile,pdffile)
+    tools::texi2dvi(tikzfiles$tex,pdf=T)                                                                                                                                                                           # use pdfcrop tool to remove plot borders
+    command <- sprintf("pdfcrop %s %s",tikzfiles$pdf,tikzfiles$pdf)
+    system(command)
+    # remove temporary files 
+    command <- sprintf("rm %s %s %s", tikzfiles$tex, tikzfiles$log, tikzfiles$aux)
     system(command)
   } # if(overview)
-
 
   ### EDIT FROM HERE
   # mu_s from FLAG ratio
