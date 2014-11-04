@@ -43,7 +43,7 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
   #   observable is a numerical vector identifying which "gamma combinations" will be fitted (in the CMI format)
   #   sign is a numerical vector indicating whether the correlator is of "cosh" (+1) or "sinh" (-1) form
   analyses[[1]] <- list( dirs=dirs$ll_c, name="ll_c", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=10, t2=42, t1_plot=5, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=12, t2=42, t1_plot=5, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
 
   analyses[[2]] <- list( dirs=dirs$ls_c, name="ls_c", mass_diagonal=F, q_masses=mass_comb$ls,
                          t1=12, t2=40, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
@@ -55,10 +55,10 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
                          t1=18, t2=32, t1_plot=8, t2_plot=48, basename="outprcv.", observables=c(1), sign=c(1) )
   
   analyses[[5]] <- list( dirs=dirs$ll_n_ud, name="ll_n_ud", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=11, t2=47, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1) )
+                         t1=14, t2=40, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1) )
   
   analyses[[6]] <- list( dirs=dirs$ll_n_du, name="ll_n_du", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=11, t2=47, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1) )
+                         t1=14, t2=40, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1) )
 
   ### TO HERE
 
