@@ -85,14 +85,13 @@ extract.for.plot <- function(hadron_obs,x.name,x.idx) {
 
 # function which will produce a plot of data extracted from a hadron_obs object
 # a number of optional items can be added to the plot
-plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=TRUE,...) {
+plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,labely,debug=TRUE,...) {
   require(tikzDevice)
   temp <- sprintf("%s.%s",name,c("tex","pdf","aux","log"))
   tikzfiles <- list(tex=temp[1],pdf=temp[2],aux=temp[3],log=temp[4])
   rm(temp)
   tikz(tikzfiles$tex, standAlone = TRUE, width=4, height=4)
 
-  
   if(debug){
     cat("Supllied data points\n")
     print(df)
@@ -148,6 +147,14 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,debug=TRUE
   
   # add data points on top of any bands that were drawn
   plotwitherror( y=df$y, x=df$x, dy=df$dy, rep=T )
+  
+  if(!missing(labelx)) {
+    txpd <- par()$xpd
+    par(xpd=NA)
+    text(x=(lims[1]-0.05*deltax),
+         y=(lims[3]-0.18*deltay),labels=labelx) 
+    par(xpd=txpd)
+  }
   
   if(!missing(extrapolations)){
     if(debug){
