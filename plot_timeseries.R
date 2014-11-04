@@ -22,20 +22,22 @@ plot_timeseries <- function(dat,trange,pdf.filename,
        ytop=uw.data$value+uw.data$dvalue,
        ybottom=uw.data$value-uw.data$dvalue,border=FALSE,col=errorband_color)
   abline(h=uw.data$value,col="black")                                                                                                   
-  
   # plot the corresponding histogram
   hist.data <- hist(dat,xlim=yrange,main=paste("histogram",titletext),xlab=ylab, breaks=hist.breaks)
   rect(ytop=max(hist.data$counts),
        ybottom=0,
        xright=uw.data$value+uw.data$dvalue,
        xleft=uw.data$value-uw.data$dvalue,border=FALSE,col=errorband_color)
-  abline(v=uw.data$value,col="black")                                                                                                   
+  abline(v=uw.data$value,col="black")                                                                                             
 
   # and a periodogram
   if(periodogram)
   {
     spec.pgram(x=dat,main=paste(ylab,paste("raw periodogram",titletext)))
   }
+
+  # and the uwerr plots
+  plot(uw.data,main=paste(ylab,paste("UWErr analysis",titletext)))
    
   dev.off()
 }
