@@ -146,11 +146,13 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
                           dy=phys_ratios[phys_ratios$name == name,]$dval )
     
     solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name)
+    print(solution)
                           
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
 
     plot.hadron_obs(df=df,name=name,pheno=pheno,solutions=solution,extrapolations=extrapolations[[length(extrapolations)]],
-                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel,debug=debug)
+                    debug=debug, #labelx="$a\\mu_s$",
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)
                     
     mu_s <- rbind( mu_s, solution )
   }
@@ -161,19 +163,19 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
   
   legend.mu_s <- list( labels=c("Data",
                                 "$\\mu_s$ from FLAG ratio",
-                                "$\\mu_s$ from $m_K/f_K$",
-                                "$\\mu_s$ from $m_K/m_\\pi$"),
+                                "$\\mu_s$ from $M_K/f_K$",
+                                "$\\mu_s$ from $M_K/M_\\pi$"),
                        pch=syms, col=c(cols,'blue') )
   legend.mu_c <- list( labels=c("Data","$\\mu_c$ from FLAG$\\cdot$HPQCD ratios",
-                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
-                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/m_\\pi$",
-                                "$\\mu_c$ from $m_D/m_\\pi$"),
+                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $M_K/f_K$",
+                                "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $M_K/M_\\pi$",
+                                "$\\mu_c$ from $M_D/M_\\pi$"),
                         pch=c(syms,18), col=c(cols,'cyan','blue') )
   
   legend.mu_sc <- list( labels=c("Data", "$\\mu_s$ and $\\mu_c$ from FLAG/HPQCD ratios",
-                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/f_K$",
-                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $m_K/m_\\pi$",
-                                 "$\\mu_c$ from $m_D/m_\\pi$, $\\mu_s$ from $m_K/m_\\pi$"), 
+                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $M_K/f_K$",
+                                 "$\\mu_c=$ HPQCD ratio $\\cdot\\mu_s$ from $M_K/M_\\pi$",
+                                 "$\\mu_c$ from $M_D/M_\\pi$, $\\mu_s$ from $M_K/M_\\pi$"), 
                         pch=c(syms,18), col=c(cols,'cyan','blue') )
   
   name <- "m_K_ov_m_pi"
@@ -201,7 +203,9 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],solutions=solution,
-                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
+                    #labelx="$a\\mu_s$",
+                    lg=legend.mu_s,debug=debug,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, ylim=c(3.58,3.75))
                     
     mu_s <- rbind( mu_s, solution )
   }
@@ -235,7 +239,9 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(13,15))                
+                    #labelx="$a\\mu_c$",
+                    lg=legend.mu_c,
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel,ylim=c(13,15))                
 
     mu_c <- rbind( mu_c, solution )
   }
@@ -267,7 +273,8 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
                                    
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],solutions=solution,
-                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s, ylim=c(3.1,3.7), xlim=c(0.022,0.027))
+                    lg=legend.mu_s, debug=debug,
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, ylim=c(3.05,3.3), xlim=c(0.022,0.027))
   }
   
   name <- "m_D_ov_f_D"
@@ -294,7 +301,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
                                        
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(8,10.3), xlim=c(0.26,0.38))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(7.8,10.3), xlim=c(0.26,0.40))
   }
 
   # we could also add this value to the list of possible charm masses
@@ -318,7 +325,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc, ylim=c(7.1,8.1))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc, ylim=c(7.1,8.2))
   }
   
   name <- "m_Ds_ov_m_K"
@@ -386,7 +393,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,ylim=c(13.7,15.4))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,ylim=c(13.7,15.55))
   }
 
   name <- "m_D_ov_m_K"
@@ -452,7 +459,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(1.55,1.85))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c, ylim=c(1.45,1.85))
   }  
 
   name <- "f_Ds_ov_f_pi"
@@ -540,7 +547,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,ylim=c(1.15,1.3))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc,ylim=c(1.13,1.3))
   }
 
   name <- "f_Ds_ov_f_K"
