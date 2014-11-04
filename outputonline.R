@@ -18,7 +18,8 @@ source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 ### the various parameters are used to build a directory name into which R descends to read
 ### pionline.dat and output.data
 # oneplot=TRUE will produce one lattice plot with CG iterations, plaquette and mpcac histories
-### otherwise three separate plots are produced
+# and it will not produce any of the other plots
+### otherwise separate plots are produced
 # addon can be used to add arbitrary text to the directory name (such as for replicas)
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
@@ -153,7 +154,7 @@ outputonline <- function(type,beta,L,T,kappa,mul,t1,t2,skip,
     dev.off()
 
 
-  } else {
+  } else { # oneplot == FALSE
     dpaopp_filename <- sprintf("01_dpaopp_%s.pdf",filelabel)
     
     plot_timeseries(dat=onlineout$MChist.dpaopp,
