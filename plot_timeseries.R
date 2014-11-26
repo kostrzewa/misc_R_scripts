@@ -37,7 +37,7 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   }
 
   # and the uwerr plots
-  plot(uw.data,main=paste(ylab,paste("UWErr analysis",titletext)))
+  plot(uw.data,main=paste(ylab,paste("UWErr analysis",titletext)),x11=FALSE,plot.hist=FALSE)
    
   dev.off()
 }
