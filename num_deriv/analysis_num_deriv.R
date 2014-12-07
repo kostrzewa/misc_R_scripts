@@ -1,4 +1,4 @@
-analysis_num_deriv <- function(dir,volume=2^4,int.steps=101,trajs=1,filename,endian="little",idx=1,single=FALSE) {
+analysis_num_deriv <- function(dir,filename,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",idx=1,single=FALSE) {
   
   n_pat <- "*_f_numerical.bin"
   a_pat <- "*_f_analytical.bin"
@@ -49,14 +49,29 @@ analysis_num_deriv <- function(dir,volume=2^4,int.steps=101,trajs=1,filename,end
   }
   dev.off()
 
-  pdf(file="df_a.all.pdf",width=6,height=6)
+  ft <- rep(times=int.steps*trajs,0.0)
+  pdf(file="df_a.all.pdf",width=6,height=6,onefile=T)
   library(plot3D)
-  points3D(x=rep(times=ncol(df_a[[length(df_a)]]$df),seq(1,nrow(df_a[[length(df_a)]]$df))),
-          y=rep(times=nrow(df_a[[length(df_a)]]$df),seq(1,ncol(df_a[[length(df_a)]]$df))),
-          z=as.vector(df_a[[length(df_a)]]$df),pch=".",
-          xlab="int. step",ylab="idx")
+  rows <- nrow(df_a[[length(df_a)]]$df)
+  cols <- ncol(df_a[[length(df_a)]]$df)
+  xcoords <- rep(times=cols,seq(1,rows))
+  ycoords <- c()
+  for( i in 1:cols ) {
+    idcs <- seq((i-1)*rows,i*rows)
+    ycoords[idcs] <- i
+  }
+  
+  points3D(x=xcoords,
+          y=ycoords,
+          z=as.vector(df_a[[length(df_a)]]$df[1:rows,1:cols]),pch=".",
+          xlab="t",ylab="idx")
   for( i in 1:ncol(df_a[[length(df_a)]]$df) ) {
-    plot(df_a[[length(df_a)]]$df[,i])
+    plot(y=df_a[[length(df_a)]]$df[,i],
+         x=seq(1,length(df_a[[length(df_a)]]$df[,i]))*tau/int.steps,
+         t='l',xlab="t",ylab="dP")
+    ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2
+    plot(y=ft/max(ft),t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
+    xlab="f")
   }
   dev.off()
 
@@ -89,7 +104,7 @@ analysis_num_deriv <- function(dir,volume=2^4,int.steps=101,trajs=1,filename,end
 
   mean_df_a <- data.frame(df=c(),ddf=c(),sddf=c(),prec=c())
   diff.df_a <- matrix(nrow=0,ncol=length(df_a[[1]]$df))
-  pdf("df_a_hist.pdf",width=6,height=6)
+  pdf("df_a_hist.pdf",width=6,height=6,onefile=T)
   for( i in 1:length(df_a) ) {
     tdf <- mean(df_a[[i]]$df)
     tsdf <- sd(df_a[[i]]$df)
@@ -102,7 +117,7 @@ analysis_num_deriv <- function(dir,volume=2^4,int.steps=101,trajs=1,filename,end
  
   print(mean_df_a)
   
-  pdf(file="mean.df_a.pdf",width=6,height=6)
+  pdf(file="mean.df_a.pdf",width=6,height=6,onefile=T)
   plot(x=log10(mean_df_a$prec),y=mean_df_a$df,ylab="mean(df_a)",main="average analytical derivative",xlab="log10(force precision)")
   plotwitherror(x=log10(mean_df_a$prec),y=mean_df_a$ddf,dy=mean_df_a$sddf,log="y",ylab="max(abs(df_25-df_x))",main="max analytical derivative difference",xlab="log10(force precision)")
   for( i in 1:nrow(diff.df_a) ) {
