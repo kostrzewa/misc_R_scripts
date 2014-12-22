@@ -8,13 +8,21 @@
 # with the corresponding values listed below, one set per row
 # colour is a string for the colour name such as "red" or "blue"
 
-plot_mpcac_v_kappa <- function(datafile,debug=F,...)
+plot_mpcac_v_kappa <- function(datafile,interval,debug=F,...)
 {
-  pcacdat <- read.table(file=datafile,header=T)
+  pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE)
+  pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
   if(debug) {
-    print(cbind(1/(2*pcacdat$kappa),pcacdat))
+    print(pcacdat)
   }
-
+  
+  if(!missing(interval)){
+    mpcacmod <- lm(mpcac~oneov2k, data=pcacdat, weights=(1/pcacdat$dmpcac)^2)
+    rootfun <- function(x,coefs) { coefs[1] + coefs[2]*x }
+    kappa_c <- uniroot(f=rootfun,interval=interval,coefs=mpcacmod$coefficients)
+    cat("estimate of kappa_c: ", 0.5*(1/kappa_c$root),"\n")
+  }
+  
   par(family="Times")
 
   plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
@@ -44,5 +52,4 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,...)
   }
 
   legend( x=legend.xpos, y=legend.ypos, col=unique(pcacdat$colour), legend=paste( "mu =", unique( pcacdat$mu ) ), pch=1 )
-
 }
