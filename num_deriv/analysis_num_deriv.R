@@ -1,10 +1,15 @@
-analysis_num_deriv <- function(dir,filename,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",idx=1,single=FALSE) {
+analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",single=FALSE) {
   
   n_pat <- "*_f_numerical.bin"
   a_pat <- "*_f_analytical.bin"
+  
   if(single) {
-    a_pat <- "f_numerical.bin"
-    n_pat <- "f_analytical.bin"
+    a_pat <- "f_analytical.bin"
+    n_pat <- "f_numerical.bin"
+    if(!missing(pattern)) {
+      a_pat <- sprintf("%s_%s",pattern,a_pat)
+      n_pat <- sprintf("%s_%s",pattern,n_pat)
+    }
     if(!missing(filename)) {
       a_pat <- n_pat <- filename
     }
@@ -43,14 +48,12 @@ analysis_num_deriv <- function(dir,filename,volume=2^4,int.steps=101,trajs=1,tau
     close(a_file)
   }
 
-  pdf(file="df_a.pdf",onefile=T,width=6,height=6)
-  for( i in 1:length(df_a) ) {
-    plot(df_a[[i]]$df[,idx])
+  pdf.filename <- "df_a.all.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
   }
-  dev.off()
 
-  ft <- rep(times=int.steps*trajs,0.0)
-  pdf(file="df_a.all.pdf",width=6,height=6,onefile=T)
+  pdf(file=pdf.filename,width=5,height=5,onefile=T)
   library(plot3D)
   rows <- nrow(df_a[[length(df_a)]]$df)
   cols <- ncol(df_a[[length(df_a)]]$df)
@@ -60,51 +63,115 @@ analysis_num_deriv <- function(dir,filename,volume=2^4,int.steps=101,trajs=1,tau
     idcs <- seq((i-1)*rows,i*rows)
     ycoords[idcs] <- i
   }
-  
   points3D(x=xcoords,
           y=ycoords,
           z=as.vector(df_a[[length(df_a)]]$df[1:rows,1:cols]),pch=".",
-          xlab="t",ylab="idx")
+          xlab="t",ylab="idx",zlab="dP")
+
   for( i in 1:ncol(df_a[[length(df_a)]]$df) ) {
     plot(y=df_a[[length(df_a)]]$df[,i],
          x=seq(1,length(df_a[[length(df_a)]]$df[,i]))*tau/int.steps,
-         t='l',xlab="t",ylab="dP")
-    ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2
-    plot(y=ft/max(ft),t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
-    xlab="f")
+         t='l',lwd=3,
+         xlab="t",ylab="dP")
+
+    ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
+    plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
+    xlab="f",ylab="Re(dP(f))^2",lwd=3 )
   }
   dev.off()
 
-  pdf(file="df_n.pdf",onefile=T,width=6,height=6)
+
+  pdf.filename <- "df_n.all.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+
+  pdf(file=pdf.filename,width=5,height=5,onefile=T)
+
+  library(plot3D)
+  rows <- nrow(df_n[[length(df_n)]]$df)
+  cols <- ncol(df_n[[length(df_n)]]$df)
+  xcoords <- rep(times=cols,seq(1,rows))
+  ycoords <- c()
+  for( i in 1:cols ) {
+    idcs <- seq((i-1)*rows,i*rows)
+    ycoords[idcs] <- i
+  }
+  points3D(x=xcoords,
+          y=ycoords,
+          z=as.vector(df_n[[length(df_n)]]$df[1:rows,1:cols]),pch=".",
+          xlab="t",ylab="idx",zlab="dP")
+  for( i in 1:ncol(df_n[[length(df_n)]]$df) ) {
+    plot(y=df_n[[length(df_n)]]$df[,i],
+         x=seq(1,length(df_n[[length(df_n)]]$df[,i]))*tau/int.steps,
+         t='l',xlab="t",ylab="dP",lwd=3)
+    ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
+    plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
+    xlab="f",ylab="Re(dP(f))^2",lwd=3 )
+  }
+  dev.off()
+
+  pdf.filename <- "diff_a.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
+  for( i in 1:length(df_a) ) {
+    irange <- 1:ncol(df_a[[length(df_a)]]$df)
+    if(!missing(indices))
+      irange <- indices
+    for( idx in irange ) {
+      plot(df_a[[length(df_a)]]$df[,idx]-df_a[[i]]$df[,idx],
+           ylab=expression(dP[max]-dP[i]),xlab="t",
+           main=sprintf("fp=%.1e",df_a[[i]]$fp) )
+    }
+  }
+  dev.off()
+
+  pdf.filename <- "diff_n.pdf"                                                                                                                                          
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
   for( i in 1:length(df_n) ) {
-    plot(df_n[[i]]$df[,idx])
-  }
-  dev.off()
-
-  pdf(file="diff_a.pdf",onefile=T,width=6,height=6)
-  for( i in 1:length(df_a) ) {
-    plot(df_a[[length(df_a)]]$df[,idx]-df_a[[i]]$df[,idx])
-  }
-  dev.off()
-
-  pdf(file="diff_n.pdf",onefile=T,width=6,height=6)
-  for( i in 1:length(df_a) ) {
-    plot(df_n[[length(df_n)]]$df[,idx]-df_n[[i]]$df[,idx])
+    irange <- 1:ncol(df_n[[length(df_n)]]$df)
+    if(!missing(indices))
+      irange <- indices
+    for( idx in irange ) {
+      plot(df_n[[length(df_n)]]$df[,idx]-df_n[[i]]$df[,idx],
+           ylab=expression(dP[max]-dP[i]),xlab="t",
+           main=sprintf("ap=%.1e eps=%.1e", df_n[[i]]$ap, df_n[[i]]$eps) )
+    }
   }
   dev.off()
   
   a.idx <- length(df_a)
   diffs <- data.frame(prec=c(),eps=c(),diff=c())
-  pdf(file="diff_a_n.pdf",onefile=T,width=6,height=6)
+  pdf.filename <- "diff_a_n.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
   for( i in 1:length(df_n) ) {
-    plot(df_a[[a.idx]]$df[,idx]-df_n[[i]]$df[,idx])
+    irange <- 1:ncol(df_n[[length(df_n)]]$df)
+    if(!missing(indices))
+      irange <- indices
+    for( idx in irange ) {
+      plot(y=df_a[[a.idx]]$df[,idx]-df_n[[i]]$df[,idx],x=seq(1,length(df_n[[length(df_n)]]$df[,idx]))*tau/int.steps,
+           main=sprintf("eps=%.1e ap=%.1e fp=%.1e",df_n[[i]]$eps,df_n[[i]]$ap,df_a[[a.idx]]$fp),
+           ylab=expression(dP[a]-dP[n]),xlab="t")
+    }
     diffs <- rbind(diffs, data.frame(prec=df_n[[i]]$ap,eps=df_n[[i]]$eps,diff=max(abs(df_a[[a.idx]]$df-df_n[[i]]$df))))
   }
   dev.off()
 
   mean_df_a <- data.frame(df=c(),ddf=c(),sddf=c(),prec=c())
   diff.df_a <- matrix(nrow=0,ncol=length(df_a[[1]]$df))
-  pdf("df_a_hist.pdf",width=6,height=6,onefile=T)
+  pdf.filename <- "df_a_hist.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
   for( i in 1:length(df_a) ) {
     tdf <- mean(df_a[[i]]$df)
     tsdf <- sd(df_a[[i]]$df)
@@ -116,8 +183,12 @@ analysis_num_deriv <- function(dir,filename,volume=2^4,int.steps=101,trajs=1,tau
   dev.off()
  
   print(mean_df_a)
-  
-  pdf(file="mean.df_a.pdf",width=6,height=6,onefile=T)
+
+  pdf.filename <- "mean_df_a.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
   plot(x=log10(mean_df_a$prec),y=mean_df_a$df,ylab="mean(df_a)",main="average analytical derivative",xlab="log10(force precision)")
   plotwitherror(x=log10(mean_df_a$prec),y=mean_df_a$ddf,dy=mean_df_a$sddf,log="y",ylab="max(abs(df_25-df_x))",main="max analytical derivative difference",xlab="log10(force precision)")
   for( i in 1:nrow(diff.df_a) ) {
@@ -125,14 +196,21 @@ analysis_num_deriv <- function(dir,filename,volume=2^4,int.steps=101,trajs=1,tau
   }
   dev.off()  
 
-
   diffs <- diffs[with(diffs,order(prec,eps)),]
   diff.matrix <- matrix(data=diffs$diff,nrow=length(unique(diffs$eps)),ncol=length(unique(diffs$prec)))
-  pdf(file="optim_contour.pdf",width=6,height=6)
+  pdf.filename <- "optim_contour.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
   filled.contour(x=log10(sort(unique(diffs$eps))),y=log10(sort(unique(diffs$prec))),z=diff.matrix,ylab="eps",xlab="ap")
   dev.off()
   
-  pdf(file="optim.pdf",onefile=T,width=6,height=6)
+  pdf.filename <- "optim.pdf"
+  if(!missing(single) && !missing(pattern)) {
+    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  }
+  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
   plot(x=log10(diffs$eps),y=diffs$diff,log="y",ylab="max. diff",main="max. diff. btw. num. and analytical deriv.",xlab="log10(eps)")
   plot(x=log10(diffs$prec),y=diffs$diff,log="y",ylab="max. diff",main="max. diff. btw. num. and analytical deriv.",xlab="log10(acc. precision)")
   dev.off()
