@@ -7,6 +7,7 @@
 # as a pair of quark masses (a*mu) which are required for extracting the decay constant
 
 meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel='continuum',useCov=FALSE,debug=FALSE,boot.fit=FALSE) {
+  minrange <- 5
   if(!any(class(cf) == "cf")) {
     stop("study_fitrange requires that 'cf' is of class 'cf'!\n")
   }
@@ -32,8 +33,8 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
                 matrixfit.dChiSqr=c(), matrixfit.dof=c(), effectivemass.ChiSqr=c(),
                 effectivemass.dChiSqr=c(), effectivemass.dof=c() )
 
-  for( T1 in 3:((cf$Time/2)-1-2) ) {
-    for( T2 in (T1+2):((cf$Time/2)-1) ) {
+  for( T1 in 3:((cf$Time/2)-1-minrange) ) {
+    for( T2 in (T1+minrange):((cf$Time/2)-1) ) {
       cat(T1, "to", T2, "\n")
 
       cf.matrixfit <- try(matrixfit(cf=cf, t1=T1, t2=T2, parlist=array(c(1,1,1,2,2,2), dim=c(2,3)),
@@ -94,7 +95,14 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
   tshld.lo <- quants[2] - 1.5*IQR(res$M)
 
   outlier.indices <- which( res$M < tshld.lo | res$M > tshld.hi )
-  res <- res[-outlier.indices,]
+
+  if( length(res[,1]) == length(outlier.indices) ) {
+    warning("For ", name, " no entries remain after removal of outliers! Continuing with full set!")
+  } else if( length(outlier.indices) == 0 ) {
+    warning("Interquartile range very large, no outliers found!\n")
+  } else {
+    res <- res[-outlier.indices,]
+  }
 
   # assemble relevant data for convenient plotting
   l.matrix <- list(df=data.frame( val=res$M, t1=res$t1, t2=res$t2,
