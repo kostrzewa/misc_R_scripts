@@ -3,13 +3,15 @@
 
 plot_timeseries <- function(dat,trange,pdf.filename,
                             ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
-                            hist.breaks=30,uwerr.S=5,periodogram=FALSE) {
+                            hist.breaks=30,uwerr.S=5,periodogram=FALSE,debug=FALSE) {
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat)
       
   uw.data <- uwerrprimary(dat,S=uwerr.S)
-  print(paste("uw.",name,sep=""))
-  summary(uw.data)
+  if(debug) {
+    print(paste("uw.",name,sep=""))
+    summary(uw.data)
+  }
   
   pdf(pdf.filename,width=plotsize,height=plotsize,title=filelabel)
   op <- par(family="Palatino",cex.main=0.6,font.main=1)
@@ -40,4 +42,6 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   plot(uw.data,main=paste(ylab,paste("UWErr analysis",titletext)),x11=FALSE,plot.hist=FALSE)
    
   dev.off()
+
+  return(c(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint))
 }

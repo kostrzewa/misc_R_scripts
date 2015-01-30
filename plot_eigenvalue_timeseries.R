@@ -40,4 +40,8 @@ plot_eigenvalue_timeseries <- function(dat,trange,stepsize=1,pdf.filename,
   abline(v=uw.max_ev$value,col="black")                                                                                                   
 
   dev.off()
+
+  return(list(mineval=c(val=uw.min_ev$value, dval=uw.min_ev$dvalue, tauint=uw.min_ev$tauint, dtauint=uw.min_ev$dtauint),
+              maxeval=c(val=uw.max_ev$value, dval=uw.max_ev$dvalue, tauint=uw.max_ev$tauint, dtauint=uw.max_ev$dtauint) ) )
+              
 }
