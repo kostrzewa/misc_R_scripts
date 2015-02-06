@@ -4,7 +4,7 @@
 # the legend position is determined from 'xlim' and 'ylim' automatically
 
 # the data file must have a header containing (*without* quotes or #):
-# "kappa mu mpcac dmpcac colour"
+# "kappa mu mpcac dmpcac colour pch"
 # with the corresponding values listed below, one set per row
 # colour is a string for the colour name such as "red" or "blue"
 
@@ -26,9 +26,13 @@ plot_mpcac_v_kappa <- function(datafile,interval,debug=F,...)
   par(family="Times")
 
   plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
-    xlab=expression(paste("1/2",kappa)), ylab=expression(~am[PCAC]), col=pcacdat$colour, ... )
+    xlab=expression(paste("1/2",kappa)), ylab=expression(~am[PCAC]), col=pcacdat$colour, 
+    pch=pcacdat$pch+pcacdat$offsetpch, ... )
 
   abline(h=0,lty=2)
+
+  # get plot boundaries
+  lims <- par("usr")
 
   # attempt to extract some coordinates for the legend 
   # from variable parameter list
@@ -48,8 +52,10 @@ plot_mpcac_v_kappa <- function(datafile,interval,debug=F,...)
     legend.ypos <- var_params$ylim[2]
   } else {
     print("legend y position NOT set")
-    legend.ypos <- 0
+    legend.ypos <- lims[4]
   }
 
-  legend( x=legend.xpos, y=legend.ypos, col=unique(pcacdat$colour), legend=paste( "mu =", unique( pcacdat$mu ) ), pch=1 )
+  legend( x=legend.xpos, y=legend.ypos, col=unique(pcacdat$colour), legend=paste( "mu =", unique( pcacdat$mu ) ), 
+          pch=unique(pcacdat$pch+pcacdat$offsetpch) )
+  
 }
