@@ -43,5 +43,5 @@ plot_timeseries <- function(dat,trange,pdf.filename,
    
   dev.off()
 
-  return(c(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint))
+  return(c(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint, Wopt=uw.data$Wopt))
 }

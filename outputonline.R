@@ -20,7 +20,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,
   title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,S=10)
 {
-  navec <- c(val=NA,dval=NA,tauint=NA,dtauint=NA)
+  navec <- c(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA)
   result <- list(params=data.frame(L=L,T=T,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta),
                  obs=data.frame(mpcac_fit=navec, mpcac_mc=navec, mpi=navec, fpi=navec, P=navec, dH=navec, expdH=navec, mineval=navec, maxeval=navec, CG.iter=navec))
 
@@ -121,11 +121,14 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   result$obs$mpi[2] <- onlineout$uwerrresultmps$dvalue
   result$obs$mpi[3] <- onlineout$uwerrresultmps$tauint
   result$obs$mpi[4] <- onlineout$uwerrresultmps$dtauint
+  result$obs$mpi[5] <- onlineout$uwerrresultmps$Wopt
+
 
   result$obs$fpi[1] <- 2*kappa*2*mul/sqrt(2)*abs(onlineout$fitresultpp$par[1])/sqrt(onlineout$fitresultpp$par[2]^3)
   result$obs$fpi[2] <- 2*kappa*2*mul/sqrt(2)*onlineout$uwerrresultfps$dvalue
   result$obs$fpi[3] <- onlineout$uwerrresultfps$tauint
   result$obs$fpi[4] <- onlineout$uwerrresultfps$dtauint
+  result$obs$fpi[5] <- onlineout$uwerrresultfps$Wopt
 
   # something in the skip computation is odd, let's just solve it like this
   if(skip==0){
@@ -221,6 +224,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   } else {
     print("pdfcat not found, not concatenating plots!")
   }
+  return(result)
 }
 
 construct_rundir <- function(type,beta,L,T,kappa=0,mul=0,csw=0,musigma=0,mudelta=0,muh=0,addon="",debug=FALSE) {
