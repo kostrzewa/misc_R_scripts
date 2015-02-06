@@ -26,11 +26,11 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
 
   # (sub-)directories where the correlators will be loaded from
   dirs <- list( ll_c=sprintf("llc_u_%g-u_%g",mass_comb$ll$m1,mass_comb$ll$m2),
-                ll_n_ud=sprintf("lln_u_%g-d_%g",mass_comb$ll$m1,mass_comb$ll$m2),
-                ll_n_du=sprintf("lln_d_%g-u_%g",mass_comb$ll$m1,mass_comb$ll$m2),
                 ls_c=sprintf("ls_u_%g-sp_%g",mass_comb$ls$m1,mass_comb$ls$m2),
                 lc_c=sprintf("lc_u_%g-cp_%g",mass_comb$lc$m1,mass_comb$lc$m2),
-                sc_c=sprintf("sc_sp_%g-cp_%g",mass_comb$sc$m1,mass_comb$sc$m2) )
+                sc_c=sprintf("sc_sp_%g-cp_%g",mass_comb$sc$m1,mass_comb$sc$m2),
+                ll_n_ud=sprintf("lln_u_%g-d_%g",mass_comb$ll$m1,mass_comb$ll$m2),
+                ll_n_du=sprintf("lln_d_%g-u_%g",mass_comb$ll$m1,mass_comb$ll$m2) )
 
   analyses <- NULL
   # the "analyses" list drives the automation process, the first four elements are self-explanatory
