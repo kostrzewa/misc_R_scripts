@@ -34,12 +34,12 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   meson.cor <- avg.ls.cf(meson.cor)
 
   if(debug) {
-    cat("Bootsrapping cf and effectivemass\n")
+    cat("Bootsrapping cf\n")
   }
   meson.cor <- bootstrap.cf(meson.cor,boot.R=boot.R,boot.l=boot.l,seed=seed)
-  meson.cor.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed)
 
   if(study.fitrange) {
+    meson.cor.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed)
     meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,
                              kappa=kappa,useCov=useCov,q_masses=q_masses,boot.fit=F,
                              fps.disprel=fps.disprel,debug=debug)
@@ -92,8 +92,8 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   }
 
   # estimate some boundaries for the effective mass plot
-  ymin <- min( save.effectivemass$effMass[t1_plot:t2_plot], na.rm=T )
-  ymax <- max( save.effectivemass$effMass[t1_plot:t2_plot], na.rm=T )
+  ymin <- save.effectivemass$opt.res$par[1]-10*sd(save.effectivemass$massfit.tsboot[,1])
+  ymax <- save.effectivemass$opt.res$par[1]+10*sd(save.effectivemass$massfit.tsboot[,1])
 
   if( ymin < 0 || is.na(ymin) ) {
     ymin <- 0
@@ -109,8 +109,9 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
        xlim=c(t1_plot,t2_plot), ylim=c(ymin,ymax), pch=4)
   plot(save.matrixfit,plot.errorband=TRUE, xlab="t/a", ylab="C(t)",main=paste(name, directory,sep=" "), pch=4)
 
-  # add another plot which shows the difference between the fitted correlation function
-  # and the original data
+
+  ## add another plot which shows the ratio between the fitted correlation function
+  ## and the original data
   Cor <- function(t) {
     m <- save.matrixfit$opt.res$par[1]
     a <- 0.5*save.matrixfit$opt.res$par[2]^2
