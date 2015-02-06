@@ -9,7 +9,11 @@ source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/definitions
 # in the strange and charm quark masses and subsequent extra-/interpolations
 # for any other quantities
 
-# in practice one would modify 
+# in practice one would modify the sections between "EDIT FROM HERE" to "TO HERE" markers
+# in order to customize the analysis to a different ensemble or different observables
+
+# the individual steps of the analysis are documented further below in the analysis of
+# m_K_ov_f_K
 
 ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute=T,loadraw=T,overview=T) {
   # certain functionality relies on stuff being strings
@@ -123,37 +127,71 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
   
   #print(phys_ratios)  
   #readline("press key")
+
+  # description of the most general type of analysis done here for a given quantity
+  # we begin by enclosing the analysis in wavy brackets to provide a local namespace
+  # and we define the name of the observable: m_K_ov_f_K in this case
   
   # m_K_ov_f_K
   name <- "m_K_ov_f_K"
   {
+    # from the "phys_ratios" table, we load the physical values of the ratio corresponding to this "name"
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
+
+    # the bootstrap samples, expectation values and errors related to 'name' are stored in hadron_obs (see documentation
+    # for  description of the data encapsulation format)
+    # here we extract from the collection of observables the 
+    
     # asemble the data into the correct format
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
+    
+    # the observable depends on a number of parameters (masses), pred.idx is an index which determines which
+    # mass value the observable is made to depend on, in this case m.val=2 specifies dependence on the second
+    # valence mass, which is the strange mass for this observable since hadron_obs stores the mass values
+    # in order of increasing size (this observable depends on the light mass and the strange mass)
+    
     pred.idx <- list(m.val=c(2),m.sea=vector())
+
+    # the extrapolation functions from the FES toolkit require the data in a data frame which is extracted
+    # via extract.for.fes_fit
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
+
+    # do the linear interpolation of this data (in this case 1D, but in principle of arbitrary
+    # dimensionality
     fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+
+    # we are going to extrapolate now, so we choose some parameter values that we want to extrapolate towards
+    # in this case the strange masses defined above
     pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval)
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
-    
+
+    # add the result of this extrapolation to the list of extrapolations
     extrapolations[[length(extrapolations)+1]] <- cbind( 
                                 data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                            dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                            pred,plot.x.idx='x1',plot.dx.idx='dx1')
-    
+
+    # we can also find the parameter values of the observable corresponding to the physical
+    # value saved in pheno above, this is done here
     fes.solve <- fes_solve(fesfit=fes.fit,unknown='x1',known=c(),
                           y=phys_ratios[phys_ratios$name == name,]$val,
                           dy=phys_ratios[phys_ratios$name == name,]$dval )
+
     
+    # and we store the result (which is a bootstrap sampling) in a data frame
     solution <- data.frame(val=mean(fes.solve[,1]), dval=sd(fes.solve[,1]), name=name)
     print(solution)
-                          
+
+    # just as we extracted data for the fit above, here we extract it for plotting
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
 
+    # and plot th data points with the phenomenological value indicated by a green band, th extrapolations indicated by coloured points
+    # and the original data as black points
     plot.hadron_obs(df=df,name=name,pheno=pheno,solutions=solution,extrapolations=extrapolations[[length(extrapolations)]],
                     debug=debug, #labelx="$a\\mu_s$",
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)
-                    
+
+    # finally we add the resulting interpolated strange mass to the vector of strange masses
     mu_s <- rbind( mu_s, solution )
   }
     
