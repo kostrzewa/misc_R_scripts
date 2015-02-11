@@ -125,9 +125,9 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
   tikz(tikzfiles$tex, standAlone = TRUE, width=5, height=5)
 
   # colours to add some timeslice information
-  colours <- rainbow(n=cf$Time/2)
+  colours <- rainbow(n=cf$Time/2,start=0.5)
   # colours to provide information about Q
-  Qcolours <- rainbow(n=100)
+  Qcolours <- rainbow(n=100,start=0.5)
   
   for( l in list( l.matrix, l.effmass ) ) {
     df <- l$df
