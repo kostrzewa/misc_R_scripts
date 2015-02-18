@@ -1,6 +1,6 @@
 source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/meson_2pt_study_fitrange.R")
 
-do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,
+do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,end=-1,
                               debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=10,
                               seed=12345,useCov=F,read.cor=T,study.fitrange=F,fps.disprel='continuum') {
 
@@ -16,11 +16,15 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
     if(debug) {
       cat("Reading", basename, "correlators from",directory,"\n")
     }
-    cmicor <- readcmidatafiles(files[skip+1:length(files)],verbose=debug)
+    if(end<0  || end > length(files) ){
+      end <- length(files)
+    }
+
+    cmicor <- readcmidatafiles(files[(skip+1):end],verbose=debug)
     save(cmicor,file=sprintf("%s.cor.Rdata",directory))
   } else {
     archivename <- sprintf("%s.cor.Rdata",directory)
-    wmesg <- sprintf("Warning, archived correlators are being read\ from: %s\nIf you changed a relevant option like 'skip' or the size of the ensemble, then you should specify 'read.cor=TRUE'!\n",archivename)
+    wmesg <- sprintf("Warning, archived correlators are being read from: %s\nIf you changed a relevant option like 'skip' or the size of the ensemble, then you should specify 'read.cor=TRUE'!\n",archivename)
     cat(wmesg)
     load(archivename)
   }
@@ -92,8 +96,8 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   }
 
   # estimate some boundaries for the effective mass plot
-  ymin <- save.effectivemass$opt.res$par[1]-10*sd(save.effectivemass$massfit.tsboot[,1])
-  ymax <- save.effectivemass$opt.res$par[1]+10*sd(save.effectivemass$massfit.tsboot[,1])
+  ymin <- save.effectivemass$opt.res$par[1]-20*sd(save.effectivemass$massfit.tsboot[,1])
+  ymax <- save.effectivemass$opt.res$par[1]+20*sd(save.effectivemass$massfit.tsboot[,1])
 
   if( ymin < 0 || is.na(ymin) ) {
     ymin <- 0

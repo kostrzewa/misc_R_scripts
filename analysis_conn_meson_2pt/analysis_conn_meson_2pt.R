@@ -10,7 +10,7 @@
 
 source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/do_conn_meson_2pt_analysis.R")
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel='continuum',boot.R=400,boot.l=20,
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel='continuum',end=-1,boot.R=400,boot.l=20,
                                     debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
   ### EDIT FROM HERE
   # masses to be used in this analysis
@@ -43,13 +43,13 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
   #   observable is a numerical vector identifying which "gamma combinations" will be fitted (in the CMI format)
   #   sign is a numerical vector indicating whether the correlator is of "cosh" (+1) or "sinh" (-1) form
   analyses[[1]] <- list( dirs=dirs$ll_c, name="ll_c", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=12, t2=42, t1_plot=5, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=18, t2=42, t1_plot=5, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
 
   analyses[[2]] <- list( dirs=dirs$ls_c, name="ls_c", mass_diagonal=F, q_masses=mass_comb$ls,
-                         t1=12, t2=40, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=18, t2=40, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
 
   analyses[[3]] <- list( dirs=dirs$lc_c, name="lc_c", mass_diagonal=F, q_masses=mass_comb$lc,
-                         t1=15, t2=30, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=18, t2=30, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
 
   analyses[[4]] <- list( dirs=dirs$sc_c, name="sc_c", mass_diagonal=F, q_masses=mass_comb$sc,
                          t1=18, t2=32, t1_plot=8, t2_plot=48, basename="outprcv.", observables=c(1), sign=c(1) )
@@ -82,7 +82,7 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
                                   basename=analyses[[ctr_analyses]]$basename, t1=analyses[[ctr_analyses]]$t1, t2=analyses[[ctr_analyses]]$t2,
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
-                                  skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
+                                  skip=skip, end=end, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
                                   fps.disprel=fps.disprel,
                                   boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange
                                  )
