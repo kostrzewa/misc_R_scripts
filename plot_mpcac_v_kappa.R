@@ -15,12 +15,36 @@ plot_mpcac_v_kappa <- function(datafile,interval,debug=F,...)
   if(debug) {
     print(pcacdat)
   }
-  
+
+  estimate <- c()
+  models <- list() 
   if(!missing(interval)){
-    mpcacmod <- lm(mpcac~oneov2k, data=pcacdat, weights=(1/pcacdat$dmpcac)^2)
     rootfun <- function(x,coefs) { coefs[1] + coefs[2]*x }
-    kappa_c <- uniroot(f=rootfun,interval=interval,coefs=mpcacmod$coefficients)
-    cat("estimate of kappa_c: ", 0.5*(1/kappa_c$root),"\n")
+    # if we have negative and positive mpcac masses (at least two of either),
+    # we should do two fits because the negative and positive slopes are different
+    no_mpcac <- c(length(which(pcacdat$mpcac>0)),length(which(pcacdat$mpcac<0)) )
+    sign <- c(1,-1)
+    if(no_mpcac[1]>=2 | no_mpcac[2]>=2){
+      cat("ok\n")
+      for( i in 1:2 ){
+        if( no_mpcac[i] < 2 ) next;
+        rws <- which(sign[i]*pcacdat$mpcac>0)
+        mpcacmod <- lm(mpcac~oneov2k, data=pcacdat[rws,], weights=(1/pcacdat$dmpcac[rws])^2)
+        models[[length(models)+1]] <- mpcacmod
+        kappa_c <- uniroot(f=rootfun,interval=interval,coefs=mpcacmod$coefficients)
+        estimate <- c(estimate,0.5*(1/kappa_c$root))
+      } 
+    } else {
+      cat("not ok\n")
+      mpcacmod <- lm(mpcac~oneov2k, data=pcacdat, weights=(1/pcacdat$dmpcac)^2)
+      models[[length(models)+1]] <- mpcacmod
+      kappa_c <- uniroot(f=rootfun,interval=interval,coefs=mpcacmod$coefficients)
+      estimate <- c(estimate,0.5*(1/kappa_c$root))
+    }
+    cat("estimate of kappa_c (+ve,-ve): ", estimate,"\n")
+    if(length(estimate)>1){
+      cat("average:", mean(estimate),"\n")
+    }
   }
   
   par(family="Times")
@@ -28,6 +52,14 @@ plot_mpcac_v_kappa <- function(datafile,interval,debug=F,...)
   plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
     xlab=expression(paste("1/2",kappa)), ylab=expression(~am[PCAC]), col=pcacdat$colour, 
     pch=pcacdat$pch+pcacdat$offsetpch, ... )
+
+  if(length(estimate)>0){
+    cols <- c("magenta","cyan")
+    for( i in 1:length(estimate) ) {
+      points(y=0,x=1/(2*estimate[i]),col=cols[i],pch=16)
+      abline(models[[i]],col=cols[i])
+    }
+  }
 
   abline(h=0,lty=2)
 
