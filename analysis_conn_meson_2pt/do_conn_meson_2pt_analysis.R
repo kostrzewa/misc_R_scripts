@@ -144,6 +144,12 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   effectivemass.ChiSqr.x <- seq(min(effectivemass.ChiSqr.tsboot),max(effectivemass.ChiSqr.tsboot),1)
   hist(effectivemass.ChiSqr.tsboot,breaks=40,main=paste("effectivemass.ChiSqr",directory,sep=" "),freq=FALSE)
   lines(x=effectivemass.ChiSqr.x,y=dchisq(x=effectivemass.ChiSqr.x,df=save.effectivemass$dof),lwd=3,col='blue')
+  
+  ## and images of the covariance matrices
+  
+  image(save.matrixfit$invCovMatrix,col=heat.colors(200),main="matrixfit invCovMatrix",useRaster=TRUE)
+  image(save.effectivemass$invCovMatrix,col=heat.colors(200),main="effectivemass invCovMatrix",useRaster=TRUE)
+  
 
   dev.off();
 
