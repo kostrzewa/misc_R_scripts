@@ -8,55 +8,87 @@
 # with the corresponding values listed below, one set per row
 # colour is a string for the colour name such as "red" or "blue"
 
-plot_mpcac_v_kappa <- function(datafile,interval,debug=F,...)
+
+plot_mpcac_v_kappa <- function(datafile,debug=F,...)
 {
-  pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE)
+  pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=TRUE)
   pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
   if(debug) {
     print(pcacdat)
   }
 
-  estimate <- c()
-  models <- list() 
-  if(!missing(interval)){
-    rootfun <- function(x,coefs) { coefs[1] + coefs[2]*x }
-    # if we have negative and positive mpcac masses (at least two of either),
-    # we should do two fits because the negative and positive slopes are different
-    no_mpcac <- c(length(which(pcacdat$mpcac>0)),length(which(pcacdat$mpcac<0)) )
-    sign <- c(1,-1)
-    if(no_mpcac[1]>=2 | no_mpcac[2]>=2){
-      cat("ok\n")
-      for( i in 1:2 ){
-        if( no_mpcac[i] < 2 ) next;
-        rws <- which(sign[i]*pcacdat$mpcac>0)
-        mpcacmod <- lm(mpcac~oneov2k, data=pcacdat[rws,], weights=(1/pcacdat$dmpcac[rws])^2)
-        models[[length(models)+1]] <- mpcacmod
-        kappa_c <- uniroot(f=rootfun,interval=interval,coefs=mpcacmod$coefficients)
-        estimate <- c(estimate,0.5*(1/kappa_c$root))
-      } 
-    } else {
-      cat("not ok\n")
-      mpcacmod <- lm(mpcac~oneov2k, data=pcacdat, weights=(1/pcacdat$dmpcac)^2)
-      models[[length(models)+1]] <- mpcacmod
-      kappa_c <- uniroot(f=rootfun,interval=interval,coefs=mpcacmod$coefficients)
-      estimate <- c(estimate,0.5*(1/kappa_c$root))
-    }
-    cat("estimate of kappa_c (+ve,-ve): ", estimate,"\n")
-    if(length(estimate)>1){
-      cat("average:", mean(estimate),"\n")
-    }
-  }
+  predict.newdata <- data.frame(oneov2k=1/(2*seq(0.1,0.2,length.out=200)))
+
   
+  models <- list()
+  predictions <- list()
+  kappa_c <- data.frame(min=c(),med=c(),max=c())
+
+  # if we have negative and positive mpcac masses (at least two of either),
+  # we should do two fits because the negative and positive slopes are different
+  no_mpcac <- c(length(which(pcacdat$mpcac>0)),length(which(pcacdat$mpcac<0)) )
+  sign <- c(1,-1)
+  if(no_mpcac[1]>=2 | no_mpcac[2]>=2){
+    for( i in 1:2 ){
+      if( no_mpcac[i] < 2 ) next;
+      rws <- which(sign[i]*pcacdat$mpcac>0)
+      mpcacmod <- lm(mpcac~oneov2k, data=pcacdat[rws,], weights=(1/pcacdat$dmpcac[rws])^2)
+      prediction <- predict(mpcacmod,newdata=predict.newdata,interval="confidence",level=0.68)
+      models[[length(models)+1]] <- mpcacmod
+      predictions[[length(predictions)+1]] <- prediction
+      # interpolate the model and the confidence bands (if available) to find 1/2k corresponding to mpcac=0.0
+      lwr <- NA
+      upr <- NA
+      if(!any(is.na(prediction[,2]))) {
+        lwr <- approx(x=prediction[,2],y=predict.newdata$oneov2k,xout=0.0)$y
+        upr <- approx(x=prediction[,3],y=predict.newdata$oneov2k,xout=0.0)$y
+      }
+      kappa_c <- rbind(kappa_c, 
+                       data.frame( lwr=lwr,
+                                   fit=approx(x=prediction[,1],y=predict.newdata$oneov2k,xout=0.0)$y,
+                                   upr=upr ) )
+    }
+  } else if(sum(no_mpcac) >= 2) {
+    mpcacmod <- lm(mpcac~oneov2k, data=pcacdat, weights=(1/pcacdat$dmpcac)^2)
+    models[[length(models)+1]] <- mpcacmod
+    prediction <- predict(mpcacmod,newdata=predict.newdata,interval="confidence",level=0.68)
+    predictions[[length(predictions)+1]] <- prediction
+    # interpolate the model and the confidence bands (if available) to find 1/2k corresponding to mpcac=0.0
+    lwr <- NA
+    upr <- NA
+    if(!any(is.na(prediction[,2]))) {
+      lwr <- approx(x=prediction[,2],y=predict.newdata$oneov2k,xout=0.0)$y
+      upr <- approx(x=prediction[,3],y=predict.newdata$oneov2k,xout=0.0)$y
+    }
+    kappa_c <- rbind(kappa_c, 
+                     data.frame( lwr=lwr,
+                                 fit=approx(x=prediction[,1],y=predict.newdata$oneov2k,xout=0.0)$y,
+                                 upr=upr ) )
+  }
+  if(nrow(kappa_c)>0) {
+    cat("Estimates of kappa_c\n")
+    print(0.5*(1/kappa_c))
+    cat("\n")
+  }
+   
   par(family="Times")
 
   plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
     xlab=expression(paste("1/2",kappa)), ylab=expression(~am[PCAC]), col=pcacdat$colour, 
     pch=pcacdat$pch+pcacdat$offsetpch, ... )
 
-  if(length(estimate)>0){
+  if(nrow(kappa_c)>0){
     cols <- c("magenta","cyan")
-    for( i in 1:length(estimate) ) {
-      points(y=0,x=1/(2*estimate[i]),col=cols[i],pch=16)
+    alpha.cols <- col2rgb(cols,alpha=TRUE)
+    alpha.cols[4,] <- 40
+    for( i in 1:nrow(kappa_c) ) {
+      if(!any(is.na(predictions[[i]][,2]))){
+        poly.x <- c(predict.newdata$oneov2k,rev(predict.newdata$oneov2k))
+        poly.y <- c(predictions[[i]][,2],rev(predictions[[i]][,3]))
+        polygon(x=poly.x,y=poly.y,border=NA,
+                col=rgb(red=alpha.cols[1,i],green=alpha.cols[2,i],blue=alpha.cols[3,i],alpha=alpha.cols[4,i],maxColorValue=255))
+      }
+      points(y=0,x=kappa_c$fit[i],col=cols[i],pch=16)
       abline(models[[i]],col=cols[i])
     }
   }
