@@ -105,18 +105,41 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
   }
 
   # assemble relevant data for convenient plotting
-  l.matrix <- list(df=data.frame( val=res$M, t1=res$t1, t2=res$t2,
+
+  # first compute the weights that are going to be used for the weighted histogram
+  # and the final determination of the error
+  wM <- wP1 <- wP2 <- (1-2*abs(res$matrixfit.Q-0.5))^2
+  wMeff <- (1-2*abs(res$effectivemass.Q-0.5))^2
+  if(boot.fit){
+    wM <- wM*(min(res$dM)/res$dM)^2
+    wP1 <- wP1*(min(res$dP1)/res$dP1)^2
+    wP2 <- wP2*(min(res$dP2)/res$dP2)^2
+    wMeff <- wMeff*(min(res$dMeff)/res$dMeff)^2 
+  }
+
+  l.matrixM <- list(df=data.frame( val=res$M, dval=res$dM, t1=res$t1, t2=res$t2,
                                ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof),
-                               Q=res$matrixfit.Q),
+                               Q=res$matrixfit.Q, w=wM),
                                label="$M_{\\mathrm{mtx}}$",
-                               name="matrixfit" )
+                               name="matrixfit M" )
 
-  l.effmass <- list(df=data.frame( val=res$Meff, t1=res$t1, t2=res$t2,
+  l.matrixP1 <- list(df=data.frame( val=res$P1, dval=res$dP1, t1=res$t1, t2=res$t2,
+                               ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof),
+                               Q=res$matrixfit.Q, w=wP1),
+                               label="$P1_{\\mathrm{mtx}}$",
+                               name="matrixfit P1" )
+  
+  l.matrixM <- list(df=data.frame( val=res$dP1, dval=res$dP2, t1=res$t1, t2=res$t2,
+                               ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof),
+                               Q=res$matrixfit.Q, w=wM),
+                               label="$P2_{\\mathrm{mtx}}$",
+                               name="matrixfit P2" )
+
+  l.effM <- list(df=data.frame( val=res$Meff, dval=res$dMeff,t1=res$t1, t2=res$t2,
                                 ChiSqr.ov.dof=(res$effectivemass.ChiSqr/res$effectivemass.dof),
-                                Q=res$effectivemass.Q),
+                                Q=res$effectivemass.Q, w=wMeff),
                                 label="$M_{\\mathrm{eff}}$",
-                                name="effmass" )
-
+                                name="eff M" )
 
   # produce a number of plots relating to the fit range analysis
   temp <- sprintf("%s.fitrange.%s",name,c("tex","pdf","aux","log"))
@@ -129,7 +152,7 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
   # colours to provide information about Q
   Qcolours <- rainbow(n=100,start=0.5)
   
-  for( l in list( l.matrix, l.effmass ) ) {
+  for( l in list( l.matrixM, l.matrixP1, l.matrixP2, l.effM ) ) {
     df <- l$df
     qtyname <- l$name
     label <- l$label
@@ -151,8 +174,8 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
         )
 
     plot(y=df$Q,x=df$val,main=title,col=colours[df$t2],ylab='$Q$',xlab=label)
-
-    weighted.hist(x=df$val,w=df$Q,breaks=40,main=paste("weighted",title),xlab=label)
+    
+    weighted.hist(x=df$val,w=df$w,breaks=40,main=paste("weighted",title),xlab=label)
 
     # save some more lines by doing two sets of plots in one go
     for( dat in list( list(qty=df$Q,lab='Q'), list(qty=df$val,lab=label) ) ) {
@@ -166,35 +189,35 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
   }
 
   # weighted mean and variance for the matrixfit masses
-  matrixfit.mustar <- weighted.mean(l.matrix$df$val,l.matrix$df$Q)
-  matrixfit.varstar <- weighted.variance(l.matrix$df$val,l.matrix$df$Q)
+  matrixfit.mustar <- weighted.mean(l.matrix$df$val,l.matrixM$df$w)
+  matrixfit.varstar <- weighted.variance(l.matrix$df$val,l.matrixM$df$w)
 
   # weighted mean and variance for the effective masses
-  effective.mustar <- weighted.mean(l.effmass$df$val,l.effmass$df$Q)
-  effective.varstar <- weighted.variance(l.effmass$df$val,l.effmass$df$Q)
+  effective.mustar <- weighted.mean(l.effmass$df$val,l.effM$df$w)
+  effective.varstar <- weighted.variance(l.effmass$df$val,l.effM$df$w)
 
   cat("Effective mass:", effective.mustar, sqrt(effective.varstar), "\n")
   cat("Matrixfit:", matrixfit.mustar, sqrt(matrixfit.varstar), "\n")
 
-  effseq <- seq(from=min(l.effmass$df$val),to=max(l.effmass$df$val),length.out=500)
-  effnorm <- dnorm(x=effseq,mean=effective.mustar,sd=sqrt(effective.varstar))
-  matrixseq <- seq(from=min(l.matrix$df$val),to=max(l.matrix$df$val),length.out=500)
-  matrixnorm <- dnorm(x=matrixseq,mean=matrixfit.mustar,sd=sqrt(matrixfit.varstar))
+#  effseq <- seq(from=min(l.effmass$df$val),to=max(l.effmass$df$val),length.out=500)
+#  effnorm <- dnorm(x=effseq,mean=effective.mustar,sd=sqrt(effective.varstar))
+#  matrixseq <- seq(from=min(l.matrix$df$val),to=max(l.matrix$df$val),length.out=500)
+#  matrixnorm <- dnorm(x=matrixseq,mean=matrixfit.mustar,sd=sqrt(matrixfit.varstar))
+#
+#  ylims <- c(0,max( c(effnorm,matrixnorm) ) )
+#
+#  plot(y=effnorm, x=effseq,lwd=3,type='l',col='blue',
+#      xlim=effective.mustar+4*c(-1,1)*sqrt(effective.varstar),ylim=ylims,xlab="mass",ylab="",
+#      main=sprintf("weighted gaussians %s", gsub("_","\\\\_",name)))
+#
+#  lines(y=matrixnorm, x=matrixseq,lwd=3,col='red',type='l')
 
-  ylims <- c(0,max( c(effnorm,matrixnorm) ) )
-
-  plot(y=effnorm, x=effseq,lwd=3,type='l',col='blue',
-      xlim=effective.mustar+4*c(-1,1)*sqrt(effective.varstar),ylim=ylims,xlab="mass",ylab="",
-      main=sprintf("weighted gaussians %s", gsub("_","\\\\_",name)))
-
-  lines(y=matrixnorm, x=matrixseq,lwd=3,col='red',type='l')
-
-  plot(y=l.effmass$df$val,x=l.matrix$df$val, main="effective vs. matrixfit",
-       ylab="effective mass", xlab="matrixfit mass",col=colours[l.effmass$df$t2])
+  plot(y=l.effM$df$val,x=l.matrixM$df$val, main="effective vs. matrixfit",
+       ylab="effective mass", xlab="matrixfit mass",col=colours[l.effM$df$t2])
 
   # plot chosen fit ranges, indicating the Q value with a
-  plot(x=l.matrix$df$t1,y=l.matrix$df$t2,main=sprintf("chosen fitranges %s", gsub("_","\\\\_",name)),
-       xlab=expression(t[i]),ylab=expression(t[f]),col=Qcolours[as.integer(100*l.matrix$df$Q)])
+  plot(x=l.matrixM$df$t1,y=l.matrixM$df$t2,main=sprintf("chosen fitranges %s", gsub("_","\\\\_",name)),
+       xlab=expression(t[i]),ylab=expression(t[f]),col=Qcolours[as.integer(100*l.matrixM$df$w)])
 
   dev.off()
   tools::texi2dvi(tikzfiles$tex,pdf=T)                                                                                                                                                                         
