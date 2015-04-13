@@ -9,7 +9,7 @@
 # colour is a string for the colour name such as "red" or "blue"
 
 
-plot_mpcac_v_kappa <- function(datafile,debug=F,...)
+plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
 {
   pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=TRUE)
   pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
@@ -22,55 +22,59 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,...)
   
   models <- list()
   predictions <- list()
-  kappa_c <- data.frame(min=c(),med=c(),max=c())
+  coefs.cov <- list()
+  coefs <- list()
+  kappa_c <- data.frame(lwr=c(),fit=c(),upr=c())
 
   # if we have negative and positive mpcac masses (at least two of either),
   # we should do two fits because the negative and positive slopes are different
   no_mpcac <- c(length(which(pcacdat$mpcac>0)),length(which(pcacdat$mpcac<0)) )
-  sign <- c(1,-1)
-  if(no_mpcac[1]>=2 | no_mpcac[2]>=2){
-    for( i in 1:2 ){
-      if( no_mpcac[i] < 2 ) next;
-      rws <- which(sign[i]*pcacdat$mpcac>0)
-      mpcacmod <- lm(mpcac~oneov2k, data=pcacdat[rws,], weights=(1/pcacdat$dmpcac[rws])^2)
-      prediction <- predict(mpcacmod,newdata=predict.newdata,interval="confidence",level=0.68)
-      models[[length(models)+1]] <- mpcacmod
-      predictions[[length(predictions)+1]] <- prediction
-      # interpolate the model and the confidence bands (if available) to find 1/2k corresponding to mpcac=0.0
-      lwr <- NA
-      upr <- NA
-      if(!any(is.na(prediction[,2]))) {
-        lwr <- approx(x=prediction[,2],y=predict.newdata$oneov2k,xout=0.0)$y
-        upr <- approx(x=prediction[,3],y=predict.newdata$oneov2k,xout=0.0)$y
+  if(sum(no_mpcac)>=2){
+    l.rws <- list()
+    l.rws[[1]] <- 1:sum(no_mpcac)
+    if(no_mpcac[1]>=2 | no_mpcac[2]>=2){
+      l.rws[[1]] <- which(pcacdat$mpcac>0)
+      l.rws[[2]] <- which(pcacdat$mpcac<0)
+    }
+    
+    for( rws in l.rws ){
+      if( length(rws) < 2 ) next;
+      simdata <- data.frame(matrix(ncol=length(rws),nrow=sim))
+      for( k in 1:length(rws) ) {
+        simdata[,k] <- rnorm(n=sim,mean=pcacdat$mpcac[rws[k]],sd=pcacdat$dmpcac[rws[k]])
       }
+      mpcacmod <- apply(X=simdata,MARGIN=1,
+                        FUN=function(x) { 
+                              lm(mpcac~oneov2k,data=data.frame(mpcac=x,oneov2k=pcacdat$oneov2k[rws]),weights=1/(pcacdat$dmpcac[rws])^2) 
+                            } )
+
+      coefs.tmp <- lapply(X=mpcacmod,FUN=function(x) { x$coefficients })
+      coefs.tmp <- array(data=unlist(coefs.tmp),dim=c(2,sim))
+
+      prediction <- lapply(X=mpcacmod,FUN=function(x) { predict(x,newdata=predict.newdata,interval="none") })
+      prediction <- array(data=unlist(prediction),dim=c(200,sim))
+
+      models[[length(models)+1]] <- mpcacmod
+      predictions[[length(predictions)+1]] <- data.frame(val=apply(X=prediction,MARGIN=1,FUN=mean),err=apply(X=prediction,MARGIN=1,FUN=sd))
+      coefs[[length(coefs)+1]] <- apply(X=coefs.tmp,MARGIN=1,FUN=mean)
+      coefs.cov[[length(coefs.cov)+1]] <- cov(t(coefs.tmp))
+
+      kappa_estimate <- apply(X=prediction,MARGIN=2,FUN=function(x) { approx(x=x,y=predict.newdata$oneov2k,xout=0.0)$y } )
       kappa_c <- rbind(kappa_c, 
-                       data.frame( lwr=lwr,
-                                   fit=approx(x=prediction[,1],y=predict.newdata$oneov2k,xout=0.0)$y,
-                                   upr=upr ) )
+                       data.frame( lwr=min(kappa_estimate), fit=mean(kappa_estimate), upr=max(kappa_estimate) ) )
     }
-  } else if(sum(no_mpcac) >= 2) {
-    mpcacmod <- lm(mpcac~oneov2k, data=pcacdat, weights=(1/pcacdat$dmpcac)^2)
-    models[[length(models)+1]] <- mpcacmod
-    prediction <- predict(mpcacmod,newdata=predict.newdata,interval="confidence",level=0.68)
-    predictions[[length(predictions)+1]] <- prediction
-    # interpolate the model and the confidence bands (if available) to find 1/2k corresponding to mpcac=0.0
-    lwr <- NA
-    upr <- NA
-    if(!any(is.na(prediction[,2]))) {
-      lwr <- approx(x=prediction[,2],y=predict.newdata$oneov2k,xout=0.0)$y
-      upr <- approx(x=prediction[,3],y=predict.newdata$oneov2k,xout=0.0)$y
-    }
-    kappa_c <- rbind(kappa_c, 
-                     data.frame( lwr=lwr,
-                                 fit=approx(x=prediction[,1],y=predict.newdata$oneov2k,xout=0.0)$y,
-                                 upr=upr ) )
-  }
+  } 
   if(nrow(kappa_c)>0) {
     cat("Estimates of kappa_c\n")
     print(0.5*(1/kappa_c))
     cat("\n")
   }
-   
+
+  for(idx in 1:length(coefs) ) {
+    print(coefs[[idx]])
+    print(sqrt(coefs.cov[[idx]]))
+  }
+  
   par(family="Times")
 
   plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
@@ -82,14 +86,19 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,...)
     alpha.cols <- col2rgb(cols,alpha=TRUE)
     alpha.cols[4,] <- 40
     for( i in 1:nrow(kappa_c) ) {
-      if(!any(is.na(predictions[[i]][,2]))){
-        poly.x <- c(predict.newdata$oneov2k,rev(predict.newdata$oneov2k))
-        poly.y <- c(predictions[[i]][,2],rev(predictions[[i]][,3]))
-        polygon(x=poly.x,y=poly.y,border=NA,
-                col=rgb(red=alpha.cols[1,i],green=alpha.cols[2,i],blue=alpha.cols[3,i],alpha=alpha.cols[4,i],maxColorValue=255))
-      }
+      poly.x <- c(predict.newdata$oneov2k,rev(predict.newdata$oneov2k))
+
+      coef.deriv <- matrix(nrow=2,ncol=length(predict.newdata$oneov2k))
+      coef.deriv[1,] <- 1
+      coef.deriv[2,] <- predict.newdata$oneov2k
+      yvar <- t(coef.deriv) %*% coefs.cov[[i]] %*% coef.deriv
+      dy <- sqrt(diag(yvar))
+
+      poly.y <- c(predictions[[i]]$val-dy,rev(predictions[[i]]$val+dy))
+      polygon(x=poly.x,y=poly.y,border=NA,
+              col=rgb(red=alpha.cols[1,i],green=alpha.cols[2,i],blue=alpha.cols[3,i],alpha=alpha.cols[4,i],maxColorValue=255))
       points(y=0,x=kappa_c$fit[i],col=cols[i],pch=16)
-      abline(models[[i]],col=cols[i])
+      lines(x=predict.newdata$oneov2k,y=predictions[[i]]$val,col=cols[i])
     }
   }
 
