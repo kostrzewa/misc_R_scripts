@@ -1,4 +1,4 @@
-#!/usr/bin/zsh
+#!/bin/bash
 if test ${1} = ""; then
   echo "usage:"
   echo "online_to_Cpp.sh start increment end"
