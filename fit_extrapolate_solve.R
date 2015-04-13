@@ -12,7 +12,12 @@
 # The fit function is constructed on the fly based on the number of columns
 # in dat.
 
-fes_fit_linear <- function(dat,start,type="nls",debug=F) {
+fes_fit_linear <- function(dat,start,type="nls",debug=FALSE,mc=TRUE) {
+  lapply.overload <- lapply
+  if(mc){
+    require("parallel")
+    lapply.overload <- mclapply
+  }
   if( type != "nls" ) {
     stop("fit_linear: Only fit type 'nls' currently supported!")
   }
@@ -49,17 +54,25 @@ fes_fit_linear <- function(dat,start,type="nls",debug=F) {
     cat("For this fit, the model", model, "is being used.\n")
   }
   
+  temp <- lapply.overload(X=dat,FUN=function(x) {
+      algorithms <- c("default","port","plinear")
+      fit <- NULL
+      for(algorithm in algorithms){
+        fit <- try(nls(as.formula(model),data=x,start=startvals,weights=x$weight,trace=FALSE,model=TRUE,algorithm=algorithm),silent=TRUE)
+        if(!any(class(fit) == "try-error")) break;
+      }
+      fit
+    })
+  # remove any fits that failed
   for( index in 1:n ) {
-    temp <- try(nls(as.formula(model),data=dat[[index]],start=startvals,weights=dat[[index]]$weight,trace=FALSE,model=TRUE))
-    if( any(class(temp) == "try-error" )) {
-      cat("Fit for bootstrap sample", index, "failed!\n")
+    if( !any(class(temp[[index]])=="try-error") ) {
+      fit[[length(fit)+1]] <- temp[[index]]
+    }else{
       failed_fits <- failed_fits+1
-    } else {
-      if(debug) print(temp)
-      fit[[(index-failed_fits)]] <- temp
+      cat("fit",index,"failed\n")
     }
   }
-  
+
   rval <- list(fit=fit,n=(n-failed_fits),model=model)
   attr(rval, "class") <- c("fesfit","fesfit_linear", class(rval))
   return( rval )
@@ -68,17 +81,29 @@ fes_fit_linear <- function(dat,start,type="nls",debug=F) {
 # use predict (or predictNLS) to extrapolate a model fitted using
 # a fes_fit function to some new values of predictor variables
 
-fes_extrapolate <- function(fesfit,pred,debug=F) {
+fes_extrapolate <- function(fesfit,pred,debug=FALSE,mc=TRUE) {
+  lapply.overload <- lapply
+  if(mc){
+    require("parallel")
+    lapply.overload <- mclapply
+  }
   if( !any( class(fesfit) == "fesfit" ) ) {
     stop("fes_extrapolate: 'fesfit' argument needs to be of class 'fesfit'\n")
   }
+  
+  classes <- NULL 
+  for(fit in fesfit$fit){
+    classes <- c(classes,class(fit))
+  }
+  print(unique(classes))
+
   if( class(fesfit$fit[[1]]) != "nls" ) {
     stop("fes_extrapolate: Only fit type 'nls' currently supported!\n")
   }
   
   # for predictNLS, the model fuction needs to be in the current environment
   # with the same name as it was used in fes_fit
-  # the reason is that predicNLS extracts the function from the $m$cal member
+  # the reason is that predicNLS extracts the function from the $m$call member
   # which literally stores the code that was used to pass the model
   # unfortunately, this call then only contains something like
   # "as.formula(model)"
@@ -95,15 +120,15 @@ fes_extrapolate <- function(fesfit,pred,debug=F) {
   require("propagate")
   # suppress some very verbose default output
   sink("/dev/null")
-  for(index in 1:fesfit$n) {      
-    prednls <- predictNLS(fesfit$fit[[index]],newdata=pred,do.sim=FALSE,interval='prediction')$summary
-    # second order mean and standard deviation
-    predy$y[index,] <- prednls[,2]
-    predy$dy[index,] <- prednls[,4]
-  }
+  temp <- lapply.overload(X=fesfit$fit,FUN=function(x) { predictNLS(x,newdata=pred,do.sim=FALSE,interval='prediction')$summary })
   # reset the output!
   sink(NULL)
   sink(NULL)
+  # extract content from list
+  for( index in 1:fesfit$n ){
+    predy$y[index,] <- temp[[index]][,2]
+    predy$dy[index,] <- temp[[index]][,4]
+  }
   
   return(predy)
 }
@@ -117,7 +142,12 @@ fes_extrapolate <- function(fesfit,pred,debug=F) {
 # there are as many columns as there are unknowns, multiplied
 # by the number of values which we try to solve for
 
-fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=F) {
+fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=FALSE,mc=TRUE) {
+  lapply.overload <- lapply
+  if(mc){
+    require("parallel")
+    lapply.overload <- mclapply
+  }
   if( !any( class(fesfit) == "fesfit" ) ) {
     stop("fes_solve: 'fesfit' argument needs to be of class 'fesfit'\n")
   }
@@ -132,13 +162,12 @@ fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=F) {
   
   # this needs to be defined in the environment for the extraction below to work
   model <- fesfit$model
-  solutions <- array(0.,dim=c(fesfit$n,(length(y)*length(unknown)+1)))
   
-  for(index in 1:fesfit$n) {
+  find_solutions <- function(fit){
     # extract the rhs of the fit function
-    rhs <- as.list(eval(fesfit$fit[[index]]$call$formula))[[3]]
+    rhs <- as.list(eval(fit$call$formula))[[3]]
     # construct a data frame to act as the environment to evaluate the rhs
-    environ <- t(as.data.frame(fesfit$fit[[index]]$m$getPars()))
+    environ <- t(as.data.frame(fit$m$getPars()))
     if(length(known) > 0)
       environ <- cbind(environ,known)
     
@@ -168,9 +197,14 @@ fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=F) {
         return( c(oval$par,oval$value) )
       }
     }
-
-    solutions[index,] <- unlist(lapply(X=y,FUN=findroot))
+    
+    unlist(lapply(X=y,FUN=findroot))
   }
+
+  temp <- lapply.overload(X=fesfit$fit,FUN=find_solutions)
+  # transform list into array
+  solutions <- t(array(unlist(temp),dim=c((length(y)*length(unknown)+1),fesfit$n)))
+
   return(solutions)
 }
 
