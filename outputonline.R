@@ -21,7 +21,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,S=10)
 {
   navec <- c(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA)
-  result <- list(params=data.frame(L=L,T=T,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta),
+  result <- list(params=data.frame(L=L,T=T,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta,N.online=0,N.plaq=0,skip=skip),
                  obs=data.frame(mpcac_fit=navec, mpcac_mc=navec, mpi=navec, fpi=navec, P=navec, dH=navec, expdH=navec, mineval=navec, maxeval=navec, CG.iter=navec))
 
   result$obs$mpcac_fit[1] <- 0.1
@@ -49,6 +49,8 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   }
 
   onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
+
+  result$params$N.online <- onlineout$N
 
   if(debug){
     print(onlineout)
@@ -150,6 +152,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
 
   if(plaquette) {
     plaquette_filename <- sprintf("04_plaquette_%s.pdf",filelabel,title=filelabel)
+    result$params$N.plaq <- trange[2]-trange[1]
     result$obs$P <- plot_timeseries(dat=outdat$V2[trange[1]:trange[2]],
       trange=trange,
       pdf.filename=plaquette_filename,
@@ -224,7 +227,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   } else {
     print("pdfcat not found, not concatenating plots!")
   }
-  return(result)
+  return(invisible(result))
 }
 
 construct_rundir <- function(type,beta,L,T,kappa=0,mul=0,csw=0,musigma=0,mudelta=0,muh=0,addon="",debug=FALSE) {
