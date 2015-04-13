@@ -1,19 +1,25 @@
 pi0 <- function(pion0.disc_path, pion0.conn_path, pionc.conn_path, pionc.con.fitrange, pion0.con.fitrange, pion0.full.fitrange, 
-                kappa, mul, skipfiles=0, boot.R=1800, boot.l=15, read.data=TRUE, seed=c(34872), useCov=FALSE) {
+                kappa, mul, skip.conf, skipfiles=0, boot.R=1800, boot.l=15, read.data=TRUE, seed=c(34872), useCov=FALSE) {
   pionc.con <- NULL
   pion0.con <- NULL
   pion0.disc <- NULL
 
   if(read.data) {
     files <- getorderedfilelist(path=pionc.conn_path,basename="outprcv.")
+    if(!missing(skip.conf))
+      files <- files[-skip.conf]
     cmicor <- readcmidatafiles(files[(skipfiles+1):length(files)])
     pionc.con <- extract.obs(cmicor,  vec.obs=c(1), sign=c(1))
 
     files <- getorderedfilelist(path=pion0.conn_path,basename="outprcvn.")
+    if(!missing(skip.conf))
+      files <- files[-skip.conf]
     cmicor <- readcmidatafiles(files[(skipfiles+1):length(files)])
     pion0.con <- extract.obs(cmicor,  vec.obs=c(5), sign=c(-1))
 
     files <- getorderedfilelist(path=pion0.disc_path,basename=sprintf("disc.%s.%s.k0v4.",kappa,mul), last.digits=4)
+    if(!missing(skip.conf))
+      files <- files[-skip.conf]
     print("Reading loops files")
     vdata <- readcmiloopfiles(files[(skipfiles+1):length(files)])
     print("Extracting loops")
@@ -39,7 +45,7 @@ pi0 <- function(pion0.disc_path, pion0.conn_path, pionc.conn_path, pionc.con.fit
 
   pionc.con <- bootstrap.cf(cf=pionc.con,boot.R=boot.R,boot.l=boot.l,seed=seed)
   cat("Conn. PiC")
-  pionc.con.matrixfit <<- matrixfit(cf=pionc.con,t1=pionc.con.fitrange[1],pionc.con.fitrange[2],boot.R=boot.R,boot.l=boot.l,useCov=useCov)
+  pionc.con.matrixfit <<- matrixfit(cf=pionc.con,t1=pionc.con.fitrange[1],t2=pionc.con.fitrange[2],boot.R=boot.R,boot.l=boot.l,useCov=useCov)
   summary(pionc.con.matrixfit)
   save(pionc.con.matrixfit,file="pionc.con.matrixfit.Rdata")
 
