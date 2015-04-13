@@ -1,3 +1,5 @@
+source("~/code/R/misc_R_scripts/tikz_utils.R")
+
 construct.empty.hadron_obs <- function() {
   hadron_obs <- list()
   attr(hadron_obs,"class") <- c("hadron_obs",class(hadron_obs))
@@ -11,9 +13,9 @@ construct.hadron_obs <- function(name,texlabel,m.sea,m.val,mean,err,boot) {
 }
   
 select.hadron_obs <- function(hadron_obs,by,filter) {
-  if(!any(class(hadron_obs) == "hadron_obs")) {
-    stop("select.hadron_obs: hadron_obs argument must be of class hadron_obs!\n")
-  }
+#  if(!any(class(hadron_obs) == "hadron_obs")) {
+#    stop("select.hadron_obs: hadron_obs argument must be of class hadron_obs!\n")
+#  }
   rval <- list()
   for( i in hadron_obs ) {
     if( i[[by]] == filter )
@@ -36,7 +38,7 @@ as.data.frame.hadron_obs <- function(hadron_obs) {
 
 extract.for.fes_fit <- function(hadron_obs, pred.idx) {
   if(!any(class(hadron_obs) == "hadron_obs")) {
-   stop("preapre.for.fes_fit: hadron_obs argument must be of class hadron_obs!\n")
+   stop("extract.for.fes_fit: hadron_obs argument must be of class hadron_obs!\n")
   }
   n.boot <- length(hadron_obs[[1]]$boot)
   # number of predictor variables
@@ -59,6 +61,9 @@ extract.for.fes_fit <- function(hadron_obs, pred.idx) {
   # here!
   for( b in 1:n.boot ) {
     for( r in 1:n.resp ) {
+      # when weighing the data for the fit, we curently ignore the systematic error
+      # because it is problematic to construct a likelihood function with asymmetric errors
+      # and symmetrisng the error would just be incorrect
       rval[[b]][r,] <- c(hadron_obs[[r]]$boot[b],
                          hadron_obs[[r]]$m.val[pred.idx$m.val],
                          hadron_obs[[r]]$m.sea[pred.idx$m.sea],
@@ -76,9 +81,14 @@ extract.for.fes_fit <- function(hadron_obs, pred.idx) {
 
 extract.for.plot <- function(hadron_obs,x.name,x.idx) {
   N <- length(hadron_obs)
-  rval <- as.data.frame( array(dim=c(N,3), dimnames=list(c(NULL),c("y","dy","x"))))
+  rval <- as.data.frame( array(dim=c(N,4), dimnames=list(c(NULL),c("y","dy","mdy","x"))))
   for( i in 1:N ) {
-    rval[i,] <-  c(y=hadron_obs[[i]]$mean,dy=hadron_obs[[i]]$err,x=hadron_obs[[i]][[x.name]][x.idx])
+    # in these plots we show only the statistical error
+    rval[i,] <-  c(y=hadron_obs[[i]]$mean,
+                   dy=sqrt(hadron_obs[[i]]$err^2),
+                   mdy=sqrt(hadron_obs[[i]]$err^2),
+                   x=hadron_obs[[i]][[x.name]][x.idx])
+    print(rval[i,])
   }
   rval
 }
@@ -98,7 +108,7 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,lab
   }
   
   # set up plot
-  plotwitherror( y=df$y, x=df$x, dy=df$dy, type='n', ... )
+  plotwitherror( y=df$y, x=df$x, dy=df$dy, mdy=df$mdy, type='n', ... )
   
   # extract plot boundaries
   lims <- par("usr")
@@ -134,27 +144,11 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,lab
       # add band indicating solution      
       rect( xleft=solutions$val-solutions$dval, xright=solutions$val+solutions$dval, ybottom=ybottom,
             ytop=pheno$val+pheno$dval, col=rgb(red=0.0,blue=1.0,green=0.0,alpha=0.2), border='blue' )
-      # and add point on top
-      colours <- 'blue'
-      symbols <- 18
-      if(!missing(lg)) {
-        colours <- lg$col[length(lg$col)]
-        symbols <- lg$pch[length(lg$pch)]
-      }
-      plotwitherror( y=pheno$val, x=solutions$val, dx=solutions$dval, dy=pheno$dval, rep=T, col=colours, pch=symbols )
-    }        
+    }
   }
   
   # add data points on top of any bands that were drawn
-  plotwitherror( y=df$y, x=df$x, dy=df$dy, rep=T )
-  
-  if(!missing(labelx)) {
-    txpd <- par()$xpd
-    par(xpd=NA)
-    text(x=(lims[1]-0.05*deltax),
-         y=(lims[3]-0.18*deltay),labels=labelx) 
-    par(xpd=txpd)
-  }
+  plotwitherror( y=df$y, x=df$x, dy=df$dy, mdy=df$mdy, rep=TRUE )
   
   if(!missing(extrapolations)){
     if(debug){
@@ -173,6 +167,26 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,lab
                    col=colours, pch=symbols, rep=T )
   }
   
+  # since this is the most important point, we draw it last
+  if(!missing(solutions)){
+    # and add point on top
+    colours <- 'blue'
+    symbols <- 18
+    if(!missing(lg)) {
+      colours <- lg$col[length(lg$col)]
+      symbols <- lg$pch[length(lg$pch)]
+    }
+    plotwitherror( y=pheno$val, x=solutions$val, dx=solutions$dval, dy=pheno$dval, rep=TRUE, col=colours, pch=symbols )
+  }        
+  
+  if(!missing(labelx)) {
+    txpd <- par()$xpd
+    par(xpd=NA)
+    text(x=(lims[1]-0.05*deltax),
+         y=(lims[3]-0.18*deltay),labels=labelx) 
+    par(xpd=txpd)
+  }
+  
   if(!missing(lg)){
     legend(x=lims[1],y=lims[4],legend=lg$labels,pch=lg$pch,col=lg$col,bty="n")
   }
@@ -185,6 +199,41 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,lab
   # remove temporary files 
   command <- sprintf("rm %s %s %s", tikzfiles$tex, tikzfiles$log, tikzfiles$aux)
   system(command)
+}
+
+# return a data frame to summarize the contents of the hadron_obs object, this is of course rather silly
+# because the number of columns could be completely variable and depend on the observable... this
+# was the actual reason for introducting hadron_obs in the first place...
+summary.hadron_obs <- function(hadron_obs) {
+  rval <- NULL
+  for(obs in hadron_obs){
+    rval <- rbind(rval,data.frame(name=obs$name,texlabel=as.character(obs$texlabel), m1=obs$m.sea[1],m2=obs$m.val[1],m3=obs$m.val[2],
+                                  mean=obs$mean,err=obs$err,median=obs$median,mserr=obs$serr[1],serr=obs$serr[2],stringsAsFactors=FALSE))
+  }
+  class(rval) <- c(class(rval),"summary_hadron_obs")
+  rval
+}
+
+plot_fitrange_errors.summary_hadron_obs <- function(summary_hadron_obs) {
+  if(!any(class(summary_hadron_obs)=="summary_hadron_obs")){
+    stop("plot.summary_hadron_obs: argument must be of class 'summary_hadron_obs'")
+  }
+
+  tikzfiles <- tikz.init("fitrange_summary",width=6,height=45,sanitize=FALSE)
+
+  # we want to plot everything normalized by the mean
+  Ncol <- ncol(summary_hadron_obs)
+  summary_hadron_obs[,3:Ncol] <- summary_hadron_obs[,3:Ncol] / summary_hadron_obs$median
+  
+  y <- 1:nrow(summary_hadron_obs)
+  plotwitherror(x=summary_hadron_obs$median,y=y,
+                dx=cbind(summary_hadron_obs$err,summary_hadron_obs$serr),
+                mdx=cbind(summary_hadron_obs$err,summary_hadron_obs$mserr))
+  points(x=summary_hadron_obs$mean,y=y,pch=4)
+  print(summary_hadron_obs$texlabel)
+  text(x=0.955,y=y,labels=summary_hadron_obs$texlabel)
+
+  tikz.finalize(tikzfiles)
 }
 
 # it is unclear to me whether this kind of function is useful...
