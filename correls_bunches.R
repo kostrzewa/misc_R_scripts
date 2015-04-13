@@ -40,16 +40,23 @@ correls_bunches <- function(dir,end,per_bunch=10,skip=0,debug=F,filename="pionon
   for( i in seq(from=min_sample,to=max_sample,by=step) ) {
     if(debug) { print(i) }
     plot(x=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==1 & omeas$V2==1 ),3],
-         y=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==1 & omeas$V2==1 ),4]/pp_norm,
-         log='y',ylim=c(pp_min,1.2),
-         main=paste("PP ",i),xlab="t",ylab=expression(C[PP])) 
+         y=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==1 & omeas$V2==1 ),4],
+         log='y',#ylim=c(pp_min,1.2),
+         main=paste("PP ",i),xlab="t",ylab=expression(C[PP]),ylim=c(0.01,35)) 
 #    plot(x=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==2 & omeas$V3 > 1),3],
 #         y=omeas[(omeas$V6>i & omeas$V6<(i+step) & omeas$V1==2 & omeas$V3 > 1),4]/pa_norm,
 #        main=paste("PA ",i),xlab="t",ylab=expression(C[PA]))
          #,ylim=c(-0.02,0.04))
 #         log='y') 
   }
+  # add a summary plot with errors
+  omeas.obs <- extract.obs(omeas,vec.obs=c(1,2),sign.vec=c(1,-1)) 
+  plot(omeas.obs, log='y', main="PP",xlab="t",ylab=expression(C[PP]),ylim=c(0.01,35)) 
   dev.off()
+
+  savename <- paste("omeas.obs.",dir,sep="")
+  assign(savename,omeas.obs)
+  save(list=savename,file=paste(savename,".Rdata",sep=""))
 
   # PA correlator in bunches of 10
   #pdf("PA_correls_bunches_of_10.pdf")
