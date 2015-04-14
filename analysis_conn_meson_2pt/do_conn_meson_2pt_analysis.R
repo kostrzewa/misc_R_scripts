@@ -1,6 +1,7 @@
 source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/meson_2pt_study_fitrange.R")
 
-do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,end=-1,
+do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kappa,q_masses,m.sea,
+                              Tmin,Tmax,minrange,end=-1,
                               debug=F,pause=F,basename="outprcv.",observable=c(1),sign=c(+1),skip=0,boot.R=400,boot.l=10,
                               seed=12345,useCov=F,read.cor=T,study.fitrange=F,fps.disprel='continuum') {
 
@@ -19,8 +20,8 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
     if(end<0  || end > length(files) ){
       end <- length(files)
     }
-
-    cmicor <- readcmidatafiles(files[(skip+1):end],verbose=debug)
+    # load only the observable of interest
+    cmicor <- readcmidatafiles(files[(skip+1):end],obs=observable,verbose=debug)
     save(cmicor,file=sprintf("%s.cor.Rdata",directory))
   } else {
     archivename <- sprintf("%s.cor.Rdata",directory)
@@ -32,7 +33,7 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   if(debug) {
     cat("Extracting observable\n")
   }
-  meson.cor <- extract.obs(cmicor, vec.obs=observable,sign.vec=sign)
+  meson.cor <- extract.obs(cmicor,vec.obs=observable,sign.vec=sign)
 
   # average LF and FL
   meson.cor <- avg.ls.cf(meson.cor)
@@ -45,8 +46,8 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   if(study.fitrange) {
     meson.cor.effectivemass <- bootstrap.effectivemass(meson.cor, type="solve", boot.R=boot.R, boot.l=boot.l, seed=seed)
     meson_2pt_study_fitrange(cf=meson.cor,effmass=meson.cor.effectivemass,name=directory,
-                             kappa=kappa,useCov=useCov,q_masses=q_masses,boot.fit=F,
-                             fps.disprel=fps.disprel,debug=debug)
+                             kappa=kappa,useCov=useCov,q_masses=q_masses,m.sea=m.sea,boot.fit=TRUE,
+                             fps.disprel=fps.disprel,debug=debug,Tmin=Tmin,Tmax=Tmax,minrange=minrange)
   }
 
   if(debug) {
@@ -138,18 +139,25 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   matrixfit.ChiSqr.x <- seq(min(matrixfit.ChiSqr.tsboot),max(matrixfit.ChiSqr.tsboot),1)
   hist(matrixfit.ChiSqr.tsboot,breaks=40,main=paste("matrixfit.ChiSqr",directory,sep=" "),freq=FALSE)
   lines(x=matrixfit.ChiSqr.x,y=dchisq(x=matrixfit.ChiSqr.x,df=save.matrixfit$dof),lwd=3,col='red')
-
+  ## add a qqplot 
+  qqplot(y=matrixfit.ChiSqr.tsboot, x=rchisq(n=length(matrixfit.ChiSqr.tsboot), df=save.matrixfit$dof),xlab="theoretical chi^2", ylab="measured chi^2",main="matrixfit Q-Q plot")
+  qqline(y=rchisq(n=length(matrixfit.ChiSqr.tsboot), df=save.matrixfit$dof),distribution=function(p){qchisq(p,df=save.matrixfit$dof)})
 
   effectivemass.ChiSqr.tsboot <- save.effectivemass$massfit.tsboot[,2]
   effectivemass.ChiSqr.x <- seq(min(effectivemass.ChiSqr.tsboot),max(effectivemass.ChiSqr.tsboot),1)
   hist(effectivemass.ChiSqr.tsboot,breaks=40,main=paste("effectivemass.ChiSqr",directory,sep=" "),freq=FALSE)
   lines(x=effectivemass.ChiSqr.x,y=dchisq(x=effectivemass.ChiSqr.x,df=save.effectivemass$dof),lwd=3,col='blue')
+  qqplot(y=effectivemass.ChiSqr.tsboot, x=rchisq(n=length(effectivemass.ChiSqr.tsboot), df=save.effectivemass$dof), xlab="theoretical chi^2", ylab="measured chi^2",main="effectivemass Q-Q plot")
+  qqline(rchisq(n=length(effectivemass.ChiSqr.tsboot), df=save.effectivemass$dof),distribution=function(p){qchisq(p,df=save.effectivemass$dof)})
   
-  ## and images of the covariance matrices
-  
+  ## and images of the covariance matrices and their inverses
+  norM <- sqrt(outer(diag(save.matrixfit$CovMatrix),diag(save.matrixfit$CovMatrix)))
+  image(save.matrixfit$CovMatrix/norM,col=heat.colors(200) ,main="normalised matrixfit CovMatrix",useRaster=TRUE)
   image(save.matrixfit$invCovMatrix,col=heat.colors(200),main="matrixfit invCovMatrix",useRaster=TRUE)
+
+  norM <- sqrt(outer(diag(save.effectivemass$CovMatrix),diag(save.effectivemass$CovMatrix)))
+  image(save.effectivemass$CovMatrix/norM,col=heat.colors(200),main="normalised effectivemass CovMatrix",useRaster=TRUE)
   image(save.effectivemass$invCovMatrix,col=heat.colors(200),main="effectivemass invCovMatrix",useRaster=TRUE)
-  
 
   dev.off();
 

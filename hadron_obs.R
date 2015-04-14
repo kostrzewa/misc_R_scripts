@@ -1,5 +1,3 @@
-source("~/code/R/misc_R_scripts/tikz_utils.R")
-
 construct.empty.hadron_obs <- function() {
   hadron_obs <- list()
   attr(hadron_obs,"class") <- c("hadron_obs",class(hadron_obs))

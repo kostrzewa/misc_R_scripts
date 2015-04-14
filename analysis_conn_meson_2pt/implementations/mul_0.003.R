@@ -77,7 +77,8 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
                                   skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
-                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange
+                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange,
+                                  fps.disprel=fps.disprel,m.sea=light_masses
                                  )
           
       analysis_results <- rbind(analysis_results, result)

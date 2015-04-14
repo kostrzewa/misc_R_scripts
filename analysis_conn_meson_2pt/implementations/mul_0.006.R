@@ -10,10 +10,10 @@
 
 source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/do_conn_meson_2pt_analysis.R")
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F,end=-1,fps.disprel="continuum") {
   # masses to be used in this analysis
   strange_masses <- c(0.0224,0.0231,0.0238,0.0245,0.0252,0.0259)
-  charm_masses <- c(0.2586,0.2704,0.2822)#,0.294,0.3058,0.3176)
+  charm_masses <- c(0.2586,0.2704,0.2822,0.294,0.3058,0.3176)
   light_masses <- c(0.006)
   
   # combinations of these masses
@@ -77,7 +77,8 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
                                   skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
-                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange
+                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange,
+                                  end=end, fps.disprel=fps.disprel, m.sea=light_masses
                                  )
           
       analysis_results <- rbind(analysis_results, result)

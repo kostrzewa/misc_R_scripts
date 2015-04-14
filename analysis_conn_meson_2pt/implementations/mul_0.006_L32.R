@@ -10,11 +10,12 @@
 
 source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/do_conn_meson_2pt_analysis.R")
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=FALSE,end=-1,fps.disprel="continuum") {
   # masses to be used in this analysis
   strange_masses <- c(0.0224,0.0231,0.0238,0.0245,0.0252,0.0259)
-  charm_masses <- c(0.2586,0.2704,0.2822)#,0.294,0.3058,0.3176)
+  charm_masses <- c(0.2586,0.2704,0.2822,0.294,0.3058,0.3176)
   light_masses <- c(0.006)
+  m.sea <- light_masses
   
   # combinations of these masses
   mass_comb <- list( ll=data.frame( m1=light_masses, m2=light_masses ),
@@ -76,7 +77,8 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
                                   basename=analyses[[ctr_analyses]]$basename, t1=analyses[[ctr_analyses]]$t1, t2=analyses[[ctr_analyses]]$t2,
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
-                                  skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
+                                  skip=skip, end=end, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
+                                  fps.disprel=fps.disprel, m.sea=m.sea,
                                   boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange
                                  )
           

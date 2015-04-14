@@ -6,8 +6,7 @@
 # it takes as input: hadron cf and effectivemass objects, the kappa parameter of the simulation as well
 # as a pair of quark masses (a*mu) which are required for extracting the decay constant
 
-meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel='continuum',useCov=FALSE,debug=FALSE,boot.fit=FALSE) {
-  minrange <- 5
+meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,m.sea,q_masses,Tmax,Tmin=5,minrange=5,fps.disprel='continuum',useCov=FALSE,debug=FALSE,boot.fit=FALSE) {
   if(!any(class(cf) == "cf")) {
     stop("study_fitrange requires that 'cf' is of class 'cf'!\n")
   }
@@ -20,135 +19,196 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
 
   if(debug) {
     cat("Performing study of fit range dependence\n")
+    print(q_masses)
   }
   require("plotrix")
   require("tikzDevice")
 
-  # extract some stuff from cf
-
-  res <- data.frame(name=c(), t1=c(), t2=c(), M=c(), dM=c(),
-                Meff=c(), dMeff=c(), P1=c(), dP1=c(),
-                P2=c(), dP2=c(), f=c(), df=c(),
-                qm1=c(), qm2=c(), kappa=c(),matrixfit.ChiSqr=c(),
-                matrixfit.dChiSqr=c(), matrixfit.dof=c(), effectivemass.ChiSqr=c(),
-                effectivemass.dChiSqr=c(), effectivemass.dof=c() )
-
-  for( T1 in 3:((cf$Time/2)-1-minrange) ) {
-    for( T2 in (T1+minrange):((cf$Time/2)-1) ) {
-      cat(T1, "to", T2, "\n")
-
-      cf.matrixfit <- try(matrixfit(cf=cf, t1=T1, t2=T2, parlist=array(c(1,1,1,2,2,2), dim=c(2,3)),
-                                matrix.size=3, symmetrise=T, boot.R=cf$boot.R, boot.l=cf$boot.l, useCov=useCov, boot.fit=boot.fit))
-
-      # if the fit fails, we go to the next fit range
-      if( any(class(cf.matrixfit) == "try-error" )) next
-
-      cf.matrixfit <- computefps( cf.matrixfit, mu1=q_masses$m1, mu2=q_masses$m2, Kappa=kappa, #normalisation="mpsexplicit",
-       disprel=fps.disprel, boot.fit=boot.fit )
-
-      effectivemass.fit <- try(fit.effectivemass(effmass, t1=T1, t2=T2, useCov=useCov, replace.na=TRUE, boot.fit=boot.fit))
-      if( any(class(effectivemass.fit) == "try-error" )) next
-
-      # if we skip bootstrapping the two fits (boot.fit==FALSE), then we can't compute errors
-      dM <- NA
-      dMeff <- NA
-      dP1 <- NA
-      dP2 <- NA
-      df <- NA
-      matrixfit.dChiSqr <- NA
-      effectivemass.dChiSqr <- NA
-
-      if(boot.fit) {
-        dM <- sd(cf.matrixfit$opt.tsboot[1,])
-        dMeff <- sd(effectivemass.fit$massfit.tsboot[,1])
-        dP1 <- sd(cf.matrixfit$opt.tsboot[2,])
-        dP2 <- sd(cf.matrixfit$opt.tsboot[3,])
-        df <- sd(cf.matrixfit$fps.tsboot)
-        matrixfit.dChiSqr <- sd(cf.matrixfit$opt.tsboot[,4])
-        effectivemass.dChiSqr <- sd(effectivemass.fit$massfit.tsboot[,2])
-      }
-
-      res <- rbind(res,data.frame(name=name, t1=T1, t2=T2, M=cf.matrixfit$opt.res$par[1], dM=dM,
-                Meff=effectivemass.fit$opt.res$par[1], dMeff=dMeff,
-                P1=cf.matrixfit$opt.res$par[2], dP1=dP1,
-                P2=cf.matrixfit$opt.res$par[3], dP2=dP2,
-                f=cf.matrixfit$fps, df=df,
-                qm1=q_masses$m1, qm2=q_masses$m2, kappa=kappa,
-                matrixfit.ChiSqr=cf.matrixfit$opt.res$value, matrixfit.dChiSqr=matrixfit.dChiSqr,
-                matrixfit.dof=cf.matrixfit$dof, matrixfit.Q=cf.matrixfit$Qval,
-                effectivemass.ChiSqr=effectivemass.fit$opt.res$value, effectivemass.dChiSqr=effectivemass.dChiSqr,
-                effectivemass.dof=effectivemass.fit$dof, effectivemass.Q=effectivemass.fit$Qval ))
+  # construct list of fitranges to be studied with placeholders for analysis results
+  if(missing(Tmax)){
+    Tmax <- (cf$Time/2)-1
+  }
+  fr <- list()
+  for( T1 in Tmin:(Tmax-minrange) ) {
+    for( T2 in (T1+minrange):Tmax ) {
+      fr[[length(fr)+1]] <- list( t1=T1, t2=T2, boot.fit=boot.fit, m.sea=m.sea, q_masses=q_masses, name=name, Time=cf$Time, kappa=kappa,
+                                   useCov=useCov, fps.disprel=fps.disprel,
+                                    M=NA,P1=NA,P2=NA,f=NA,Meff=NA
+                                  )
     }
   }
+  class(fr) <- c(class(fr),"fitrange")
+  
+  require("parallel")
+  rval <- mclapply(X=fr,FUN=do_fit.fitrange,cf=cf,effmass=effmass)
 
-  # need to rename object before saving to file so that it can easily be loaded
-  # and referred to in an external script
-  # we make sure that no "-" characters remain in the name because they would
-  # make it very difficult to use the objects in the future
-  savename <- sprintf("%s.fitrange",gsub("-","_",name) )
-  assign(savename,res)
+  error <- lapply(X=rval,FUN=function(x) { any(class(x)=="try-error") })
+  if(any(unlist(error)))
+    stop("try-errors detected in parallel execution of do_fit.fitrange")
+
+# temporary attempt to output this as a set of data frames to make the computation of
+# medians easier, not sure if this implementation is what will happen when I'm done...
+###########################
+#  for(i in 1:length(fr)){
+#    if(fr[[i]]
+#  }
+#
+#  # reformat into data frames
+#  
+#  Nleft <- 2
+#  Ncol <- Nleft+length(fr[[1]]$M$t)
+#
+#  Mdf <- array(dim(length(fr),Ncol))
+#  P1df <- array(dim(length(fr),Ncol))
+#  P2df <- array(dim(length(fr),Ncol))
+#  fdf <- array(dim(length(fr),Ncol))
+#  Meffdf <- array(dim(length(fr),Ncol))
+#  
+#  for(i in 1:length(fr)){
+#    Mdf[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$M$t)
+#    P1df[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$P1$t)
+#    P2df[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$P2$t)
+#    fdf[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$f$t)
+#    Meffdf[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$Meff$t)
+#  }
+#
+#  # need to rename object before saving to file so that it can easily be loaded
+#  # and referred to in an external script
+#  # we make sure that no "-" characters remain in the name because they would
+#  # make it very difficult to use the objects in the future
+
+#  l.objects <- c("rval","Mdf","P1df","P2df","fdf","Meffdf")
+
+#  for(objname in l.objects){
+#    class(get(objname)) <- c(class(get(objname)),"fitrange")
+#    savename <- sprintf("%s.%s.fitrange",gsub("-","_",name),objname)
+#    assign(savename,get(objname))
+#    save(list=savename,file=sprintf("%s.Rdata",savename))
+#  }
+#######################
+
+  class(rval) <- c(class(rval),"fitrange")
+  savename <- sprintf("%s.fitrange",gsub("-","_",name))
+  assign(savename,rval)
   save(list=savename,file=sprintf("%s.Rdata",savename))
+  rval
+}
+
+do_fit.fitrange <- function(fr,cf,effmass) {
+  cat(fr$t1, "to", fr$t2, "\n")
+  cf.matrixfit <- try(matrixfit(cf=cf, t1=fr$t1, t2=fr$t2, parlist=array(c(1,1,1,2,2,2), dim=c(2,3)),
+                                matrix.size=3, symmetrise=T, boot.R=cf$boot.R, boot.l=cf$boot.l, 
+                                useCov=fr$useCov, boot.fit=fr$boot.fit))
+ 
+  if(!any(class(cf.matrixfit)=="try-error")) {
+    cf.matrixfit <- computefps( cf.matrixfit, mu1=fr$q_masses$m1, mu2=fr$q_masses$m2, Kappa=fr$kappa, #normalisation="mpsexplicit",
+                                disprel=fr$fps.disprel, boot.fit=fr$boot.fit )
+  }
+
+  effectivemass.fit <- try(fit.effectivemass(effmass, t1=fr$t1, t2=fr$t2, useCov=fr$useCov, replace.na=TRUE, boot.fit=fr$boot.fit))
+  
+  # if there were no errors during the fit procedure, propagate the fit results to the return value 
+  if(fr$boot.fit){
+    if(!any(class(cf.matrixfit)=="try-error")){
+      fr$M <- list(t=cf.matrixfit$opt.tsboot[1,],t0=cf.matrixfit$opt.res$par[1],
+                   Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+      fr$P1 <- list(t=cf.matrixfit$opt.tsboot[2,],t0=cf.matrixfit$opt.res$par[2],
+                    Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+      fr$P2 <- list(t=cf.matrixfit$opt.tsboot[3,],t0=cf.matrixfit$opt.res$par[3],
+                    Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+      fr$f <- list(t=cf.matrixfit$fps.tsboot,t0=cf$matrixfit$fps,
+                   Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+    }
+    if(!any(class(effectivemass.fit)=="try-error")){
+      fr$Meff <- list(t=effectivemass.fit$massfit.tsboot[,1],t0=effectivemass.fit$opt.res$par[1],
+                      Q=effectivemass.fit$Qval,chisq=effectivemass.fit$opt.res$value,dof=effectivemass.fit$dof )
+    }
+  }else{
+    if(!any(class(cf.matrixfit)=="try-error")){
+      fr$M <- list(t=NA,t0=cf.matrixfit$opt.res$par[1],
+                   Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+      fr$P1 <- list(t=NA,t0=cf.matrixfit$opt.res$par[2],
+                    Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+      fr$P2 <- list(t=NA,t0=cf.matrixfit$opt.res$par[3],
+                    Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+      fr$f <- list(t=NA,t0=cf$matrixfit$fps,
+                   Q=cf.matrixfit$Qval,chisq=cf.matrixfit$opt.res$value,dof=cf.matrixfit$dof )
+    }
+    if(!any(class(effectivemass.fit)=="try-error")){
+      fr$Meff <- list(t=NA,t0=effectivemass.fit$opt.res$par[1],
+                      Q=effectivemass.fit$Qval,chisq=effectivemass.fit$opt.res$value,dof=effectivemass.fit$dof )
+    }
+  }
+  return(invisible(fr))
+}
+
+plot.fitrange <- function(fr) {
+  require("plotrix")
+  require("tikzDevice")
+  if(!any(class(fr)=="fitrange")) {
+    stop("object for plotting must be of class 'fitrange'")
+  }
 
   # we now remove the outliers using the usual idea of computing quartiles and the interquartile range
-  quants <- quantile(res$M)
-  tshld.hi <- quants[4] + 1.5*IQR(res$M)
-  tshld.lo <- quants[2] - 1.5*IQR(res$M)
+  quants <- quantile(fr$M)
+  tshld.hi <- quants[4] + 1.5*IQR(fr$M)
+  tshld.lo <- quants[2] - 1.5*IQR(fr$M)
 
-  outlier.indices <- which( res$M < tshld.lo | res$M > tshld.hi )
+  outlier.indices <- which( fr$M < tshld.lo | fr$M > tshld.hi )
 
-  if( length(res[,1]) == length(outlier.indices) ) {
-    warning("For ", name, " no entries remain after removal of outliers! Continuing with full set!")
+  if( length(fr[,1]) == length(outlier.indices) ) {
+    warning("For ", fr$name[1], " no entries remain after removal of outliers! Continuing with full set!")
   } else if( length(outlier.indices) == 0 ) {
     warning("Interquartile range very large, no outliers found!\n")
   } else {
-    res <- res[-outlier.indices,]
+    fr <- fr[-outlier.indices,]
   }
 
   # assemble relevant data for convenient plotting
 
   # first compute the weights that are going to be used for the weighted histogram
   # and the final determination of the error
-  wM <- wP1 <- wP2 <- (1-2*abs(res$matrixfit.Q-0.5))^2
-  wMeff <- (1-2*abs(res$effectivemass.Q-0.5))^2
-  if(boot.fit){
-    wM <- wM*(min(res$dM)/res$dM)^2
-    wP1 <- wP1*(min(res$dP1)/res$dP1)^2
-    wP2 <- wP2*(min(res$dP2)/res$dP2)^2
-    wMeff <- wMeff*(min(res$dMeff)/res$dMeff)^2 
+  wM <- wP1 <- wP2 <- (1-2*abs(fr$matrixfit.Q-0.5))^2
+  wMeff <- (1-2*abs(fr$effectivemass.Q-0.5))^2
+  if(fr$boot.fit[1]){
+    wM <- wM*(min(fr$dM)/fr$dM)^2
+    wP1 <- wP1*(min(fr$dP1)/fr$dP1)^2
+    wP2 <- wP2*(min(fr$dP2)/fr$dP2)^2
+    wMeff <- wMeff*(min(fr$dMeff)/fr$dMeff)^2 
   }
 
-  l.matrixM <- list(df=data.frame( val=res$M, dval=res$dM, t1=res$t1, t2=res$t2,
-                               ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof),
-                               Q=res$matrixfit.Q, w=wM),
+  l.matrixM <- list(df=data.frame( val=fr$M, dval=fr$dM, t1=fr$t1, t2=fr$t2,
+                               ChiSqr.ov.dof=(fr$matrixfit.ChiSqr/fr$matrixfit.dof),
+                               Q=fr$matrixfit.Q, w=wM),
                                label="$M_{\\mathrm{mtx}}$",
                                name="matrixfit M" )
 
-  l.matrixP1 <- list(df=data.frame( val=res$P1, dval=res$dP1, t1=res$t1, t2=res$t2,
-                               ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof),
-                               Q=res$matrixfit.Q, w=wP1),
+  l.matrixP1 <- list(df=data.frame( val=fr$P1, dval=fr$dP1, t1=fr$t1, t2=fr$t2,
+                               ChiSqr.ov.dof=(fr$matrixfit.ChiSqr/fr$matrixfit.dof),
+                               Q=fr$matrixfit.Q, w=wP1),
                                label="$P1_{\\mathrm{mtx}}$",
                                name="matrixfit P1" )
   
-  l.matrixM <- list(df=data.frame( val=res$dP1, dval=res$dP2, t1=res$t1, t2=res$t2,
-                               ChiSqr.ov.dof=(res$matrixfit.ChiSqr/res$matrixfit.dof),
-                               Q=res$matrixfit.Q, w=wM),
+  l.matrixP2 <- list(df=data.frame( val=fr$P2, dval=fr$dP2, t1=fr$t1, t2=fr$t2,
+                               ChiSqr.ov.dof=(fr$matrixfit.ChiSqr/fr$matrixfit.dof),
+                               Q=fr$matrixfit.Q, w=wM),
                                label="$P2_{\\mathrm{mtx}}$",
                                name="matrixfit P2" )
 
-  l.effM <- list(df=data.frame( val=res$Meff, dval=res$dMeff,t1=res$t1, t2=res$t2,
-                                ChiSqr.ov.dof=(res$effectivemass.ChiSqr/res$effectivemass.dof),
-                                Q=res$effectivemass.Q, w=wMeff),
+  l.effM <- list(df=data.frame( val=fr$Meff, dval=fr$dMeff,t1=fr$t1, t2=fr$t2,
+                                ChiSqr.ov.dof=(fr$effectivemass.ChiSqr/fr$effectivemass.dof),
+                                Q=fr$effectivemass.Q, w=wMeff),
                                 label="$M_{\\mathrm{eff}}$",
                                 name="eff M" )
 
   # produce a number of plots relating to the fit range analysis
-  temp <- sprintf("%s.fitrange.%s",name,c("tex","pdf","aux","log"))
+  temp <- sprintf("%s.fitrange.%s",fr$name[1],c("tex","pdf","aux","log"))
   tikzfiles <- list(tex=temp[1],pdf=temp[2],aux=temp[3],log=temp[4])
   rm(temp)
   tikz(tikzfiles$tex, standAlone = TRUE, width=5, height=5)
 
   # colours to add some timeslice information
-  colours <- rainbow(n=cf$Time/2,start=0.5)
+  colours <- rainbow(n=fr$Time[1]/2,start=0.5)
   # colours to provide information about Q
   Qcolours <- rainbow(n=100,start=0.5)
   
@@ -156,8 +216,8 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
     df <- l$df
     qtyname <- l$name
     label <- l$label
-    title <- sprintf("%s %s",qtyname,name)
-    # prefix all underscores with a backslash so that latex understands properly
+    title <- sprintf("%s %s",qtyname,fr$name[1])
+    # prefix all underscore with a backslash so that latex understands properly
     # note that we need to escape the backslash twice in order to have two backslashes
     # in the resulting string
     title <- gsub("_","\\\\_",title)
@@ -165,36 +225,41 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
 
     hist(df$val,breaks=40,main=title,xlab=label)
 
-    plot(density(df$val),main=title, xlab=label)
-    abline(v=mean(df$val),col='red')
-    abline(v=median(df$val),col='blue')
+    #plot(density(df$val),main=title, xlab=label)
+    #abline(v=mean(df$val),col='red')
+    #abline(v=median(df$val),col='blue')
 
     plot(y=df$ChiSqr.ov.dof,x=df$val,main=title,
          col=colours[df$t2],ylab="$\\chi^2 / \\mathrm{d.o.f}$",xlab=label
         )
 
-    plot(y=df$Q,x=df$val,main=title,col=colours[df$t2],ylab='$Q$',xlab=label)
+    plot(y=df$w,x=df$val,main=title,col=colours[df$t2],ylab='$w$',xlab=label)
     
     weighted.hist(x=df$val,w=df$w,breaks=40,main=paste("weighted",title),xlab=label)
 
     # save some more lines by doing two sets of plots in one go
-    for( dat in list( list(qty=df$Q,lab='Q'), list(qty=df$val,lab=label) ) ) {
-      plot(x=df$t2-df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab="$t_f - t_i$",ylab=dat$lab)
-      plot(x=df$t1+df$t2,y=df$Q,main=title,col=colours[df$t2],xlab="$t_i + t_f$",ylab=dat$lab)
-      plot(x=df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab="$t_i$",ylab=dat$lab)
-      plot(x=df$t2,y=dat$qty,main=title,col=colours[df$t1],xlab="$t_f$",ylab=dat$lab)
+    # plot the weight and quantity as a function of several combinations of the fit range
+    for( dat in list( list(qty=df$w,lab='w'), list(qty=df$val,lab=label) ) ) {
+      #plot(x=df$t2-df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab="$t_f - t_i$",ylab=dat$lab)
+      #plot(x=df$t1+df$t2,y=dat$qty,main=title,col=colours[df$t2],xlab="$t_i + t_f$",ylab=dat$lab)
+      #plot(x=df$t1,y=dat$qty,main=title,col=colours[df$t2],xlab="$t_i$",ylab=dat$lab)
+      #plot(x=df$t2,y=dat$qty,main=title,col=colours[df$t1],xlab="$t_f$",ylab=dat$lab)
+      weighted.hist(x=df$t1,w=df$w,breaks=0:(fr$Time[1]/2),main=paste("weighted",title),xlab="$t_i$")
+      weighted.hist(x=df$t2,w=df$w,breaks=0:(fr$Time[1]/2),main=paste("weighted",title),xlab="$t_f$")
+      weighted.hist(x=df$t2-df$t1,w=df$w,breaks=0:fr$Time[1],main=paste("weighted",title),xlab="$t_f-t_i$")
+      weighted.hist(x=df$t2+df$t1,w=df$w,breaks=0:fr$Time[1],main=paste("weighted",title),xlab="$t_f+t_i$")
     }
 
     boxplot(df$val,main=title,ylab=label)
   }
 
   # weighted mean and variance for the matrixfit masses
-  matrixfit.mustar <- weighted.mean(l.matrix$df$val,l.matrixM$df$w)
-  matrixfit.varstar <- weighted.variance(l.matrix$df$val,l.matrixM$df$w)
+  matrixfit.mustar <- weighted.mean(l.matrixM$df$val,l.matrixM$df$w)
+  matrixfit.varstar <- weighted.variance(l.matrixM$df$val,l.matrixM$df$w)
 
   # weighted mean and variance for the effective masses
-  effective.mustar <- weighted.mean(l.effmass$df$val,l.effM$df$w)
-  effective.varstar <- weighted.variance(l.effmass$df$val,l.effM$df$w)
+  effective.mustar <- weighted.mean(l.effM$df$val,l.effM$df$w)
+  effective.varstar <- weighted.variance(l.effM$df$val,l.effM$df$w)
 
   cat("Effective mass:", effective.mustar, sqrt(effective.varstar), "\n")
   cat("Matrixfit:", matrixfit.mustar, sqrt(matrixfit.varstar), "\n")
@@ -212,11 +277,13 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
 #
 #  lines(y=matrixnorm, x=matrixseq,lwd=3,col='red',type='l')
 
+
+  # plot effective mass vs. matrixfit mass
   plot(y=l.effM$df$val,x=l.matrixM$df$val, main="effective vs. matrixfit",
        ylab="effective mass", xlab="matrixfit mass",col=colours[l.effM$df$t2])
 
-  # plot chosen fit ranges, indicating the Q value with a
-  plot(x=l.matrixM$df$t1,y=l.matrixM$df$t2,main=sprintf("chosen fitranges %s", gsub("_","\\\\_",name)),
+  # plot chosen fit ranges, indicating the weight by the colour
+  plot(x=l.matrixM$df$t1,y=l.matrixM$df$t2,main=sprintf("chosen fitranges %s", gsub("_","\\\\_",fr$name[1])),
        xlab=expression(t[i]),ylab=expression(t[f]),col=Qcolours[as.integer(100*l.matrixM$df$w)])
 
   dev.off()
@@ -227,6 +294,17 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,q_masses,fps.disprel=
   # remove temporary files 
   command <- sprintf("rm %s %s %s", tikzfiles$tex, tikzfiles$log, tikzfiles$aux)
   system(command)
+  
+  return()
+}
 
-  return(invisible(res))
+summary.fitrange <- function(fr) {
+  if(!any(class(fr)=="fitrange")) {
+    stop("object for plotting must be of class 'fitrange'")
+  }
+  
+#  t1=T1, t2=T2, boot.fit=boot.fit, q_masses=q_masses, name=name, Time=cf$Time, kappa=kappa,
+
+#  sprintf("%4s %3s %3s %5s %5s %7s
+#   lapply(X=fitrange,FUN=function(x) { sprintf("t1: 
 }

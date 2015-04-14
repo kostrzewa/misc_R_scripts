@@ -17,6 +17,7 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
   strange_masses <- c(0.0238,0.0245,0.0252,0.0259)
   charm_masses <- c(0.2822,0.294,0.3058,0.3176)
   light_masses <- c(0.0009)
+  m.sea <- light_masses
   
   # for testing purposes
   #strange_masses <- c(0.021,0.023,0.025,0.027,0.031)
@@ -42,23 +43,30 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
   #   basename is the correlator filename "prefix"
   #   observable is a numerical vector identifying which "gamma combinations" will be fitted (in the CMI format)
   #   sign is a numerical vector indicating whether the correlator is of "cosh" (+1) or "sinh" (-1) form
+  #   Tmin, Tmax and minrange are parameters for the fitrange analysis
   analyses[[1]] <- list( dirs=dirs$ll_c, name="ll_c", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=18, t2=42, t1_plot=5, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=18, t2=42, t1_plot=5, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1),
+                         Tmin=5, Tmax=47, minrange=5 )
 
   analyses[[2]] <- list( dirs=dirs$ls_c, name="ls_c", mass_diagonal=F, q_masses=mass_comb$ls,
-                         t1=18, t2=40, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=15, t2=40, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1), 
+                         Tmin=5, Tmax=47, minrange=5 )
 
   analyses[[3]] <- list( dirs=dirs$lc_c, name="lc_c", mass_diagonal=F, q_masses=mass_comb$lc,
-                         t1=18, t2=30, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=15, t2=30, t1_plot=8, t2_plot=48, basename="outprcv.", observable=c(1), sign=c(1), 
+                         Tmin=5, Tmax=47, minrange=5 )
 
   analyses[[4]] <- list( dirs=dirs$sc_c, name="sc_c", mass_diagonal=F, q_masses=mass_comb$sc,
-                         t1=18, t2=32, t1_plot=8, t2_plot=48, basename="outprcv.", observables=c(1), sign=c(1) )
+                         t1=20, t2=30, t1_plot=8, t2_plot=48, basename="outprcv.", observables=c(1), sign=c(1), 
+                         Tmin=5, Tmax=47, minrange=5 )
   
   analyses[[5]] <- list( dirs=dirs$ll_n_ud, name="ll_n_ud", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=14, t2=40, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1) )
+                         t1=14, t2=40, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1), 
+                         Tmin=5, Tmax=47, minrange=5 )
   
   analyses[[6]] <- list( dirs=dirs$ll_n_du, name="ll_n_du", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=14, t2=40, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1) )
+                         t1=14, t2=40, t1_plot=5, t2_plot=48, basename="outprcvn.", observable=c(5), sign=c(-1), 
+                         Tmin=5, Tmax=47, minrange=5 )
 
   ### TO HERE
 
@@ -83,8 +91,9 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,fps.disprel=
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
                                   skip=skip, end=end, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
-                                  fps.disprel=fps.disprel,
-                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange
+                                  fps.disprel=fps.disprel, m.sea=m.sea,
+                                  boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange,
+                                  Tmin=analyses[[ctr_analyses]]$Tmin, Tmax=analyses[[ctr_analyses]]$Tmax, minrange=analyses[[ctr_analyses]]$minrange
                                  )
           
       analysis_results <- rbind(analysis_results, result)
