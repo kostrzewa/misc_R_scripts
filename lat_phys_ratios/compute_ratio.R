@@ -1,4 +1,4 @@
-compute_ratio <- function(dividend,divisor,name,debug=FALSE) {
+compute_ratio <- function(dividend,divisor,name="",debug=FALSE) {
   ratio <- list( val=dividend$val / divisor$val, 
                  dval=sqrt( (dividend$dval/divisor$val)^2 + (divisor$dval*dividend$val/divisor$val^2)^2 ), 
                  name=name )
