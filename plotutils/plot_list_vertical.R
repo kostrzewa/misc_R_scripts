@@ -11,16 +11,17 @@
 # * it may be interesting to provide x, dx and mdx in relative terms where 
 #   all(x==1) and everyhting else is normalized by the central value
 
-plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,item.height=0.15,...) {
+plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,ylim,item.height=0.15,...) {
   if(missing(height)) height <- length(x)*item.height
   if(missing(width)) width <- 5
   if(missing(mdx)) mdx <- dx
   if(missing(labels)) labels <- rep("",times=length(x))
+  if(missing(ylim)) ylim <- c(1,length(x))
   tikzfiles <- tikz.init(basename=basename,height=height,width=width)
 
   y <- 1:length(x)
   # set up plot region
-  plotwitherror(y=y,x=x,dx=dx,mdx=mdx,xlab="",yaxt='n',ylab="",type='n',...)
+  plotwitherror(y=y,x=x,dx=dx,mdx=mdx,xlab="",yaxt='n',ylab="",type='n',ylim=ylim,...)
   lims <- par("usr")
   # draw some gray rectangles to make reading the plot easier
   for( i in y ) {
@@ -30,7 +31,7 @@ plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,it
     }
   }
   # do the actual plotting
-  plotwitherror(y=y,x=x,dx=dx,mdx=mdx,xlab="",yaxt='n',rep=T,...)
+  plotwitherror(y=y,x=x,dx=dx,mdx=mdx,xlab="",yaxt='n',rep=TRUE,...)
   text(x=labelpos,y=y,labels=labels)
 
   tikz.finalize(tikzfiles)
