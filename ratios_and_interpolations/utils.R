@@ -54,38 +54,48 @@ compute.fitrange_systematic <- function(quants,ratios,m.sea,debug=FALSE,mc=TRUE,
     # loop "over mass combinations" (effectively)
     temp <- list()
     for( index in 1:length(qty$datanames) ) {
+      # this gets an object of class "fitrange" as produced by meson_2pt_fitrange_analysis
       obj <- get(qty$datanames[index],env)
       m.val <- sort(unique(c(obj[[1]]$q_masses$m1,obj[[1]]$q_masses$m2)))
+      cat("m.val:",m.val,"\n")
+      # this will be a data frame containing bootstrap samples in rows and fit ranges in columns
+      t <- NULL
+      # a data frame containing start and end points of the fitranges
+      fr <- NULL
+      # a vector containing the weights of the given fitrange
+      w <- NULL
+      # loop through the fitranges
+      my.ptm <- proc.time()
       mclist <- lapply.overload(X=obj,FUN=function(x) {
-        if(!(is.na(x$M) || is.na(x$f))){
-          val <- NULL
-          dval <- NULL
-          Q <- NULL
-          if(qty$type=="fps"){
-            val <- mean(x$f$t)
-            dval <- sd(x$f$t)
-            Q <- x$f$Q
-          }else if(qty$type=="mps"){
-            val <- mean(x$M$t)
-            dval <- sd(x$M$t)
-            Q <- x$M$Q
-          }
-          return(data.frame(t1=x$t1, t2=x$t2, val=val, dval=dval, w=(Qw(Q)*(1/dval))^2 ))
-        } else {
-          return(NA)
+        Q <- NULL
+        bsamples <- NULL
+        weight <- NULL
+        if(qty$type=="fps" && !is.na(x$f)){
+          bsamples <- x$f$t
+          Q <- x$f$Q
+        } else if (qty$type=="mps" && !is.na(x$M)){
+          bsamples <- x$M$t
+          Q <- x$M$Q
         }
+        tfr <- data.frame(t1=x$t1,t2=x$t2)
+        if(!is.null(bsamples)){
+          weight <- Qw(Q)^2/sd(bsamples)^2
+        }
+        list(fr=tfr,w=weight,t=bsamples)
       } )
-      # reformat mclist into some kind of data frame
-      mcdf <- NULL
-      for( df in mclist ){
-        if( !any(class(df)=="try-error") && !any(is.na(df)) ){
-          mcdf <- rbind(mcdf,df)
-        } else {
-          cat("compute.fitrange_systematic: qty try-error\n")
-        }
+      if(debug) {
+        cat("Time for data reshuffling:\n")
+        print(proc.time()-my.ptm)
       }
-      # store in a sensible format
-      rval[[length(rval)+1]] <- list(name=qty$name, m.val=m.val, m.sea=m.sea, df=mcdf, fr.sys=weighted.quantile(x=mcdf$val,w=mcdf$w,na.rm=TRUE,probs=probs))
+      # extract data from list
+      for(l in mclist){
+        summary(l)
+        if(is.null(l$t) || is.null(l$w)) next
+        t <- cbind(t,l$t)
+        fr <- rbind(fr,l$fr)
+        w <- c(w,l$w)
+      }
+      rval[[length(rval)+1]] <- list(name=qty$name,m.val=m.val,m.sea=m.sea,fr=fr,t=t,w=w)
     }
   }
 
@@ -101,35 +111,39 @@ compute.fitrange_systematic <- function(quants,ratios,m.sea,debug=FALSE,mc=TRUE,
       for( index in 1:length(r$dividend$datanames) ) {
         obj <- get(r$dividend$datanames[index],env)
         m.val <- sort(unique(c(obj[[1]]$q_masses$m1,obj[[1]]$q_masses$m2)))
+        t <- NULL
+        fr <- NULL
+        w <- NULL
+        my.ptm <- proc.time()
         mclist <- lapply.overload(X=obj,FUN=function(x){
-          val <- NA
-          dval <- NA
-          w <- NA 
+          Q <- NULL
+          bsamples <- NULL
+          weight  <- NULL
           if(!is.na(x$M) && !is.na(x$f)){
             if(r$dividend$type == "mps" && r$divisor$type == "fps"){
-              val <- mean(x$M$t/x$f$t)
-              dval <- sd(x$M$t/x$f$t)
-              w <- (Qw(x$M$Q)*(1/dval))^2
+               bsamples <- x$M$t/x$f$t
+               weight <- (Qw(x$M$Q)/sd(bsamples))^2
             } else {
-              val <- mean(x$f$t/x$M$t)
-              dval <- sd(x$f$t/x$M$t)
-              w <- (Qw(x$M$Q)*(1/dval))^2
+               bsamples <- x$f$t/x$M$t
+               weight <- (Qw(x$M$Q)/sd(bsamples))^2
             }
-          }
-        data.frame(t1=x$t1, t2=x$t2, val=val, dval=dval, w=w )
+          }  
+          tfr <- data.frame(t1=x$t1,t2=x$t2)
+          list(fr=tfr,w=weight,t=bsamples)
         } )
-      
-        # reformat mclist into some kind of data frame
-        mcdf <- NULL
-        for( df in mclist ){
-          if( !any(class(df)=="try-error") && !any(is.na(df)) ){
-            mcdf <- rbind(mcdf,df)
-          } else {
-            cat("compute.fitrange_systematic: simple ratio try-error\n")
-          }
+        if(debug) {
+          cat("Time for data reshuffling:\n")
+          print(proc.time()-my.ptm)
         }
-        # store in a sensible format
-        rval[[length(rval)+1]] <- list(name=r$name, m.val=m.val, m.sea=m.sea, df=mcdf, fr.sys=weighted.quantile(x=mcdf$val,w=mcdf$w,na.rm=TRUE,probs=probs))
+        # extract data from list
+        for(l in mclist){
+          summary(l)
+          if(is.null(l$t) || is.null(l$w)) next
+          t <- cbind(t,l$t)
+          fr <- rbind(fr,l$fr)
+          w <- c(w,l$w)
+        }
+        rval[[length(rval)+1]] <- list(name=r$name,m.val=m.val,m.sea=m.sea,fr=fr,t=t,w=w)
       } 
     } else {
       # when any pair of mass vectors from the two observables are the same
@@ -164,42 +178,59 @@ compute.fitrange_systematic <- function(quants,ratios,m.sea,debug=FALSE,mc=TRUE,
           if( any(as.vector(outer(dividend.m.val,divisor.m.val,'=='))) ||
               !(m1m1 || m1m2 || m2m1 || m2m2) )  
           {
-            if(length(dividend.list)!=length(divisor.list)){
-              msg <- sprintf("Length mismatch between dividend %s and divisor %s!\n",dividend$name,divisor$name)
-              stop(msg)
-            }
-
             m.val <- sort(unique(c(dividend.list[[1]]$q_masses$m1,dividend.list[[1]]$q_masses$m2,divisor.list[[1]]$q_masses$m1,divisor.list[[1]]$q_masses$m2)))
-            mcdf <- NULL
-            # cannot use mclapply here unfortunately....
-            for(i in 1:length(dividend.list)){
-              t1 <- dividend.list[[i]]$t1
-              t2 <- dividend.list[[i]]$t2
-              divisor <- NULL
-              dividend <- NULL
-              if(r$dividend$type == "mps" && r$divisor$type == "mps"){
-                dividend <- dividend.list[[i]]$M
-                divisor <- divisor.list[[i]]$M
-              } else if (r$dividend$type == "fps" && r$divisor$type == "mps"){
-                dividend <- dividend.list[[i]]$f
-                divisor <- divisor.list[[i]]$M
-              } else if (r$dividend$type == "mps" && r$divisor$type == "fps"){
-                dividend <- dividend.list[[i]]$M
-                divisor <- divisor.list[[i]]$f
-              } else {
-                dividend <- dividend.list[[i]]$f
-                divisor <- divisor.list[[i]]$f
+            t <- NULL
+            w <- NULL
+            fr <- NULL
+            # we use mclapply to loop over the fitranges of the dividend while an internal for loop
+            # will loop over those of the divisor to ensure that only matching fitranges are considered
+            my.ptm <- proc.time()
+            mclist <- lapply.overload(X=dividend.list,FUN=function(x){
+              weight <- NULL
+              bsamples <- NULL
+              for(obj in divisor.list){
+                dividend <- NULL
+                divisor <- NULL
+                if( (x$t1 != obj$t1) || (x$t2 != obj$t2) ) {
+                  next
+                } else {
+                  if(r$dividend$type == "mps" && r$divisor$type == "mps"){
+                    dividend <- x$M
+                    divisor <- obj$M
+                  } else if (r$dividend$type == "fps" && r$divisor$type == "mps"){
+                    dividend <- x$f
+                    divisor <- obj$M
+                  } else if (r$dividend$type == "mps" && r$divisor$type == "fps"){
+                    dividend <- x$M
+                    divisor <- obj$f
+                  } else {
+                    dividend <- x$f
+                    divisor <- obj$f
+                  }
+                  #if(debug){ print(summary(dividend)); readline("key") }
+                  if(!(is.na(dividend) || is.na(divisor))){
+                    bsamples <- dividend$t/divisor$t
+                    weight <- Qw(dividend$Q)*Qw(divisor$Q)*(1/sd(bsamples))^2
+                  }
+                  # no need to complete this loop since we found the correct fitrange!
+                  break
+                }
               }
-              #if(debug){ print(summary(dividend)); readline("key") }
-              if(!(is.na(dividend) || is.na(divisor))){
-                val <- mean(dividend$t/divisor$t)
-                dval <- sd(dividend$t/divisor$t)
-                w <- Qw(dividend$Q)*Qw(divisor$Q)*(1/dval)^2
-                mcdf <- rbind(mcdf,data.frame(t1=t1, t2=t2, val=val, dval=dval, w=w ))
-              }
+              list(t=bsamples,w=weight,fr=data.frame(t1=x$t1,t2=x$t2))
+            } )
+            if(debug) {
+              cat("Time for data reshuffling:\n")
+              print(proc.time()-my.ptm)
             }
-            # store in a sensible format
-            rval[[length(rval)+1]] <- list(name=r$name, m.val=m.val, m.sea=m.sea, df=mcdf, fr.sys=weighted.quantile(x=mcdf$val,w=mcdf$w,na.rm=TRUE,probs=probs))
+            # extract data from list
+            for(l in mclist){
+              summary(l)
+              if(is.null(l$t) || is.null(l$w)) next
+              t <- cbind(t,l$t)
+              fr <- rbind(fr,l$fr)
+              w <- c(w,l$w)
+            }
+            rval[[length(rval)+1]] <- list(name=r$name,m.val=m.val,m.sea=m.sea,fr=fr,t=t,w=w)
           }
         }
       }
@@ -395,7 +426,7 @@ expand.grid.unique <- function(a,b) {
   expand.grid(unique.cols)  
 }
 
-add.fitrange.serr.hadron_obs <- function(hadron_obs,fitrange.serr){
+add.fitrange.systematic.hadron_obs <- function(hadron_obs,fitrange.serr){
   if(!any(class(hadron_obs)=="hadron_obs")){
     stop("add.fitrange.serr.hadron_obs: hadron_obs argument must be of class hadron_obs!")
   }
@@ -410,10 +441,17 @@ add.fitrange.serr.hadron_obs <- function(hadron_obs,fitrange.serr){
       msg <- sprintf("add.fitrange.serr.hadron_obs: hadron_obs and fitrange.serr %d seem to have different m.val: %s and %s",i,hadron_obs[[i]]$m.val,fitrange.serr[[i]]$m.val)
       stop(msg)
     }
-    m.serr <- abs(fitrange.serr[[i]]$fr.sys[2]-fitrange.serr[[i]]$fr.sys[3])
-    p.serr <- abs(fitrange.serr[[i]]$fr.sys[4]-fitrange.serr[[i]]$fr.sys[3])
+    w.quantiles <- weighted.quantile(x=apply(X=fitrange.serr[[i]]$t,MARGIN=2,FUN=mean,na.rm=TRUE),w=fitrange.serr[[i]]$w,probs=c(0,0.1573,0.5,0.8427,1),na.rm=TRUE)
+    m.serr <- abs(w.quantiles[2]-w.quantiles[3])
+    p.serr <- abs(w.quantiles[4]-w.quantiles[3])
+    # THIS IS A TOTAL HACK, we replace the median with the mean, and store the median over the fitranges
+    # as the mean because otherwise the changes would be too numerous 
+    hadron_obs[[i]]$median <- hadron_obs[[i]]$mean
     hadron_obs[[i]]$serr <- c(m.serr,p.serr)
-    hadron_obs[[i]]$median <- fitrange.serr[[i]]$fr.sys[3]
+    hadron_obs[[i]]$mean <- w.quantiles[3]
+    hadron_obs[[i]]$boot <- apply(X=fitrange.serr[[i]]$t,MARGIN=1,FUN=weighted.median,w=fitrange.serr[[i]]$w,na.rm=TRUE) 
+    hadron_obs[[i]]$err <- sd(hadron_obs[[i]]$boot)
+    hadron_obs[[i]]$fr <- fitrange.serr[[i]]
   }
   hadron_obs
 }

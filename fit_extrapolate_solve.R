@@ -56,12 +56,12 @@ fes_fit_linear <- function(dat,start,type="nls",debug=FALSE,mc=TRUE) {
   
   temp <- lapply.overload(X=dat,FUN=function(x) {
       algorithms <- c("default","port","plinear")
-      fit <- NULL
+      thisfit <- NULL
       for(algorithm in algorithms){
-        fit <- try(nls(as.formula(model),data=x,start=startvals,weights=x$weight,trace=FALSE,model=TRUE,algorithm=algorithm),silent=TRUE)
+        thisfit <- try(nls(as.formula(model),data=x,start=startvals,weights=x$weight,trace=FALSE,model=TRUE,algorithm=algorithm),silent=TRUE)
         if(!any(class(fit) == "try-error")) break;
       }
-      fit
+      thisfit
     })
   # remove any fits that failed
   for( index in 1:n ) {
@@ -95,7 +95,6 @@ fes_extrapolate <- function(fesfit,pred,debug=FALSE,mc=TRUE) {
   for(fit in fesfit$fit){
     classes <- c(classes,class(fit))
   }
-  print(unique(classes))
 
   if( class(fesfit$fit[[1]]) != "nls" ) {
     stop("fes_extrapolate: Only fit type 'nls' currently supported!\n")
@@ -110,7 +109,7 @@ fes_extrapolate <- function(fesfit,pred,debug=FALSE,mc=TRUE) {
   # and "model" needs to be in the environment if this is to be 
   # evaluated successfully
   # I don't know a solution to this problem yet...
-  model<-fesfit$model
+  model <- fesfit$model
   
   # we want a prediction for some new values of the predictor variables
   # in pred 
@@ -120,12 +119,13 @@ fes_extrapolate <- function(fesfit,pred,debug=FALSE,mc=TRUE) {
   require("propagate")
   # suppress some very verbose default output
   sink("/dev/null")
-  temp <- lapply.overload(X=fesfit$fit,FUN=function(x) { predictNLS(x,newdata=pred,do.sim=FALSE,interval='prediction')$summary })
+  temp <- lapply.overload(X=fesfit$fit,FUN=function(x) { predictNLS(x,newdata=pred,do.sim=FALSE,interval='prediction')$summary }) 
   # reset the output!
   sink(NULL)
   sink(NULL)
   # extract content from list
   for( index in 1:fesfit$n ){
+    if(any(class(temp[[index]])=='try-error')) { cat("Try-error in extrapolate!\n") }
     predy$y[index,] <- temp[[index]][,2]
     predy$dy[index,] <- temp[[index]][,4]
   }
@@ -140,7 +140,8 @@ fes_extrapolate <- function(fesfit,pred,debug=FALSE,mc=TRUE) {
 # the return value is an array with as many rows as there are bootstrap
 # samples which resulted in successful fits
 # there are as many columns as there are unknowns, multiplied
-# by the number of values which we try to solve for
+# by the number of values which we try to solve for, plus one
+# this last column contains the value of the objective function at the solution point
 
 fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=FALSE,mc=TRUE) {
   lapply.overload <- lapply
@@ -177,6 +178,7 @@ fes_solve <- function(fesfit,unknown,known,y,dy,interval=c(-10,10),debug=FALSE,m
       if(length(x) != length(unknown)) {
         stop(sprintf("fes_solve: rootfun supplied with %d unknowns but passed %d values to optimize!\n",length(unknown),length(x)))
       }
+      
       # x is passed as a vector but we need to supply it with names for the
       # unknown(s) that we are looking for
       x.df <- as.data.frame(t(x))

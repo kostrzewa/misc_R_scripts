@@ -34,9 +34,18 @@ as.data.frame.hadron_obs <- function(hadron_obs) {
 # pred.idx is a list of two index vecors which specify the
 # predictor variables to be used for fitting the model later on
 
-extract.for.fes_fit <- function(hadron_obs, pred.idx) {
+# when "fr" is specified, this indicates that the values
+# are to be used for the determination of the systematic errror
+# due to the choice of fitrange on the entire analysis chain
+# starting with the 
+# this means that 
+
+extract.for.fes_fit <- function(hadron_obs, pred.idx, fr=FALSE, weighted=FALSE) {
   if(!any(class(hadron_obs) == "hadron_obs")) {
    stop("extract.for.fes_fit: hadron_obs argument must be of class hadron_obs!\n")
+  }
+  if(fr==TRUE && is.null(hadron_obs[[1]]$fr) ){
+    stop("extract.for.fes_fit: extraction of values from fitrange analysis requested, but no 'fr' object found in 'hadron_obs'")
   }
   n.boot <- length(hadron_obs[[1]]$boot)
   # number of predictor variables
@@ -47,10 +56,19 @@ extract.for.fes_fit <- function(hadron_obs, pred.idx) {
   
   rval <- vector(mode="list", length=n.boot)
 
+  # number of extra columns
+  n.cols <- 2
+  col.names <- c("y",pred.names,"weight")
+#  if(fr) {
+#    n.cols <- 3
+#    col.names <- c(col.names,"fr.weight")
+#  }
+
+
   # pre-allocate memory
   for( i in 1:n.boot ) {
-    rval[[i]] <- as.data.frame( array(dim=c(n.resp,n.pred+2),
-                                      dimnames=list(c(NULL),c("y",pred.names,"weight"))))
+    rval[[i]] <- as.data.frame( array(dim=c(n.resp,n.pred+n.cols),
+                                      dimnames=list(c(NULL),col.names)))
   }
   
   # construct the list of response variables with their predictors and weights
@@ -59,15 +77,33 @@ extract.for.fes_fit <- function(hadron_obs, pred.idx) {
   # here!
   for( b in 1:n.boot ) {
     for( r in 1:n.resp ) {
-      # when weighing the data for the fit, we curently ignore the systematic error
-      # because it is problematic to construct a likelihood function with asymmetric errors
-      # and symmetrisng the error would just be incorrect
-      rval[[b]][r,] <- c(hadron_obs[[r]]$boot[b],
-                         hadron_obs[[r]]$m.val[pred.idx$m.val],
-                         hadron_obs[[r]]$m.sea[pred.idx$m.sea],
-                         1/hadron_obs[[r]]$err^2)
+      if(fr){
+        # select a fitrange randomly and optionally take into account the weights
+        n.fr <- ncol(hadron_obs[[r]]$fr$t)
+        fitrange <- NULL
+        if(weighted) {
+          fitrange <- sample(x=1:n.fr,size=1,prob=hadron_obs[[r]]$fr$w)
+        } else {
+          fitrange <- sample(x=1:n.fr,size=1)
+        }
+
+        # select a specific fit-range independently for each response variable
+        # (we use the mean of this result)
+        # this way we get n.boot combinations of different fitranges,
+        rval[[b]][r,] <- c(mean(hadron_obs[[r]]$fr$t[,fitrange]),
+                           hadron_obs[[r]]$m.val[pred.idx$m.val],
+                           hadron_obs[[r]]$m.sea[pred.idx$m.sea],
+                           1/sd(hadron_obs[[r]]$fr$t[,fitrange])^2)
+                          # hadron_obs[[r]]$fr$w[fitrange])
+      } else {
+        rval[[b]][r,] <- c(hadron_obs[[r]]$boot[b],
+                           hadron_obs[[r]]$m.val[pred.idx$m.val],
+                           hadron_obs[[r]]$m.sea[pred.idx$m.sea],
+                           1/hadron_obs[[r]]$err^2)
+      }
     }
   }
+  
   rval
 }
 
@@ -186,7 +222,8 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,lab
   }
   
   if(!missing(lg)){
-    legend(x=lims[1],y=lims[4],legend=lg$labels,pch=lg$pch,col=lg$col,bty="n")
+    #legend(x=lims[1],y=lims[4],legend=lg$labels,pch=lg$pch,col=lg$col,bty="n")
+    legend(x="topleft",legend=lg$labels,pch=lg$pch,col=lg$col,bty="n")
   }
   
   dev.off()
@@ -197,6 +234,26 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,lab
   # remove temporary files 
   command <- sprintf("rm %s %s %s", tikzfiles$tex, tikzfiles$log, tikzfiles$aux)
   system(command)
+}
+
+plot_syserr_dist.hadron_obs <- function(hadron_obs,width=4.5,height=4) {
+  require("weights")
+  if(is.null(hadron_obs[[1]]$fr)){
+    stop("plot_syserr_dist.hadron_obs: the 'hadron_obs' argument must have a non-null $fr member!\n")
+  }
+  w <- hadron_obs[[1]]$fr$w
+  fr <- apply(X=hadron_obs[[1]]$fr$t,MARGIN=2,mean)
+  qt <- weighted.quantile(x=fr,w=w,probs=c(0.1573,0.5,0.8427))
+  texlabel <- hadron_obs[[1]]$texlabel
+  tikzfiles <- tikz.init(basename=sprintf("fitrange.syserr.dist.%s",hadron_obs[[1]]$name),width=width,height=height)
+  hst <- hist(x=fr,main="",yaxt='n',ylab="",xlim=c(min(fr),max(fr)),breaks=20,xlab=texlabel,freq=FALSE)
+  w.hst <- wtd.hist(x=fr,w=w,main="",yaxt='n',ylab="",breaks=20,xlab=texlabel,xlim=c(min(fr),max(fr)),freq=FALSE)
+  lims <- par("usr")
+  col <- rgb(0.8,0.8,0.8,0.5)
+  rect(xleft=qt[1],ybottom=lims[3],xright=qt[3],ytop=lims[4],col=col,border=NA)
+  abline(v=qt[2],lwd=4)
+  tikz.finalize(tikzfiles)
+  return(list(hst,w.hst))
 }
 
 # return a data frame to summarize the contents of the hadron_obs object, this is of course rather silly
@@ -212,27 +269,41 @@ summary.hadron_obs <- function(hadron_obs) {
   rval
 }
 
-plot_fitrange_errors.summary_hadron_obs <- function(summary_hadron_obs) {
+plot_fitrange_errors.summary_hadron_obs <- function(summary_hadron_obs,width=6,height=50,...) {
   if(!any(class(summary_hadron_obs)=="summary_hadron_obs")){
     stop("plot.summary_hadron_obs: argument must be of class 'summary_hadron_obs'")
   }
 
-  tikzfiles <- tikz.init("fitrange_summary",width=6,height=45,sanitize=FALSE)
+  tikzfiles <- tikz.init("fitrange_summary",width=width,height=height,sanitize=FALSE)
 
   # we want to plot everything normalized by the mean
   Ncol <- ncol(summary_hadron_obs)
-  summary_hadron_obs[,3:Ncol] <- summary_hadron_obs[,3:Ncol] / summary_hadron_obs$median
+  summary_hadron_obs[,3:Ncol] <- summary_hadron_obs[,3:Ncol] / summary_hadron_obs$mean
   
   y <- 1:nrow(summary_hadron_obs)
-  plotwitherror(x=summary_hadron_obs$median,y=y,
+  plotwitherror(x=summary_hadron_obs$mean,y=y,
                 dx=cbind(summary_hadron_obs$err,summary_hadron_obs$serr),
-                mdx=cbind(summary_hadron_obs$err,summary_hadron_obs$mserr))
-  points(x=summary_hadron_obs$mean,y=y,pch=4)
-  print(summary_hadron_obs$texlabel)
+                mdx=cbind(summary_hadron_obs$err,summary_hadron_obs$mserr),...)
+  #points(x=summary_hadron_obs$median,y=y,pch=4)
   text(x=0.955,y=y,labels=summary_hadron_obs$texlabel)
 
   tikz.finalize(tikzfiles)
 }
+
+compare.extrapolations.syserr.hadron_obs <- function(hadron_obs,ext.sys) {
+  rval <- NULL
+  for( name in unique(summary(hadron_obs)[,1])){
+    obs <- select.hadron_obs(hadron_obs,'name',name)
+    for( ext in ext.sys ) {
+      if( all(name == ext$name) ) {
+        rval <- rbind(rval,data.frame(name=name,mserr.ratio=ext$mserr/obs[[1]]$serr[1],serr.ratio=ext$serr/obs[[1]]$serr[2]))
+      }
+    }
+  }
+  rval
+}
+
+
 
 # it is unclear to me whether this kind of function is useful...
 # because it would need to be provided with quite a number of arguments

@@ -3,6 +3,7 @@
 define.meson.quants <- function(datanames,light_masses,strange_masses,charm_masses) {
   quants <- NULL
   quants[["m_pi"]] <- list(name="m_pi", texlabel="$aM_\\pi$", m1=light_masses, m2=light_masses, datanames=datanames$ll_c, type="mps" )
+  quants[["m_pi0c"]] <- list(name="m_pi0c", texlabel="$aM_{\\pi_0^{(c)}}$", m1=light_masses, m2=light_masses, datanames=datanames$ll_nud, type="mps" ) 
   quants[["m_K"]] <- list(name="m_K", texlabel="$aM_K$", m1=light_masses, m2=strange_masses, datanames=datanames$ls_c, type="mps" )
   quants[["m_D"]] <- list(name="m_D", texlabel="$aM_D$", m1=light_masses, m2=charm_masses, datanames=datanames$lc_c, type="mps" )
   quants[["m_Ds"]] <- list(name="m_Ds", texlabel="$aM_{D_s}$", m1=strange_masses, m2=charm_masses, datanames=datanames$sc_c, type="mps" )

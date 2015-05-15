@@ -1,9 +1,9 @@
 library('propagate')
 
-source("/home/bartek/code/R/misc_R_scripts/fit_extrapolate_solve.R")
+source("~/code/R/misc_R_scripts/fit_extrapolate_solve.R")
 source("~/code/R/misc_R_scripts/hadron_obs.R")
-source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/utils.R")
-source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/definitions.R")
+source("~/code/R/misc_R_scripts/ratios_and_interpolations/utils.R")
+source("~/code/R/misc_R_scripts/ratios_and_interpolations/definitions.R")
 
 # this is a template for a driver script for the analysis involving interpolations
 # in the strange and charm quark masses and subsequent extra-/interpolations
@@ -11,17 +11,17 @@ source("/home/bartek/code/R/misc_R_scripts/ratios_and_interpolations/definitions
 
 # in practice one would modify 
 
-ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute=T,loadraw=T,overview=T) {
+ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=FALSE,recompute=TRUE,loadraw=TRUE,overview=TRUE,
+												mc=TRUE, fitrange.systematic=TRUE, propagate.systematic=TRUE) {
   # certain functionality relies on stuff being strings
   options(stringsAsFactors = FALSE)
 
-
   ### EDIT FROM HERE
   # masses to be used in this analysis
-  analysis_name <- "iwa_b2.1-L24T48-csw1.57551-k0.1373-mul0.006"
+  analysis_name <- "iwa_b2.1-L24T48-csw1.57551-k0.1373-mul0.003"
   strange_masses <- c(0.0224,0.0231,0.0238,0.0245,0.0252,0.0259)
   charm_masses <- c(0.2586,0.2704,0.2822,0.294,0.3058,0.3176)
-  light_masses <- c(0.006)
+  light_masses <- c(0.003)
   m.sea <- light_masses
   
   phys_ratios <- read.csv("phys_ratios.csv",as.is=c("type","name"))
@@ -37,15 +37,15 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
   
   # File (and object) names of the data to be loaded
   matrixfit.datanames <- list(ll_c=sprintf("ll_c.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
-                #ll_na=sprintf("lln_u_%g-d_%g",mass_comb$ll$m1,mass_comb$ll$m2),
-                #ll_nb=sprintf("lln_d_%g-u_%g",mass_comb$ll$m1,mass_comb$ll$m2),
+                ll_nud=sprintf("ll_n_ud.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
+                ll_ndu=sprintf("ll_n_du.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
                 ls_c=sprintf("ls_c.m%g.m%g.matrixfit",mass_comb$ls$m1,mass_comb$ls$m2),
                 lc_c=sprintf("lc_c.m%g.m%g.matrixfit",mass_comb$lc$m1,mass_comb$lc$m2),
                 sc_c=sprintf("sc_c.m%g.m%g.matrixfit",mass_comb$sc$m1,mass_comb$sc$m2) )
   
   fitrange.datanames <- list(ll_c=sprintf("llc_u_%g_u_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
-                #ll_na=sprintf("lln_u_%g-d_%g",mass_comb$ll$m1,mass_comb$ll$m2),
-                #ll_nb=sprintf("lln_d_%g-u_%g",mass_comb$ll$m1,mass_comb$ll$m2),
+                ll_nud=sprintf("lln_u_%g_d_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
+                ll_ndu=sprintf("lln_d_%g_u_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
                 ls_c=sprintf("ls_u_%g_sp_%g.fitrange",mass_comb$ls$m1,mass_comb$ls$m2),
                 lc_c=sprintf("lc_u_%g_cp_%g.fitrange",mass_comb$lc$m1,mass_comb$lc$m2),
                 sc_c=sprintf("sc_sp_%g_cp_%g.fitrange",mass_comb$sc$m1,mass_comb$sc$m2) )
@@ -150,9 +150,13 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
   # mu_s from iwa2.1-L48T96-csw1.57551-k0.13729-mul0.0009 analysis
   load("mu_s.iwa_b2.1_L48T96_k0.13729_mul0.0009.Rdata")
   mu_s <- mu_s.iwa_b2.1_L48T96_k0.13729_mul0.0009
+  load("mu_s.sys.iwa_b2.1_L48T96_k0.13729_mul0.0009.Rdata")
+  mu_s.sys <- mu_s.sys.iwa_b2.1_L48T96_k0.13729_mul0.0009
 
   load("mu_c.iwa_b2.1_L48T96_k0.13729_mul0.0009.Rdata")
   mu_c <- mu_c.iwa_b2.1_L48T96_k0.13729_mul0.0009
+  load("mu_c.sys.iwa_b2.1_L48T96_k0.13729_mul0.0009.Rdata")
+  mu_c.sys <- mu_c.sys.iwa_b2.1_L48T96_k0.13729_mul0.0009
   
   #extrapolations <- data.frame(name=c(),val=c(),dval=c(),x=c(),dx=c())
   extrapolations <- list()
@@ -161,47 +165,6 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
   #print(phys_ratios)  
   #readline("press key")
   
-  # m_K_ov_f_K
-  name <- "m_K_ov_f_K"
-  {
-    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-    # asemble the data into the correct format
-    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
-    pred.idx <- list(m.val=c(2),m.sea=vector())
-    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx, fr=FALSE)
-    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
-    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval,x1.from=mu_s$name)
-    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
-    
-    extrapolations[[length(extrapolations)+1]] <- cbind( 
-                                data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
-                                           dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
-                                           pred,plot.x.idx='x1',plot.dx.idx='dx1')
-
-    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
-                    debug=debug, #labelx="$a\\mu_s$",
-                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)
-
-    if(propagate.systematic){
-      cat(sprintf("Estimating systematic error for %s\n",name))
-      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
-      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
-      pred.sys <- data.frame(x1=mu_s.sys$val, dx1=mu_s.sys$dval)
-      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
-      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
-      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
-                                  data.frame(name=name, qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
-                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
-
-#      save(extrapolations.sys, file="extrapolations.sys.Rdata", compress=FALSE)
-#      save(fes.solve.sys, file="fes.solve.sys.Rdata", compress=FALSE)
-#      save(mu_s.sys, file="mu_s.sys.Rdata", compress=FALSE)
-#      stop("systematics written to file\n")
-    }
-  }
-    
   # some definitions required by many of the plots below
   cols <- c('black','red','forestgreen')
   syms <- c(1,15:(15+length(mu_s$val)))
@@ -225,6 +188,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
   
   name <- "m_K_ov_m_pi"
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     
     # asemble the data into the correct format
@@ -233,11 +197,11 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
 
-    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
-    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval,x1.from=mu_s$name)
-    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+    fes.fit <- fes_fit_linear(mc=mc,dat=dat.fes,debug=F)
+    pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval, x1.from=mu_s$name)
+    fes.extrapolate <- fes_extrapolate(mc=mc,fesfit=fes.fit, pred=pred)
     extrapolations[[length(extrapolations)+1]] <- cbind( 
-                                data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                                data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                            dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                            pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
@@ -245,10 +209,23 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
                     lg=legend.mu_s,debug=debug,
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)#, ylim=c(3.58,3.75))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_s.sys$val, dx1=mu_s.sys$dval, x1.from=mu_s.sys$name)
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
-  
+ 
   name <- "m_D_ov_m_pi"
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
@@ -258,7 +235,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind( 
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
@@ -266,7 +243,19 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
                     #labelx="$a\\mu_c$",
                     lg=legend.mu_c,
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel)#,ylim=c(13,15))
+                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel,ylim=c(13,15))                
+
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_c.sys$val, dx1=mu_c.sys$dval, x1.from=mu_c.sys$name)
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
   
   pred <- list()
@@ -275,6 +264,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
   name <- "m_K_ov_f_K"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
@@ -284,19 +274,33 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind( 
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
                                        
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
                     lg=legend.mu_s, debug=debug,
-                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel)#, ylim=c(3.05,3.3), xlim=c(0.022,0.027))
+                    xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, ylim=c(3.05,3.3), xlim=c(0.022,0.027))
+    
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_s.sys$val, dx1=mu_s.sys$dval)
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
   
   name <- "m_D_ov_f_D"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
@@ -306,7 +310,7 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind( 
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
                                        
@@ -315,8 +319,21 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
                            dy=phys_ratios[phys_ratios$name == name,]$dval )
     
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c)#, ylim=c(7.8,10.3), xlim=c(0.26,0.40))
+    
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_c.sys$val, dx1=mu_c.sys$dval, x1.from=mu_c.sys$name)
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
 
   name <- "m_Ds_ov_f_Ds"
@@ -333,18 +350,34 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind( 
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#, ylim=c(7.1,8.2))
+
+
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
   
   name <- "m_Ds_ov_m_K"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     
@@ -357,18 +390,32 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind( 
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(3.7,4.35))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
   
   name <- "m_Ds_ov_m_D"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     
@@ -381,18 +428,32 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(1.04,1.07))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
 
   name <- "m_Ds_ov_m_pi"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
 
@@ -402,21 +463,35 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],
                        dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4],
                        x1.from=c(mu_s$name,mu_s$name[3]),x2.from=mu_c$name[1:4])
-    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+    fes.extrapolate <- fes_extrapolate(mc=mc, fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(13.7,15.55))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
 
   name <- "m_D_ov_m_K"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
 
@@ -429,62 +504,102 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(3.5,4.2))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s$name,mu_s$name[3]),x2.from=mu_c$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
     
   name <- "f_K_ov_f_pi"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     # asemble the data into the correct format
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    fes.fit <- fes_fit_linear(mc=mc,dat=dat.fes,debug=F)
     pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval,x1.from=mu_s$name)
     
-    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+    fes.extrapolate <- fes_extrapolate(mc=mc,fesfit=fes.fit, pred=pred)
     
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
     
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)#,ylim=c(1.18,1.22))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_s.sys$val, dx1=mu_s.sys$dval, x1.from=mu_s.sys$name)
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
 
   name <- "f_D_ov_f_pi"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    fes.fit <- fes_fit_linear(mc=mc,dat=dat.fes,debug=F)
     pred <- data.frame(x1=mu_c$val[1:4],dx1=mu_c$dval[1:4],x1.from=mu_c$name[1:4])
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c)#, ylim=c(1.45,1.85))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_c.sys$val[1:4], dx1=mu_c.sys$dval[1:4], x1.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }  
 
   name <- "f_Ds_ov_f_pi"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     
@@ -497,61 +612,64 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(1.94,2.15))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
   
   name <- "f_D_ov_f_K"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     
     pred.idx <- list(m.val=c(2,3),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    fes.fit <- fes_fit_linear(mc=mc,dat=dat.fes,debug=F)
     pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],
                        dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4],
                        x1.from=c(mu_s$name,mu_s$name[3]),x2.from=mu_c$name[1:4])
-    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+    fes.extrapolate <- fes_extrapolate(mc=mc,fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(1.5,1.8))
-  }
-  
-  name <- "f_Ds_ov_f_K"
-  if( analyses=="all" || any(analyses==name) )
-  {
-    pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
-    obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
-    
-    pred.idx <- list(m.val=c(2,3),m.sea=vector())
-    dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
-    pred <- data.frame(x1=c(mu_s$val,mu_s$val[3]),x2=mu_c$val[1:4],
-                       dx1=c(mu_s$dval,mu_s$dval[3]),dx2=mu_c$dval[1:4],
-                       x1.from=c(mu_s$name,mu_s$name[3]),x2.from=mu_c$name[1:4])
-    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
-
-    extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
-                                       dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
-                                       pred,plot.x.idx='x2',plot.dx.idx='dx2')
-
-    df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
-                    xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(1.55,1.85))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
 
   name <- "f_Ds_ov_f_D"
@@ -569,18 +687,32 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
-    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
+    plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],#solutions=solution,
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(1.13,1.3))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
 
   name <- "f_Ds_ov_f_K"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     pheno <- cbind(phys_ratios[phys_ratios$name==name,],col=pheno.col,pch=pheno.pch)
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     
@@ -593,39 +725,66 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(3))
     plot.hadron_obs(df=df,name=name,pheno=pheno,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)#,ylim=c(1.15,1.3))
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }  
   
   name <- "m_K"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
-    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F)
+    fes.fit <- fes_fit_linear(dat=dat.fes,debug=F,mc=mc)
     pred <- data.frame(x1=mu_s$val,dx1=mu_s$dval,x1.from=mu_s$name)
 
-    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
+    fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred, mc=mc)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_s.sys$val, dx1=mu_s.sys$dval, x1.from=mu_s.sys$name)
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
                      
   name <- "f_K"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
@@ -635,18 +794,31 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_s$",ylab=obs[[1]]$texlabel, lg=legend.mu_s)
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_s.sys$val, dx1=mu_s.sys$dval, x1.from=mu_s.sys$name)
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
                      
   name <- "m_D"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
@@ -655,18 +827,31 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c)
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_c.sys$val[1:4], dx1=mu_c.sys$dval[1:4], x1.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
                      
   name <- "f_D"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
     pred.idx <- list(m.val=c(2),m.sea=vector())
     dat.fes <- extract.for.fes_fit(hadron_obs=obs,pred.idx=pred.idx)
@@ -675,18 +860,31 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x1',plot.dx.idx='dx1')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_c)
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=mu_c.sys$val[1:4], dx1=mu_c.sys$dval[1:4], x1.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                  data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                  pred.sys, plot.x.idx='x1', plot.dx.idx='dx1')
+    }
   }
 
   name <- "m_Ds"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
 
     pred.idx <- list(m.val=c(1,2),m.sea=vector())
@@ -700,18 +898,32 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
   
   name <- "f_Ds"
   if( analyses=="all" || any(analyses==name) )
   {
+    cat(sprintf("Doing interpolations for %s\n",name))
     obs <- select.hadron_obs(hadron_obs,by='name',filter=name)
 
     pred.idx <- list(m.val=c(1,2),m.sea=vector())
@@ -723,22 +935,36 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=F,recompute
     fes.extrapolate <- fes_extrapolate(fesfit=fes.fit, pred=pred)
 
     extrapolations[[length(extrapolations)+1]] <- cbind(
-                            data.frame(name=name, val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
+                            data.frame(name=name, texlabel=obs[[1]]$texlabel,  val=apply(X=fes.extrapolate$y,MARGIN=2,FUN=mean),
                                        dval=sqrt( apply(X=fes.extrapolate$y,MARGIN=2,FUN=sd)^2 + apply(X=fes.extrapolate$dy,MARGIN=2,FUN=mean)^2 ) ),
                                        pred,plot.x.idx='x2',plot.dx.idx='dx2')
 
     df <- extract.for.plot(hadron_obs=obs,x.name="m.val",x.idx=c(2))
     plot.hadron_obs(df=df,name=name,extrapolations=extrapolations[[length(extrapolations)]],
                     xlab="$a\\mu_c$",ylab=obs[[1]]$texlabel, lg=legend.mu_sc)
+    if(propagate.systematic){
+      cat(sprintf("Estimating systematic error for %s\n",name))
+      dat.fes.sys <- extract.for.fes_fit(hadron_obs=obs, pred.idx=pred.idx, fr=TRUE)
+      fes.fit.sys <- fes_fit_linear(dat=dat.fes.sys, debug=FALSE, mc=mc)
+      pred.sys <- data.frame(x1=c(mu_s.sys$val,mu_s.sys$val[3]),x2=mu_c.sys$val[1:4],dx1=c(mu_s.sys$dval,mu_s.sys$dval[3]),dx2=mu_c.sys$dval[1:4],
+                             x1.from=c(mu_s.sys$name,mu_s.sys$name[3]),x2.from=mu_c.sys$name[1:4])
+      fes.extrapolate.sys <- fes_extrapolate(fesfit=fes.fit.sys, pred=pred.sys, mc=mc)
+      save(fes.extrapolate.sys,file=sprintf("fes.extrapolate.sys.%s.Rdata",name),compress=FALSE)
+      qt <- t(apply(X=fes.extrapolate.sys$y, MARGIN=2, FUN=quantile, probs=c(0,0.1573,0.5,0.8427,0.99), na.rm=TRUE))
+      extrapolations.sys[[length(extrapolations.sys)+1]] <- cbind(
+                                 data.frame(name=name, texlabel=obs[[1]]$texlabel,  qt0=qt[,1], qt1=qt[,2], median=qt[,3], qt2=qt[,4], qt3=qt[,5], mserr=abs(qt[,3]-qt[,2]), serr=abs(qt[,3]-qt[,4])),
+                                 pred.sys, plot.x.idx='x2', plot.dx.idx='dx2')
+    }
   }
   ### TO HERE
   
   # rename objects so that they refer to the ensemble that they are based on
   # and save to disk
-  for( objname in c("extrapolations") ){
+  for( objname in c("extrapolations","extrapolations.sys") ){
     savename <- gsub("-","_",sprintf("%s.%s",objname,analysis_name))
     assign(savename,get(objname))
-    save(list=savename,file=sprintf("%s.Rdata",savename))
+    cat("Saving",sprintf("%s.Rdata",savename),"\n")
+    save(list=savename,file=sprintf("%s.Rdata",savename),compress=FALSE)
   }
 
   options(stringsAsFactors = TRUE)
