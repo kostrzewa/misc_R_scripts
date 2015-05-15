@@ -22,7 +22,7 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
     }
     # load only the observable of interest
     cmicor <- readcmidatafiles(files[(skip+1):end],obs=observable,verbose=debug)
-    save(cmicor,file=sprintf("%s.cor.Rdata",directory))
+    save(cmicor,file=sprintf("%s.cor.Rdata",directory),compress=FALSE)
   } else {
     archivename <- sprintf("%s.cor.Rdata",directory)
     wmesg <- sprintf("Warning, archived correlators are being read from: %s\nIf you changed a relevant option like 'skip' or the size of the ensemble, then you should specify 'read.cor=TRUE'!\n",archivename)
@@ -72,13 +72,13 @@ do_conn_meson_2pt_analysis <- function(directory,name,t1,t2,t1_plot,t2_plot,kapp
   # "load" matrixfit objects for multiple mesons at the same time
   savename <- sprintf("%s.m%g.m%g.matrixfit",name,q_masses$m1,q_masses$m2)
   assign(savename,save.matrixfit)
-  save(list=savename,file=sprintf("%s.Rdata",savename))
+  save(list=savename,file=sprintf("%s.Rdata",savename),compress=FALSE)
   summary(save.matrixfit)
 
   # also rename the effectivemass object
   savename <- sprintf("%s.m%g.m%g.effectivemass",name,q_masses$m1,q_masses$m2)
   assign(savename,save.effectivemass)
-  save(list=savename,file=sprintf("%s.Rdata",savename))
+  save(list=savename,file=sprintf("%s.Rdata",savename),compress=FALSE)
   summary(save.effectivemass)
 
   rval <- data.frame(name=name, t1=t1, t2=t2, M=save.matrixfit$opt.res$par[1], dM=sd(save.matrixfit$opt.tsboot[1,]),
