@@ -18,7 +18,8 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   par(mgp=c(2,1,0))
 
   # plot the timeseries
-  plot(x=xdat,xlim=trange,y=dat,ylim=yrange,t='l',ylab=ylab,xlab=expression(t[HMC]),main=titletext)
+  plot(x=xdat,xlim=trange,y=dat,ylim=yrange,t='l',ylab=ylab,xlab=expression(t[MD]),main=titletext)
+
   rect(xleft=trange[1],
        xright=trange[2],
        ytop=uw.data$value+uw.data$dvalue,

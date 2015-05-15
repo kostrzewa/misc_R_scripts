@@ -17,7 +17,7 @@ plot_eigenvalue_timeseries <- function(dat,trange,stepsize=1,pdf.filename,
   par(mgp=c(2,1,0))
 
   # plot the timeseries
-  plot(x=xdat,xlim=trange,y=dat[,2],ylim=yrange,t='l',ylab=ylab,xlab=expression(t[HMC]),main=titletext,log='y')
+  plot(x=xdat,xlim=trange,y=dat[,2],ylim=yrange,t='l',ylab=ylab,xlab=expression(t[MD]),main=titletext,log='y')
   lines(x=xdat,y=dat[,3])
  
   ## add the approximation interval

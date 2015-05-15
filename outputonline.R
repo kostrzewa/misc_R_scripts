@@ -227,6 +227,15 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   } else {
     print("pdfcat not found, not concatenating plots!")
   }
+  if( Sys.which("pdfcrop") != "" ) {
+    commands <- c(sprintf("pdfcrop analysis_%s.pdf analysis_%s.pdf",filelabel,filelabel))
+    for( command in commands ) {
+      print(paste("calling",command))
+      system(command=command)
+    } 
+  } else {
+    print("pdfcrop not found, not cropping plots!")
+  }
   return(invisible(result))
 }
 
