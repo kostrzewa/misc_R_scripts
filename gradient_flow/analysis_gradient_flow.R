@@ -4,7 +4,7 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE) {
   if(read.data) {
     files <- getorderedfilelist(path=path, basename="gradflow", last.digits=6)
     raw.gradflow <- readgradflow(path=path)
-    save(raw.gradflow,file="raw.gradflow.Rdata")
+    save(raw.gradflow,file="raw.gradflow.Rdata",compress=FALSE)
   }else{
     cat("Warning, reading data from raw.gradflow.Rdata, if the number of samples changed, set read.data=TRUE to reread all output files\n")
     load("raw.gradflow.Rdata")
@@ -33,7 +33,7 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE) {
     gradflow[i_row,] <- summaryvec
   }
   
-  save(gradflow,file="gradflow.Rdata")
+  save(gradflow,file="gradflow.Rdata",compress=FALSE)
    
   # find w_0 and its lower and upper error
   w0sq <- c( approx(x=gradflow$Wsym.value+gradflow$Wsym.dvalue,y=gradflow$t,xout=0.3)$y, 
