@@ -40,28 +40,28 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
   #   observable is a numerical vector identifying which "gamma combinations" will be fitted (in the CMI format)
   #   sign is a numerical vector indicating whether the correlator is of "cosh" (+1) or "sinh" (-1) form
   analyses[[1]] <- list( dirs=dirs$ll_c, name="ll_c", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=12, t2=25, t1_plot=5, t2_plot=32, basename="outprcv.", observable=c(1), sign=c(1),
-                         Tmin=9, Tmax=28, minrange=6 )
+                         t1=9, t2=22, t1_plot=5, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1),
+                         Tmin=9, Tmax=23, minrange=6 )
 
   analyses[[2]] <- list( dirs=dirs$ls_c, name="ls_c", mass_diagonal=F, q_masses=mass_comb$ls,
-                         t1=13, t2=25, t1_plot=7, t2_plot=32, basename="outprcv.", observable=c(1), sign=c(1),
-                         Tmin=9, Tmax=28, minrange=6 )
+                         t1=13, t2=23, t1_plot=7, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1),
+                         Tmin=9, Tmax=23, minrange=6 )
 
   analyses[[3]] <- list( dirs=dirs$lc_c, name="lc_c", mass_diagonal=F, q_masses=mass_comb$lc,
-                         t1=15, t2=25, t1_plot=7, t2_plot=32, basename="outprcv.", observable=c(1), sign=c(1),
-                         Tmin=13, Tmax=27, minrange=6 )
+                         t1=15, t2=23, t1_plot=7, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1),
+                         Tmin=12, Tmax=23, minrange=6 )
 
   analyses[[4]] <- list( dirs=dirs$sc_c, name="sc_c", mass_diagonal=F, q_masses=mass_comb$sc,
-                         t1=18, t2=25, t1_plot=7, t2_plot=32, basename="outprcv.", observables=c(1), sign=c(1),
-                         Tmin=15, Tmax=27, minrange=6 )
+                         t1=18, t2=23, t1_plot=7, t2_plot=24, basename="outprcv.", observables=c(1), sign=c(1),
+                         Tmin=13, Tmax=23, minrange=6 )
   
   analyses[[5]] <- list( dirs=dirs$ll_n_ud, name="ll_n_ud", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=9, t2=27, t1_plot=5, t2_plot=32, basename="outprcvn.", observable=c(5), sign=c(-1),
-                         Tmin=8, Tmax=31, minrange=6 )
+                         t1=9, t2=17, t1_plot=5, t2_plot=24, basename="outprcvn.", observable=c(5), sign=c(-1),
+                         Tmin=9, Tmax=23, minrange=6 )
   
   analyses[[6]] <- list( dirs=dirs$ll_n_du, name="ll_n_du", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=9, t2=27, t1_plot=5, t2_plot=32, basename="outprcvn.", observable=c(5), sign=c(-1),
-                         Tmin=8, Tmax=31, minrange=6 )
+                         t1=9, t2=17, t1_plot=5, t2_plot=24, basename="outprcvn.", observable=c(5), sign=c(-1),
+                         Tmin=9, Tmax=23, minrange=6 )
 
   analyses_to_be_done <- NULL
   if( missing(analyses_to_be_done_input) ) {

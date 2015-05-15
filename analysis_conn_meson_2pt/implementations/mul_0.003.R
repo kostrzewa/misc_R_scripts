@@ -10,11 +10,12 @@
 
 source("~/code/R/misc_R_scripts/analysis_conn_meson_2pt/do_conn_meson_2pt_analysis.R")
 
-analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=F) {
+analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,boot.l=20,debug=F,pause=F,skip=0,seed=12345,useCov=F,read.cor=T,study.fitrange=FALSE,end=-1,fps.disprel="continuum") {
   # masses to be used in this analysis
   strange_masses <- c(0.0224,0.0231,0.0238,0.0245,0.0252,0.0259)
   charm_masses <- c(0.2586,0.2704,0.2822,0.294,0.3058,0.3176)
   light_masses <- c(0.003)
+  m.sea <- light_masses
   
   # combinations of these masses
   mass_comb <- list( ll=data.frame( m1=light_masses, m2=light_masses ),
@@ -39,22 +40,26 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
   #   observable is a numerical vector identifying which "gamma combinations" will be fitted (in the CMI format)
   #   sign is a numerical vector indicating whether the correlator is of "cosh" (+1) or "sinh" (-1) form
   analyses[[1]] <- list( dirs=dirs$ll_c, name="ll_c", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=10, t2=23, t1_plot=5, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=12, t2=23, t1_plot=5, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1),
+                         Tmin=9, Tmax=23, minrange=6 )
 
   analyses[[2]] <- list( dirs=dirs$ls_c, name="ls_c", mass_diagonal=F, q_masses=mass_comb$ls,
-                         t1=12, t2=20, t1_plot=8, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=13, t2=23, t1_plot=7, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1),
+                         Tmin=9, Tmax=23, minrange=6 )
 
   analyses[[3]] <- list( dirs=dirs$lc_c, name="lc_c", mass_diagonal=F, q_masses=mass_comb$lc,
-                         t1=15, t2=20, t1_plot=8, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1) )
+                         t1=15, t2=23, t1_plot=7, t2_plot=24, basename="outprcv.", observable=c(1), sign=c(1),
+                         Tmin=12, Tmax=23, minrange=6 )
 
   analyses[[4]] <- list( dirs=dirs$sc_c, name="sc_c", mass_diagonal=F, q_masses=mass_comb$sc,
-                         t1=16, t2=20, t1_plot=8, t2_plot=24, basename="outprcv.", observables=c(1), sign=c(1) )
+                         t1=18, t2=23, t1_plot=7, t2_plot=24, basename="outprcv.", observables=c(1), sign=c(1),
+                         Tmin=13, Tmax=23, minrange=6 )
   
   analyses[[5]] <- list( dirs=dirs$ll_n_ud, name="ll_n_ud", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=11, t2=23, t1_plot=5, t2_plot=24, basename="outprcvn.", observable=c(5), sign=c(-1) )
+                         t1=10, t2=31, t1_plot=5, t2_plot=24, basename="outprcvn.", observable=c(5), sign=c(-1) )
   
   analyses[[6]] <- list( dirs=dirs$ll_n_du, name="ll_n_du", mass_diagonal=T, q_masses=mass_comb$ll,
-                         t1=11, t2=23, t1_plot=5, t2_plot=24, basename="outprcvn.", observable=c(5), sign=c(-1) )
+                         t1=10, t2=31, t1_plot=5, t2_plot=24, basename="outprcvn.", observable=c(5), sign=c(-1) )
 
   analyses_to_be_done <- NULL
   if( missing(analyses_to_be_done_input) ) {
@@ -76,9 +81,10 @@ analysis_conn_meson_2pt <- function(analyses_to_be_done_input,kappa,boot.R=400,b
                                   basename=analyses[[ctr_analyses]]$basename, t1=analyses[[ctr_analyses]]$t1, t2=analyses[[ctr_analyses]]$t2,
                                   t1_plot=analyses[[ctr_analyses]]$t1_plot,t2_plot=analyses[[ctr_analyses]]$t2_plot,
                                   observable=analyses[[ctr_analyses]]$observable , sign=analyses[[ctr_analyses]]$sign,
-                                  skip=skip, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
+                                  skip=skip, end=end, kappa=kappa, q_masses=analyses[[ctr_analyses]]$q_masses[ctr_dirs,],
+                                  fps.disprel=fps.disprel, m.sea=m.sea,
                                   boot.R=boot.R, boot.l=boot.l, seed=seed, useCov=useCov, read.cor=read.cor, study.fitrange=study.fitrange,
-                                  fps.disprel=fps.disprel,m.sea=light_masses
+                                  Tmin=analyses[[ctr_analyses]]$Tmin, Tmax=analyses[[ctr_analyses]]$Tmax, minrange=analyses[[ctr_analyses]]$minrange
                                  )
           
       analysis_results <- rbind(analysis_results, result)

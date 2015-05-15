@@ -40,57 +40,54 @@ meson_2pt_study_fitrange <- function(cf,effmass,name,kappa,m.sea,q_masses,Tmax,T
   class(fr) <- c(class(fr),"fitrange")
   
   require("parallel")
+  ptm <- proc.time()
   rval <- mclapply(X=fr,FUN=do_fit.fitrange,cf=cf,effmass=effmass)
+  if(debug){
+    cat("Time for fit-range analysis\n")
+    print(proc.time()-ptm)
+  }
 
   error <- lapply(X=rval,FUN=function(x) { any(class(x)=="try-error") })
   if(any(unlist(error)))
     stop("try-errors detected in parallel execution of do_fit.fitrange")
 
-# temporary attempt to output this as a set of data frames to make the computation of
-# medians easier, not sure if this implementation is what will happen when I'm done...
-###########################
-#  for(i in 1:length(fr)){
-#    if(fr[[i]]
-#  }
-#
-#  # reformat into data frames
-#  
-#  Nleft <- 2
-#  Ncol <- Nleft+length(fr[[1]]$M$t)
-#
-#  Mdf <- array(dim(length(fr),Ncol))
-#  P1df <- array(dim(length(fr),Ncol))
-#  P2df <- array(dim(length(fr),Ncol))
-#  fdf <- array(dim(length(fr),Ncol))
-#  Meffdf <- array(dim(length(fr),Ncol))
-#  
-#  for(i in 1:length(fr)){
-#    Mdf[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$M$t)
-#    P1df[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$P1$t)
-#    P2df[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$P2$t)
-#    fdf[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$f$t)
-#    Meffdf[i,] <- c(fr[[i]]$t1,fr[[i]]$t2,fr[[i]]$Meff$t)
-#  }
-#
-#  # need to rename object before saving to file so that it can easily be loaded
-#  # and referred to in an external script
-#  # we make sure that no "-" characters remain in the name because they would
-#  # make it very difficult to use the objects in the future
-
-#  l.objects <- c("rval","Mdf","P1df","P2df","fdf","Meffdf")
-
-#  for(objname in l.objects){
-#    class(get(objname)) <- c(class(get(objname)),"fitrange")
-#    savename <- sprintf("%s.%s.fitrange",gsub("-","_",name),objname)
-#    assign(savename,get(objname))
-#    save(list=savename,file=sprintf("%s.Rdata",savename))
-#  }
-#######################
-
   class(rval) <- c(class(rval),"fitrange")
   savename <- sprintf("%s.fitrange",gsub("-","_",name))
   assign(savename,rval)
-  save(list=savename,file=sprintf("%s.Rdata",savename))
+  save(list=savename,file=sprintf("%s.Rdata",savename),compress=FALSE)
+  
+#  ptm <- proc.time()
+#  rvaldf <- list(M=NULL,P1=NULL ,P2=NULL,f=NULL,Meff=NULL)
+#  for( obj in rval ){
+#    if(!is.na(obj$M)){
+#        rvaldf$M <- cbind(rvaldf$M,obj$M$t)
+#    }
+#    if(!is.na(obj$f)){
+#        rvaldf$f <- cbind(rvaldf$f,obj$f$t)
+#    }
+#    if(!is.na(obj$P1)){
+#        rvaldf$P1 <- cbind(rvaldf$P1,obj$P1$t)
+#    }
+#    if(!is.na(obj$P2)){
+#        rvaldf$P2 <- cbind(rvaldf$P2,obj$P2$t)
+#    }
+#    if(!is.na(obj$Meff)){
+#        rvaldf$Meff <- cbind(rvaldf$Meff,obj$Meff$t)
+#    }
+#  }
+#  for(df in rvaldf){
+#    names(df) <- NULL
+#  }
+#  if(debug){
+#    cat("Time for data reformatting\n")
+#    print(proc.time()-ptm)
+#  }
+#
+#  class(rvaldf) <- c(class(rvaldf),"fitrangedf")
+#  savename <- sprintf("%s.fitrangedf",gsub("-","_",name))
+#  assign(savename,rvaldf)
+#  save(list=savename,file=sprintf("%s.Rdata",savename),compress=FALSE)
+  
   rval
 }
 
@@ -149,20 +146,20 @@ plot.fitrange <- function(fr) {
     stop("object for plotting must be of class 'fitrange'")
   }
 
-  # we now remove the outliers using the usual idea of computing quartiles and the interquartile range
-  quants <- quantile(fr$M)
-  tshld.hi <- quants[4] + 1.5*IQR(fr$M)
-  tshld.lo <- quants[2] - 1.5*IQR(fr$M)
-
-  outlier.indices <- which( fr$M < tshld.lo | fr$M > tshld.hi )
-
-  if( length(fr[,1]) == length(outlier.indices) ) {
-    warning("For ", fr$name[1], " no entries remain after removal of outliers! Continuing with full set!")
-  } else if( length(outlier.indices) == 0 ) {
-    warning("Interquartile range very large, no outliers found!\n")
-  } else {
-    fr <- fr[-outlier.indices,]
-  }
+#  # we now remove the outliers using the usual idea of computing quartiles and the interquartile range
+#  quants <- quantile(fr$M)
+#  tshld.hi <- quants[4] + 1.5*IQR(fr$M)
+#  tshld.lo <- quants[2] - 1.5*IQR(fr$M)
+#
+#  outlier.indices <- which( fr$M < tshld.lo | fr$M > tshld.hi )
+#
+#  if( length(fr[,1]) == length(outlier.indices) ) {
+#    warning("For ", fr$name[1], " no entries remain after removal of outliers! Continuing with full set!")
+#  } else if( length(outlier.indices) == 0 ) {
+#    warning("Interquartile range very large, no outliers found!\n")
+#  } else {
+#    fr <- fr[-outlier.indices,]
+#  }
 
   # assemble relevant data for convenient plotting
 
