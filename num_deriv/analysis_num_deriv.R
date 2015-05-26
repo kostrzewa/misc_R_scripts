@@ -259,25 +259,25 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
 
   a.idx <- length(df_a)
   diffs <- data.frame(prec=c(),eps=c(),diff=c())
-  pdf.filename <- "diff_a_n.pdf"
+  tex.basename <- "diff_a_n"
   if(!missing(single) && !missing(pattern)) {
-    pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+    tex.basename <- sprintf("%s.%s",pattern,tex.basename)
   }
-  pdf(file=pdf.filename,width=5,height=5,onefile=T) 
+  tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
   for( i in 1:length(df_n) ) {
     irange <- 1:ncol(df_n[[length(df_n)]]$df)
     if(!missing(indices))
       irange <- indices
     for( idx in irange ) {
       plot(y=df_a[[a.idx]]$df[,idx]-df_n[[i]]$df[,idx],x=seq(1,length(df_n[[length(df_n)]]$df[,idx]))*tau/int.steps,
-           main=sprintf("eps=%.1e ap=%.1e fp=%.1e",df_n[[i]]$eps,df_n[[i]]$ap,df_a[[a.idx]]$fp),
-           ylab=expression(dP[a]-dP[n]),xlab="t")
+           main="$\\delta P^a_\\mu(x,\\tau)-\\delta \\mathcal{P}^a_\\mu(x,\\tau)$",
+           ylab="",xlab="$\\tau$",type='l',lwd=3)
     }
     qt <- quantile( as.vector(df_a[[a.idx]]$df-df_n[[i]]$df), probs=c(0.1573,0.5,0.8427) )
     mx <- max(abs(df_a[[a.idx]]$df-df_n[[i]]$df))
-    diffs <- rbind(diffs, data.frame(prec=df_n[[i]]$ap, eps=df_n[[i]]$eps, qt1=qt[1], qt2=qt[2], qt3=qt[3], max=mx ))
+    diffs <- rbind(diffs, data.frame(prec=df_n[[i]]$ap, eps=df_n[[i]]$eps, qt1=qt[1], qt2=qt[2], qt3=qt[3], max=mx) )
   }
-  dev.off()
+  tikz.finalize(tikzfiles)
 
   mean_df_a <- data.frame(df=c(),ddf=c(),sddf=c(),prec=c())
   mediandiff.df_a <- NULL
@@ -286,7 +286,6 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
   if(!missing(single) && !missing(pattern)) {
     tex.basename <- sprintf("%s.%s",pattern,tex.basename)
   }
-
   tikzfiles <- tikz.init(basename=tex.basename,width=7,height=2.4)
   for( i in 1:length(df_a) ) {
     tdf <- mean(df_a[[i]]$df)
@@ -296,13 +295,25 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
     mediandiff.df_a <- rbind(mediandiff.df_a,quantile(as.vector(tddf),probs=c(0.1573,0.5,0.8427)))
     
     diff.df_a <- rbind(diff.df_a,as.vector(abs(df_a[[length(df_a)]]$df-df_a[[i]]$df)))
-    hist(df_a[[i]]$df,breaks=as.integer(2*max(df_a[[i]]$df)),main="",ylab="",xlab="",xlim=c(-20,20),freq=FALSE)#,xlab="$\\delta P^a_\\mu$")
+    #hist(df_a[[i]]$df,breaks=as.integer(2*max(df_a[[i]]$df)),main="",ylab="",xlab="",xlim=c(-20,20),freq=FALSE)#,xlab="$\\delta P^a_\\mu$")
+    hist(df_a[[i]]$df,breaks=50,main="",ylab="",xlab="",freq=TRUE)#,xlab="$\\delta P^a_\\mu$")
     #hist(df_a[[i]]$df,breaks=2000,main="",ylab="",xlim=c(-200,200),xlab="$\\delta P^a_\\mu$",freq=FALSE)
   }
   tikz.finalize(tikzfiles)
- 
-  print(mean_df_a)
 
+
+  tex.basename <- "diff_a_n_hist"
+  if(!missing(single) && !missing(pattern)) {
+    tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+  }
+  tikzfiles <- tikz.init(basename=tex.basename,width=7,height=2.5)
+  for( i in 1:length(df_n) ) {
+    hist(df_a[[length(df_a)]]$df-df_n[[i]]$df,breaks=50,main="",ylab="",freq=TRUE,xlab="$\\delta P^a_\\mu(x,\\tau) - \\delta \\mathcal{P}^a_\\mu(x,\\tau)$")
+    #hist(df_a[[i]]$df,breaks=2000,main="",ylab="",xlim=c(-200,200),xlab="$\\delta P^a_\\mu$",freq=FALSE)
+  }
+  tikz.finalize(tikzfiles)
+
+  
   tex.basename <- "diff.df_a.prec"
   if(!missing(single) && !missing(pattern)) {
     tex.basename <- sprintf("%s.%s",pattern,tex.basename)
