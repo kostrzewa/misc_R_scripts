@@ -12,7 +12,7 @@
 # indices  - for the non-overview plots, this selects one/multiple particular lattice point(s), direction(s) and generator(s) (optional)
 #            otherwise all indices are used         
 
-analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",single=FALSE,all=FALSE,width=4,height=4) {
+analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",single=FALSE,all=FALSE,width=4,height=4,text=FALSE) {
  
   # we will use list.files with a pattern to read all the data files of interest
   # in the next few lines we construct which files we would like to read 
@@ -130,40 +130,42 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
     }
     tikz.finalize(tikzfiles)
   
-    # and the same game for the numerical derivative
-    pdf.filename <- "df_n.3D.all.pdf"
-    if(!missing(single) && !missing(pattern)) {
-      pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+    if(numerical){
+      # and the same game for the numerical derivative
+      pdf.filename <- "df_n.3D.all.pdf"
+      if(!missing(single) && !missing(pattern)) {
+        pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+      }
+      pdf(file=pdf.filename,width=width,height=height,onefile=T)
+      library(plot3D)
+      rows <- nrow(df_n[[length(df_n)]]$df)
+      cols <- ncol(df_n[[length(df_n)]]$df)
+      xcoords <- rep(times=cols,seq(1,rows))
+      ycoords <- c()
+      for( i in 1:cols ) {
+        idcs <- seq((i-1)*rows,i*rows)
+        ycoords[idcs] <- i
+      }
+      points3D(x=xcoords,
+              y=ycoords,
+              z=as.vector(df_n[[length(df_n)]]$df[1:rows,1:cols]),pch=".",
+              xlab="t",ylab="idx",zlab="dP")
+  
+      tex.basename <- "df_n.all"
+      if(!missing(single) && !missing(pattern)) {
+        tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+      }
+      tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
+      for( i in 1:ncol(df_n[[length(df_n)]]$df) ) {
+        plot(y=df_n[[length(df_n)]]$df[,i],
+             x=seq(1,length(df_n[[length(df_n)]]$df[,i]))*tau/int.steps,
+             t='l',xlab="t",ylab="dP",lwd=3)
+        ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
+        plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
+        xlab="f",ylab="$Re(dP(f))^2$",lwd=3 )
+      }
+      tikz.finalize(tikzfiles)
     }
-    pdf(file=pdf.filename,width=width,height=height,onefile=T)
-    library(plot3D)
-    rows <- nrow(df_n[[length(df_n)]]$df)
-    cols <- ncol(df_n[[length(df_n)]]$df)
-    xcoords <- rep(times=cols,seq(1,rows))
-    ycoords <- c()
-    for( i in 1:cols ) {
-      idcs <- seq((i-1)*rows,i*rows)
-      ycoords[idcs] <- i
-    }
-    points3D(x=xcoords,
-            y=ycoords,
-            z=as.vector(df_n[[length(df_n)]]$df[1:rows,1:cols]),pch=".",
-            xlab="t",ylab="idx",zlab="dP")
-
-    tex.basename <- "df_n.all"
-    if(!missing(single) && !missing(pattern)) {
-      tex.basename <- sprintf("%s.%s",pattern,tex.basename)
-    }
-    tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
-    for( i in 1:ncol(df_n[[length(df_n)]]$df) ) {
-      plot(y=df_n[[length(df_n)]]$df[,i],
-           x=seq(1,length(df_n[[length(df_n)]]$df[,i]))*tau/int.steps,
-           t='l',xlab="t",ylab="dP",lwd=3)
-      ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
-      plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
-      xlab="f",ylab="$Re(dP(f))^2$",lwd=3 )
-    }
-    tikz.finalize(tikzfiles)
   } else {
     tex.basename <- "df_a"
     if(!missing(single) && !missing(pattern)) {
@@ -186,25 +188,27 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
     }
     tikz.finalize(tikzfiles)
     
-    tex.basename <- "df_n"
-    if(!missing(single) && !missing(pattern)) {
-      tex.basename <- sprintf("%s.%s",pattern,tex.basename)
-    }
-    tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
-    irange <- 1:ncol(df_n[[length(df_n)]]$df)
-    if(!missing(indices)){
-      irange <- indices
-    }
-    for( i in irange ) {
-      plot(y=df_n[[length(df_n)]]$df[,i],
-           x=seq(1,length(df_n[[length(df_n)]]$df[,i]))*tau/int.steps,
-           t='l',lwd=3,
-           xlab="$\\tau$",ylab="$\\delta \\mathcal{P}^a_\\mu(x,\\tau)$")
-      ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
-      plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',lwd=3,
-      xlab="f",ylab="$\\left( \\Re \\left[ \\tilde{\\delta \\mathcal{P}}^a_\\mu(x,f) \\right] \\right)^2$")
-    }
-    tikz.finalize(tikzfiles)
+    if(numerical){ 
+      tex.basename <- "df_n"
+      if(!missing(single) && !missing(pattern)) {
+        tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+      }
+      tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
+      irange <- 1:ncol(df_n[[length(df_n)]]$df)
+      if(!missing(indices)){
+        irange <- indices
+      }
+      for( i in irange ) {
+        plot(y=df_n[[length(df_n)]]$df[,i],
+             x=seq(1,length(df_n[[length(df_n)]]$df[,i]))*tau/int.steps,
+             t='l',lwd=3,
+             xlab="$\\tau$",ylab="$\\delta \\mathcal{P}^a_\\mu(x,\\tau)$")
+        ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
+        plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',lwd=3,
+        xlab="f",ylab="$\\left( \\Re \\left[ \\tilde{\\delta \\mathcal{P}}^a_\\mu(x,f) \\right] \\right)^2$")
+      }
+      tikz.finalize(tikzfiles)
+    } #if(numerical)
   } #else(if(all))
 
 
@@ -238,46 +242,50 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
   # and we do the same for the numerical derivative, checking what kind of acceptance
   # precision we need to select to see basically no difference to the most precise
   # one 
-  if(length(df_n)>1){
-    pdf.filename <- "diff_n.pdf"                                                                                                                                          
-    if(!missing(single) && !missing(pattern)) {
-      pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+  if(numerical){
+    if(length(df_n)>1){
+      pdf.filename <- "diff_n.pdf"                                                                                                                                          
+      if(!missing(single) && !missing(pattern)) {
+        pdf.filename <- sprintf("%s.%s",pattern,pdf.filename)
+      }
+      pdf(file=pdf.filename,width=5,height=5,onefile=T) 
+      for( i in 1:length(df_n) ) {
+        irange <- 1:ncol(df_n[[length(df_n)]]$df)
+        if(!missing(indices))
+          irange <- indices
+        for( idx in irange ) {
+          plot(df_n[[length(df_n)]]$df[,idx]-df_n[[i]]$df[,idx],
+               ylab=expression(dP[max]-dP[i]),xlab="t",
+               main=sprintf("ap=%.1e eps=%.1e", df_n[[i]]$ap, df_n[[i]]$eps) )
+        }
+      }
+      dev.off()
     }
-    pdf(file=pdf.filename,width=5,height=5,onefile=T) 
+  }
+
+  if(numerical){
+    a.idx <- length(df_a)
+    diffs <- data.frame(prec=c(),eps=c(),diff=c())
+    tex.basename <- "diff_a_n"
+    if(!missing(single) && !missing(pattern)) {
+      tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+    }
+    tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
     for( i in 1:length(df_n) ) {
       irange <- 1:ncol(df_n[[length(df_n)]]$df)
       if(!missing(indices))
         irange <- indices
       for( idx in irange ) {
-        plot(df_n[[length(df_n)]]$df[,idx]-df_n[[i]]$df[,idx],
-             ylab=expression(dP[max]-dP[i]),xlab="t",
-             main=sprintf("ap=%.1e eps=%.1e", df_n[[i]]$ap, df_n[[i]]$eps) )
+        plot(y=df_a[[a.idx]]$df[,idx]-df_n[[i]]$df[,idx],x=seq(1,length(df_n[[length(df_n)]]$df[,idx]))*tau/int.steps,
+             main="$\\delta P^a_\\mu(x,\\tau)-\\delta \\mathcal{P}^a_\\mu(x,\\tau)$",
+             ylab="",xlab="$\\tau$",type='l',lwd=3)
       }
+      qt <- quantile( as.vector(df_a[[a.idx]]$df-df_n[[i]]$df), probs=c(0.1573,0.5,0.8427) )
+      mx <- max(abs(df_a[[a.idx]]$df-df_n[[i]]$df))
+      diffs <- rbind(diffs, data.frame(prec=df_n[[i]]$ap, eps=df_n[[i]]$eps, qt1=qt[1], qt2=qt[2], qt3=qt[3], max=mx) )
     }
-    dev.off()
+    tikz.finalize(tikzfiles)
   }
-
-  a.idx <- length(df_a)
-  diffs <- data.frame(prec=c(),eps=c(),diff=c())
-  tex.basename <- "diff_a_n"
-  if(!missing(single) && !missing(pattern)) {
-    tex.basename <- sprintf("%s.%s",pattern,tex.basename)
-  }
-  tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
-  for( i in 1:length(df_n) ) {
-    irange <- 1:ncol(df_n[[length(df_n)]]$df)
-    if(!missing(indices))
-      irange <- indices
-    for( idx in irange ) {
-      plot(y=df_a[[a.idx]]$df[,idx]-df_n[[i]]$df[,idx],x=seq(1,length(df_n[[length(df_n)]]$df[,idx]))*tau/int.steps,
-           main="$\\delta P^a_\\mu(x,\\tau)-\\delta \\mathcal{P}^a_\\mu(x,\\tau)$",
-           ylab="",xlab="$\\tau$",type='l',lwd=3)
-    }
-    qt <- quantile( as.vector(df_a[[a.idx]]$df-df_n[[i]]$df), probs=c(0.1573,0.5,0.8427) )
-    mx <- max(abs(df_a[[a.idx]]$df-df_n[[i]]$df))
-    diffs <- rbind(diffs, data.frame(prec=df_n[[i]]$ap, eps=df_n[[i]]$eps, qt1=qt[1], qt2=qt[2], qt3=qt[3], max=mx) )
-  }
-  tikz.finalize(tikzfiles)
 
   mean_df_a <- data.frame(df=c(),ddf=c(),sddf=c(),prec=c())
   mediandiff.df_a <- NULL
@@ -295,24 +303,35 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
     mediandiff.df_a <- rbind(mediandiff.df_a,quantile(as.vector(tddf),probs=c(0.1573,0.5,0.8427)))
     
     diff.df_a <- rbind(diff.df_a,as.vector(abs(df_a[[length(df_a)]]$df-df_a[[i]]$df)))
-    #hist(df_a[[i]]$df,breaks=as.integer(2*max(df_a[[i]]$df)),main="",ylab="",xlab="",xlim=c(-20,20),freq=FALSE)#,xlab="$\\delta P^a_\\mu$")
-    hist(df_a[[i]]$df,breaks=50,main="",ylab="",xlab="",freq=TRUE)#,xlab="$\\delta P^a_\\mu$")
-    #hist(df_a[[i]]$df,breaks=2000,main="",ylab="",xlim=c(-200,200),xlab="$\\delta P^a_\\mu$",freq=FALSE)
+    print(floor(abs(max(df_a[[i]]$df)-min(df_a[[i]]$df))/0.5))
+    hist(df_a[[i]]$df,breaks=function(x){floor(abs(max(x)-min(x))/0.5)},main="",ylab="",xlim=c(-10,10),freq=FALSE,xlab="$\\delta P^a_\\mu$")
+    if(text){
+      lims <- par('usr')
+      qt <- quantile(df_a[[i]]$df,probs=c(0.01,0.5,0.99)) 
+      text(x=lims[1]+0.18*(lims[2]-lims[1]),y=lims[4]-0.1*(lims[4]-lims[3]),labels=sprintf("$%5g~~%5g~~%5g$",qt[1],qt[2],qt[3]))
+    }
   }
   tikz.finalize(tikzfiles)
 
-
-  tex.basename <- "diff_a_n_hist"
-  if(!missing(single) && !missing(pattern)) {
-    tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+  if(numerical){
+    tex.basename <- "diff_a_n_hist"
+    if(!missing(single) && !missing(pattern)) {
+      tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+    }
+    tikzfiles <- tikz.init(basename=tex.basename,width=7,height=2.5)
+    for( i in 1:length(df_n) ) {
+      df <- df_a[[length(df_a)]]$df-df_n[[i]]$df
+      print(floor(abs(max(df)-min(df))/0.5))
+      hist(df,breaks=function(x){floor(abs(max(x)-min(x))/0.001)},main="",ylab="",xlab="$\\delta P^a_\\mu(x,\\tau) - \\delta \\mathcal{P}^a_\\mu(x,\\tau)$",freq=FALSE)
+      if(text){
+        lims <- par('usr')
+        qt <- quantile(df,probs=c(0.01,0.5,0.99)) 
+        text(x=lims[1]+0.3*(lims[2]-lims[1]),y=lims[4]-0.1*(lims[4]-lims[3]),labels=sprintf("$%f %f %f$",qt[1],qt[2],qt[3]))
+      }
+      #hist(df_a[[i]]$df,breaks=2000,main="",ylab="",xlim=c(-200,200),xlab="$\\delta P^a_\\mu$",freq=FALSE)
+    }
+    tikz.finalize(tikzfiles)
   }
-  tikzfiles <- tikz.init(basename=tex.basename,width=7,height=2.5)
-  for( i in 1:length(df_n) ) {
-    hist(df_a[[length(df_a)]]$df-df_n[[i]]$df,breaks=50,main="",ylab="",freq=TRUE,xlab="$\\delta P^a_\\mu(x,\\tau) - \\delta \\mathcal{P}^a_\\mu(x,\\tau)$")
-    #hist(df_a[[i]]$df,breaks=2000,main="",ylab="",xlim=c(-200,200),xlab="$\\delta P^a_\\mu$",freq=FALSE)
-  }
-  tikz.finalize(tikzfiles)
-
   
   tex.basename <- "diff.df_a.prec"
   if(!missing(single) && !missing(pattern)) {
@@ -341,42 +360,26 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,volume=2^4,int.steps
   #pdf(file=pdf.filename,width=5,height=5,onefile=T) 
   #filled.contour(x=log10(sort(unique(diffs$eps))),y=log10(sort(unique(diffs$prec))),z=diff.matrix,ylab="eps",xlab="ap")
   #dev.off()
-  
-  tex.basename <- "optim"
-  if(!missing(single) && !missing(pattern)) {
-    tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+  if(numerical){ 
+    tex.basename <- "optim"
+    if(!missing(single) && !missing(pattern)) {
+      tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+    }
+    # these need to be a little larger
+    tikzfiles <- tikz.init(basename=tex.basename,width=(width+0.5),height=(height+1.2))
+    plot(x=log10(diffs$eps),y=diffs$max,log="y",ylab="",xlab="$\\log(\\epsilon)$",type='n',main="")
+    precs <- c(1e-5,1e-10,1e-15,1e-20,1e-25)
+    logprecs <- as.integer(log10(precs))
+    library(RColorBrewer)
+    clr <- brewer.pal(n=length(precs),name="Set1")
+    lt <- 1:length(precs)
+    for(i in 1:length(precs)){
+      df <- diffs[diffs$prec==precs[i],]
+      lines(x=log10(df$eps),y=df$max,col=clr[i],lty=lt[i],lwd=3)
+    }
+    labels <- sprintf("$\\sigma_s=10^{%d}$",logprecs)
+    legend(x="topright",legend=labels,lty=lt,col=clr,lwd=3,bty='n') 
+    tikz.finalize(tikzfiles)
   }
-  # these need to be a little larger
-  tikzfiles <- tikz.init(basename=tex.basename,width=(width+0.5),height=(height+1.2))
-  plot(x=log10(diffs$eps),y=diffs$max,log="y",ylab="",xlab="$\\log(\\epsilon)$",type='n',main="")
-  precs <- c(1e-5,1e-10,1e-15,1e-20,1e-25)
-  logprecs <- as.integer(log10(precs))
-  library(RColorBrewer)
-  clr <- brewer.pal(n=length(precs),name="Set1")
-  lt <- 1:length(precs)
-  for(i in 1:length(precs)){
-    df <- diffs[diffs$prec==precs[i],]
-    lines(x=log10(df$eps),y=df$max,col=clr[i],lty=lt[i],lwd=3)
-  }
-  labels <- sprintf("$\\sigma_s=10^{%d}$",logprecs)
-  legend(x="topright",legend=labels,lty=lt,col=clr,lwd=3,bty='n') 
-  tikz.finalize(tikzfiles)
 
-  #i <- 1
-  #clr <- rainbow(n=length(unique(diffs$prec)))
-  #for(prec in unique(diffs$prec)){
-  #  df <- diffs[diffs$prec==prec,]
-  #  lines(x=log10(df$eps),y=df$diff,col=clr[i])
-  #  i <- i+1
-  #}
-  #i <- 1
-  #clr <- rainbow(n=length(unique(diffs$eps)))
-  #plot(x=log10(diffs$prec),y=diffs$diff,log="y",ylab="max. diff",main="max. diff. btw. num. and analytical deriv.",xlab="log10(acc. precision)",type='n')
-  #for(eps in unique(diffs$eps)){
-  #  df <- diffs[diffs$eps==eps,]
-  #  lines(x=log10(df$prec),y=df$diff,col=clr[i])
-  #  i<-i+1
-  #}
-
-  #dev.off()
 }
