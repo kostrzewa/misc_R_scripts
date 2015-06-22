@@ -8,8 +8,7 @@
 # with the corresponding values listed below, one set per row
 # colour is a string for the colour name such as "red" or "blue"
 
-
-plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
+plot_mpcac_v_kappa <- function(datafile,debug=F,sim=500,neg=TRUE,n.predict=5000,...)
 {
   pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=TRUE)
   pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
@@ -17,7 +16,7 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
     print(pcacdat)
   }
 
-  predict.newdata <- data.frame(oneov2k=1/(2*seq(0.1,0.2,length.out=200)))
+  predict.newdata <- data.frame(oneov2k=seq(1/0.4,1/0.2,length.out=n.predict))
 
   
   models <- list()
@@ -25,6 +24,8 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
   coefs.cov <- list()
   coefs <- list()
   kappa_c <- data.frame(lwr=c(),fit=c(),upr=c())
+
+  testpoint <- data.frame(x=0,y=0,dy=0)
 
   # if we have negative and positive mpcac masses (at least two of either),
   # we should do two fits because the negative and positive slopes are different
@@ -44,15 +45,16 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
         simdata[,k] <- rnorm(n=sim,mean=pcacdat$mpcac[rws[k]],sd=pcacdat$dmpcac[rws[k]])
       }
       mpcacmod <- apply(X=simdata,MARGIN=1,
-                        FUN=function(x) { 
-                              lm(mpcac~oneov2k,data=data.frame(mpcac=x,oneov2k=pcacdat$oneov2k[rws]),weights=1/(pcacdat$dmpcac[rws])^2) 
+                        FUN=function(x) {
+                              lm(mpcac~oneov2k,data=data.frame(mpcac=x,oneov2k=pcacdat$oneov2k[rws]),weights=1/(pcacdat$dmpcac[rws])^2)
                             } )
 
       coefs.tmp <- lapply(X=mpcacmod,FUN=function(x) { x$coefficients })
       coefs.tmp <- array(data=unlist(coefs.tmp),dim=c(2,sim))
 
       prediction <- lapply(X=mpcacmod,FUN=function(x) { predict(x,newdata=predict.newdata,interval="none") })
-      prediction <- array(data=unlist(prediction),dim=c(200,sim))
+
+      prediction <- array(data=unlist(prediction),dim=c(n.predict,sim))
 
       models[[length(models)+1]] <- mpcacmod
       predictions[[length(predictions)+1]] <- data.frame(val=apply(X=prediction,MARGIN=1,FUN=mean),err=apply(X=prediction,MARGIN=1,FUN=sd))
@@ -60,27 +62,29 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
       coefs.cov[[length(coefs.cov)+1]] <- cov(t(coefs.tmp))
 
       kappa_estimate <- apply(X=prediction,MARGIN=2,FUN=function(x) { approx(x=x,y=predict.newdata$oneov2k,xout=0.0)$y } )
-      kappa_c <- rbind(kappa_c, 
-                       data.frame( lwr=min(kappa_estimate), fit=mean(kappa_estimate), upr=max(kappa_estimate) ) )
+      kappa_c <- rbind(kappa_c, quantile(kappa_estimate,probs=c(0.1573,0.5,0.8427) ) )
     }
   } 
   if(nrow(kappa_c)>0) {
     cat("Estimates of kappa_c\n")
-    print(0.5*(1/kappa_c))
+    kc <- 0.5/rev(kappa_c)
+    print(sprintf("k_c = %f (+%f -%f)", kc[,2], kc[,3]-kc[,2], kc[,2]-kc[,1]))
     cat("\n")
   }
-
+  
+  cat("Fit coefficients and the sqrt of their variance-covariance matrices\n")
   for(idx in 1:length(coefs) ) {
     print(coefs[[idx]])
     print(sqrt(coefs.cov[[idx]]))
   }
   
   par(family="Times")
-
-  plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
+  
+  # set up plot area
+  plot(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac,  
     xlab=expression(paste("1/2",kappa)), ylab=expression(~am[PCAC]), col=pcacdat$colour, 
-    pch=pcacdat$pch+pcacdat$offsetpch, ... )
-
+    pch=pcacdat$pch+pcacdat$offsetpch, type='n', ... )
+  
   if(nrow(kappa_c)>0){
     cols <- c("magenta","cyan")
     alpha.cols <- col2rgb(cols,alpha=TRUE)
@@ -97,12 +101,16 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
       poly.y <- c(predictions[[i]]$val-dy,rev(predictions[[i]]$val+dy))
       polygon(x=poly.x,y=poly.y,border=NA,
               col=rgb(red=alpha.cols[1,i],green=alpha.cols[2,i],blue=alpha.cols[3,i],alpha=alpha.cols[4,i],maxColorValue=255))
-      points(y=0,x=kappa_c$fit[i],col=cols[i],pch=16)
+      points(y=0,x=kappa_c[i,2],col=cols[i],pch=16)
       lines(x=predict.newdata$oneov2k,y=predictions[[i]]$val,col=cols[i])
     }
   }
 
   abline(h=0,lty=2)
+  
+  plotwitherror(x=( 1/(2*pcacdat$kappa) ), y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
+    xlab=expression(paste("1/2",kappa)), ylab=expression(~am[PCAC]), col=pcacdat$colour, 
+    pch=pcacdat$pch+pcacdat$offsetpch, rep=TRUE, ... )
 
   # get plot boundaries
   lims <- par("usr")
@@ -128,7 +136,7 @@ plot_mpcac_v_kappa <- function(datafile,debug=F,sim=1000,...)
     legend.ypos <- lims[4]
   }
 
-  legend( x=legend.xpos, y=legend.ypos, col=unique(pcacdat$colour), legend=paste( "mu =", unique( pcacdat$mu ) ), 
-          pch=unique(pcacdat$pch+pcacdat$offsetpch) )
+  legend( x="topleft", col=unique(pcacdat$colour), legend=paste( "mu =", unique( pcacdat$mu ) ), 
+          pch=unique(pcacdat$pch+pcacdat$offsetpch), bty='n' )
   
 }
