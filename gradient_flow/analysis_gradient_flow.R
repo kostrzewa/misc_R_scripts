@@ -1,9 +1,8 @@
 source("~/code/R/misc_R_scripts/lat_phys_ratios/compute_ratio.R")
 
-analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE) {
+analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
   if(read.data) {
-    files <- getorderedfilelist(path=path, basename="gradflow", last.digits=6)
-    raw.gradflow <- readgradflow(path=path)
+    raw.gradflow <- readgradflow(path=path,skip=skip)
     save(raw.gradflow,file="raw.gradflow.Rdata",compress=FALSE)
   }else{
     cat("Warning, reading data from raw.gradflow.Rdata, if the number of samples changed, set read.data=TRUE to reread all output files\n")
@@ -35,17 +34,16 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE) {
   
   save(gradflow,file="gradflow.Rdata",compress=FALSE)
    
-  # find w_0 and its lower and upper error
+  # find w_0 and its lower and upper values
   w0sq <- c( approx(x=gradflow$Wsym.value+gradflow$Wsym.dvalue,y=gradflow$t,xout=0.3)$y, 
              approx( x=gradflow$Wsym.value, y=gradflow$t, xout=0.3 )$y, 
              approx( x=gradflow$Wsym.value-gradflow$Wsym.dvalue, y=gradflow$t, xout=0.3)$y )
   
-  cat("w0^2:\n")
-  print(w0sq)
+  cat(sprintf("w0^2/a^2: %f (+%f -%f)\n",w0sq[2],w0sq[3]-w0sq[2],w0sq[2]-w0sq[1]))
    
-  cat("w0:\n")
   w0 <- sqrt(w0sq)
-  print(w0)
+  cat(sprintf("w0/a: %f (+%f -%f)\n",w0[2],w0[3]-w0[2],w0[2]-w0[1]))
+   
 
   w0fm <- list(val=0.1755,dval=0.0019,name="w_0(fm)")
   a <- matrix(nrow=3,ncol=2)
@@ -53,6 +51,7 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE) {
     a_fm <- compute_ratio(dividend=w0fm,divisor=list(val=w0[i],dval=0,name="w_0"),name="a(fm)")
     a[i,] <- c(a_fm$val,a_fm$dval)
   }
+  cat(sprintf("Using w0 = %f (%f)\n",w0fm$val,w0fm$dval))
   cat("a(fm):", a[2,1], " (", a[3,1]-a[2,1], ",", a[1,1]-a[2,1]," ) ( ", a[2,2], ")\n")
   cat("a(fm) ~ ", a[2,1], "(", sqrt( 0.5*(abs(a[3,1]-a[2,1])+abs(a[1,1]-a[2,1]))^2 + a[2,2]^2 ), ")\n");   
   
