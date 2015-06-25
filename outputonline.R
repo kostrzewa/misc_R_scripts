@@ -14,11 +14,12 @@ source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
 
-outputonline <- function(type,beta,L,T,t1,t2,skip,
+outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
   cg_col, evals, kappa=0, mul=0,
-  csw=0,musigma=0,mudelta=0,muh=0,addon="",plaquette=TRUE,
-  dH=TRUE,oneplot=FALSE,plotsize=5,debug=FALSE,trajlabel=FALSE,
-  title=TRUE,pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,S=10)
+  csw=0,musigma=0,mudelta=0,muh=0,addon="",
+  plaquette=TRUE, dH=TRUE,
+  plotsize=5,debug=FALSE,trajlabel=FALSE,title=TRUE,
+  pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,S=3)
 {
   navec <- c(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA)
   result <- list(params=data.frame(L=L,T=T,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta,N.online=0,N.plaq=0,skip=skip),
@@ -27,11 +28,13 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,
   result$obs$mpcac_fit[1] <- 0.1
   
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
-
-  rundir <- construct_rundir(type=type,beta=beta,L=L,T=T,kappa=kappa,mul=mul,
+  
+  if(missing(rundir)){
+    rundir <- construct_rundir(type=type,beta=beta,L=L,T=T,kappa=kappa,mul=mul,
                              csw=csw,musigma=musigma,mudelta=mudelta,muh=muh,addon=addon,
                              debug=debug
                             )
+  }
       
   titletext <- NULL
   if(title) {
