@@ -236,7 +236,7 @@ plot.hadron_obs <- function(df,name,pheno,extrapolations,solutions,lg,labelx,lab
   system(command)
 }
 
-plot_syserr_dist.hadron_obs <- function(hadron_obs,width=4.5,height=4) {
+plot_syserr_dist.hadron_obs <- function(hadron_obs,width=4.5,height=4,breaks=35) {
   require("weights")
   if(is.null(hadron_obs[[1]]$fr)){
     stop("plot_syserr_dist.hadron_obs: the 'hadron_obs' argument must have a non-null $fr member!\n")
@@ -246,12 +246,22 @@ plot_syserr_dist.hadron_obs <- function(hadron_obs,width=4.5,height=4) {
   qt <- weighted.quantile(x=fr,w=w,probs=c(0.1573,0.5,0.8427))
   texlabel <- hadron_obs[[1]]$texlabel
   tikzfiles <- tikz.init(basename=sprintf("fitrange.syserr.dist.%s",hadron_obs[[1]]$name),width=width,height=height)
-  hst <- hist(x=fr,main="",yaxt='n',ylab="",xlim=c(min(fr),max(fr)),breaks=20,xlab=texlabel,freq=FALSE)
-  w.hst <- wtd.hist(x=fr,w=w,main="",yaxt='n',ylab="",breaks=20,xlab=texlabel,xlim=c(min(fr),max(fr)),freq=FALSE)
+  
+  hst <- hist(x=fr,main="",yaxt='n',ylab="",xlim=c(min(fr),max(fr)),breaks=breaks,xlab="",freq=FALSE)
   lims <- par("usr")
+  width <- abs(lims[2]-lims[1])
+  height <- abs(lims[4]-lims[3])
+  text(x=lims[2]-0.20*width,y=lims[4]-0.20*height,labels=texlabel)
+  
+  w.hst <- wtd.hist(x=fr,w=w,main="",yaxt='n',ylab="",breaks=breaks,xlab="",xlim=c(min(fr),max(fr)),freq=FALSE)
+  lims <- par("usr")
+  width <- abs(lims[2]-lims[1])
+  height <- abs(lims[4]-lims[3])
+  text(x=lims[2]-0.20*width,y=lims[4]-0.20*height,labels=texlabel)
   col <- rgb(0.8,0.8,0.8,0.5)
   rect(xleft=qt[1],ybottom=lims[3],xright=qt[3],ytop=lims[4],col=col,border=NA)
   abline(v=qt[2],lwd=4)
+  
   tikz.finalize(tikzfiles)
   return(list(hst,w.hst))
 }
