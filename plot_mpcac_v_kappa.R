@@ -10,13 +10,13 @@
 
 plot_mpcac_v_kappa <- function(datafile,debug=F,sim=500,neg=TRUE,n.predict=5000,...)
 {
-  pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=TRUE)
+  pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=FALSE)
   pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
   if(debug) {
     print(pcacdat)
   }
 
-  predict.newdata <- data.frame(oneov2k=seq(1/0.4,1/0.2,length.out=n.predict))
+  predict.newdata <- data.frame(oneov2k=seq(1/0.32,1/0.25,length.out=n.predict))
 
   
   models <- list()
