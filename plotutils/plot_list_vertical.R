@@ -11,29 +11,73 @@
 # * it may be interesting to provide x, dx and mdx in relative terms where 
 #   all(x==1) and everyhting else is normalized by the central value
 
-plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,ylim,item.height=0.15,...) {
-  if(missing(height)) height <- length(x)*item.height
+plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,ylim,mar,clr,pch,perlines,errband,item.height=0.15,rep=FALSE,finalize=TRUE,...) {
+  if(missing(height)) height <- length(x)*item.height+1 # the one is for the bottom margin
   if(missing(width)) width <- 5
   if(missing(mdx)) mdx <- dx
   if(missing(labels)) labels <- rep("",times=length(x))
-  if(missing(ylim)) ylim <- c(1,length(x))
-  tikzfiles <- tikz.init(basename=basename,height=height,width=width)
+  if(missing(ylim)) ylim <- c(0.6,length(x)+0.4)
+  if(missing(clr)) clr <- "black"
+  if(missing(pch)) pch <- 16
+  
+  tikzfiles <- NULL
+  if(!rep){
+    tikzfiles <- tikz.init(basename=basename,height=height,width=width,lwdUnit=0.5)
+  }
 
+  if(!missing(mar)){
+    par(mar=mar)
+  }
+  
   y <- 1:length(x)
   # set up plot region
-  plotwitherror(y=y,x=x,dx=dx,mdx=mdx,xlab="",yaxt='n',ylab="",type='n',ylim=ylim,...)
-  lims <- par("usr")
-  # draw some gray rectangles to make reading the plot easier
-  for( i in y ) {
-    if( i %% 2 == 0 ) {
-      col <- rgb(0.8,0.8,0.8,0.4)
-      rect(lims[1],i-0.5,lims[2],i+0.5,col=col,border=NA)
+  if(!rep){
+    plotwitherror(y=y,x=x,dx=dx,mdx=mdx,yaxt='n',ylab="",type='n',ylim=ylim,...)
+    lims <- par("usr")
+    # draw some gray rectangles to make reading the plot easier
+    for( i in y ) {
+      if( i %% 2 == 0 ) {
+        col <- rgb(0.8,0.8,0.8,0.4)
+        rect(lims[1],i-0.5,lims[2],i+0.5,col=col,border=NA)
+      }
+    }
+    if(!missing(perlines)){
+      abline(v=c(perlines-0.01,perlines+0.01),lty=2,col=rgb(0.5,0.5,0.5))
+      abline(v=c(perlines-0.001,perlines+0.001),lty=3,col=rgb(0.5,0.5,0.5))
     }
   }
-  # do the actual plotting
-  plotwitherror(y=y,x=x,dx=dx,mdx=mdx,xlab="",yaxt='n',rep=TRUE,...)
-  text(x=labelpos,y=y,labels=labels)
 
-  tikz.finalize(tikzfiles)
+  # the errband argument allows nice rectangles to be placed to indicate an additional error
+  # this comes in very handy when trying to compare errors and values in a ratio
+  # with the error coming from the denominator depicted by the errorband
+  if(!missing(errband)){
+    rclr <- rgb(red=1.0,green=0.0,blue=0.0,alpha=0.3)
+    print(errband)
+    rect(xleft=errband$xleft,xright=errband$xright,ybottom=y-item.height,ytop=y+item.height,col=rclr,border=NA)
+  }
+
+  # do the actual plotting
+  plotwitherror(y=y,x=x,dx=dx,mdx=mdx,rep=TRUE,pch=pch,col=clr,...)
+  if(missing(labelpos)){
+    lims <- par('usr')
+    labelpos <- lims[1]
+  }
+  
+  # if mar has been provided we probably want to put text outside the plot area
+  # so we should disable clipping 
+  if(!missing(mar)) par(xpd=NA)
+  if(!is.list(labels)) {
+    text(x=labelpos,y=y,labels=labels,adj=c(0.5,0.5), cex=0.8)
+  } else {
+    increment <- 0.5/length(labels)
+    for( i in 1:length(labels) ) {
+      text(x=labelpos,y=y+increment*2*(i-1)-0.1,adj=c(0.5,0.5),labels=labels[[i]],cex=0.8)
+    }
+  }
+  if(finalize){
+    tikz.finalize(tikzfiles)
+  } else {
+    tikzfiles
+  }
 }
 
