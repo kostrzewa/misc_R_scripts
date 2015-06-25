@@ -322,7 +322,7 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
     for( i in 1:length(df_n) ) {
       df <- df_a[[length(df_a)]]$df-df_n[[i]]$df
       print(floor(abs(max(df)-min(df))/0.5))
-      hist(df,breaks=function(x){floor(abs(max(x)-min(x))/0.001)},main="",ylab="",xlab="$\\delta P^a_\\mu(x,\\tau) - \\delta \\mathcal{P}^a_\\mu(x,\\tau)$",freq=FALSE)
+      hist(df,breaks=50,main="",ylab="",xlab="$\\delta P^a_\\mu(x,\\tau) - \\delta \\mathcal{P}^a_\\mu(x,\\tau)$",freq=FALSE)
       if(text){
         lims <- par('usr')
         qt <- quantile(df,probs=c(0.01,0.5,0.99)) 
@@ -367,7 +367,7 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
     }
     # these need to be a little larger
     tikzfiles <- tikz.init(basename=tex.basename,width=(width+0.5),height=(height+1.2))
-    plot(x=log10(diffs$eps),y=diffs$max,log="y",ylab="",xlab="$\\log(\\epsilon)$",type='n',main="")
+    plot(x=log10(diffs$eps),y=diffs$max,log="y",ylab="",xlab="$\\log_{10}(\\epsilon)$",type='n',main="")
     precs <- c(1e-5,1e-10,1e-15,1e-20,1e-25)
     logprecs <- as.integer(log10(precs))
     library(RColorBrewer)
