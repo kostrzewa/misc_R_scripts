@@ -3,7 +3,7 @@
 
 plot_timeseries <- function(dat,trange,pdf.filename,
                             ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
-                            hist.breaks=30,uwerr.S=5,periodogram=FALSE,debug=FALSE) {
+                            hist.breaks=30,uwerr.S=5,periodogram=FALSE,debug=FALSE,...) {
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat)
       
@@ -13,12 +13,13 @@ plot_timeseries <- function(dat,trange,pdf.filename,
     summary(uw.data)
   }
   
-  pdf(pdf.filename,width=plotsize,height=plotsize,title=filelabel)
+  tikzfiles <- tikz.init(basename=pdf.filename,width=plotsize,height=plotsize)
+  #pdf(pdf.filename,width=plotsize,height=plotsize,title=filelabel)
   op <- par(family="Palatino",cex.main=0.6,font.main=1)
   par(mgp=c(2,1,0))
 
   # plot the timeseries
-  plot(x=xdat,xlim=trange,y=dat,ylim=yrange,t='l',ylab=ylab,xlab=expression(t[MD]),main=titletext)
+  plot(x=xdat,xlim=trange,y=dat,ylim=yrange,ylab=ylab,t='l',xlab=expression(t[MD]),main=titletext,...)
 
   rect(xleft=trange[1],
        xright=trange[2],
@@ -42,7 +43,8 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   # and the uwerr plots
   plot(uw.data,main=paste(ylab,paste("UWErr analysis",titletext)),x11=FALSE,plot.hist=FALSE)
    
-  dev.off()
+  tikz.finalize(tikzfiles)
+  #dev.off()
 
   return(c(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint, Wopt=uw.data$Wopt))
 }
