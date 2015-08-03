@@ -8,7 +8,7 @@
 # with the corresponding values listed below, one set per row
 # colour is a string for the colour name such as "red" or "blue"
 
-plot_mpcac_v_kappa <- function(datafile,debug=FALSE,fit=TRUE,sim=500,n.predict=2000,...)
+plot_mpcac_v_kappa <- function(datafile,debug=FALSE,fit=TRUE,sim=500,n.predict=2000,mpcac.ylim=c(-0.006,0.006),...)
 {
   pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=FALSE)
   pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
@@ -50,7 +50,7 @@ plot_mpcac_v_kappa <- function(datafile,debug=FALSE,fit=TRUE,sim=500,n.predict=2
   # prepare plot area
   plotwitherror(x=pcacdat$oneov2k, y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
     xlab="", ylab="$ a m_\\mathrm{PCAC} $", col=pcacdat$colour, 
-    pch=pcacdat$pch+pcacdat$offsetpch,las=1,tck=0.02, ... )
+    pch=pcacdat$pch,las=1,tck=0.02, ylim=mpcac.ylim, t='n', ... )
   mtext(side=1,text="$ 1/2\\kappa $",line=1.3)
   abline(h=0,col="gray",lty=2)
   if(fit) {
@@ -64,17 +64,31 @@ plot_mpcac_v_kappa <- function(datafile,debug=FALSE,fit=TRUE,sim=500,n.predict=2
     lines(x=pred.x$oneov2k,y=pred.y)
   }
   plotwitherror(x=pcacdat$oneov2k, y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
-                col=pcacdat$colour, pch=pcacdat$pch+pcacdat$offsetpch, rep=TRUE )
-
-  # get plot boundaries
-  lims <- par("usr")
-
+                col=pcacdat$colour, pch=pcacdat$pch, rep=TRUE )
   legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )), 
           pch=15, bty='n', pt.cex=1.3 )
-  
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )
 
+  plotwitherror(x=pcacdat$oneov2k, y=pcacdat$mpi^2, dy=pcacdat$dmpi*pcacdat$mpi*2,
+    xlab="", ylab="$ (a M_\\mathrm{PS} )^2 $", col=pcacdat$colour, 
+    pch=pcacdat$pch,las=1,tck=0.02, ... )
+  mtext(side=1,text="$ 1/2\\kappa $",line=1.3)
+  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )), 
+          pch=15, bty='n', pt.cex=1.3 )
+  legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
+          pch=unique(pcacdat$pch), bty='n' )
+  
+  plotwitherror(x=pcacdat$oneov2k, y=pcacdat$fpi, dy=pcacdat$dfpi, 
+    xlab="", ylab="$ a f_\\mathrm{PS} $", col=pcacdat$colour, 
+    pch=pcacdat$pch,las=1,tck=0.02, ... )
+  mtext(side=1,text="$ 1/2\\kappa $",line=1.3)
+  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )), 
+          pch=15, bty='n', pt.cex=1.3 )
+  legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
+          pch=unique(pcacdat$pch), bty='n' )
+  
+  
   tikz.finalize(tikzfiles)
   
 }
