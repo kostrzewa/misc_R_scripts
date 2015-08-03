@@ -12,7 +12,7 @@
 # indices  - for the non-overview plots, this selects one/multiple particular lattice point(s), direction(s) and generator(s) (optional)
 #            otherwise all indices are used         
 
-analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",single=FALSE,all=FALSE,width=4,height=4,text=FALSE) {
+analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",single=FALSE,all=FALSE,width=4,height=4,text=FALSE,break.unit=0.01) {
  
   # we will use list.files with a pattern to read all the data files of interest
   # in the next few lines we construct which files we would like to read 
@@ -71,6 +71,7 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
   precs <- c()
   # now we read the analytical data
   for( fname in a_files ) {
+    cat("Reading ", fname, "\n")
     a_file <- file(fname,"rb")
     ap <- readBin(a_file,double(),n=1,endian=endian)
     fp <- readBin(a_file,double(),n=1,endian=endian)
@@ -126,7 +127,7 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
       # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies) 
       ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
       plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
-           xlab="f",ylab="$Re(dP(f))^2$",lwd=3 )
+           xlab="f",ylab="$Re(\\hat{dP}(f))^2$",lwd=3 )
     }
     tikz.finalize(tikzfiles)
   
@@ -162,14 +163,14 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
              t='l',xlab="t",ylab="dP",lwd=3)
         ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
         plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
-        xlab="f",ylab="$Re(dP(f))^2$",lwd=3 )
+        xlab="f",ylab="$Re(\\hat{dP}(f))^2$",lwd=3 )
       }
       tikz.finalize(tikzfiles)
     }
   } else {
     tex.basename <- "df_a"
     if(!missing(single) && !missing(pattern)) {
-      tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+      tex.basename <- sprintf("%s.%s.%s",pattern,int.steps,tex.basename)
     }
     tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
     irange <- 1:ncol(df_a[[length(df_a)]]$df)
@@ -177,13 +178,14 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
       irange <- indices
     }
     for( i in irange ) {
+      op <- par(mar = c(4,5,3,1) + 0.1,mgp = c(2,0.3,0) )
       plot(y=df_a[[length(df_a)]]$df[,i],
            x=seq(1,length(df_a[[length(df_a)]]$df[,i]))*tau/int.steps,
-           t='l',lwd=3,
+           type='l',pch='.',lwd=3,tck=0.10,las=1,
            xlab="$\\tau$",ylab="$\\delta P^a_\\mu(x,\\tau)$")
       # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies) 
       ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
-      plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',lwd=3,
+      plot(y=ft,type='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',lwd=3,
            xlab="f",ylab="$\\left( \\Re \\left[ \\tilde{\\delta P}^a_\\mu(x,f) \\right] \\right)^2$")
     }
     tikz.finalize(tikzfiles)
@@ -303,8 +305,9 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
     mediandiff.df_a <- rbind(mediandiff.df_a,quantile(as.vector(tddf),probs=c(0.1573,0.5,0.8427)))
     
     diff.df_a <- rbind(diff.df_a,as.vector(abs(df_a[[length(df_a)]]$df-df_a[[i]]$df)))
-    print(floor(abs(max(df_a[[i]]$df)-min(df_a[[i]]$df))/0.5))
-    hist(df_a[[i]]$df,breaks=function(x){floor(abs(max(x)-min(x))/0.5)},main="",ylab="",xlim=c(-10,10),freq=FALSE,xlab="$\\delta P^a_\\mu$")
+    cat("Number of breaks: ", floor(abs(max(df_a[[i]]$df)-min(df_a[[i]]$df))/break.unit), "\n")
+    xlims <- c(mean(df_a[[i]]$df)-2*sd(df_a[[i]]$df),mean(df_a[[i]]$df)+2*sd(df_a[[i]]$df))
+    hist(df_a[[i]]$df,breaks=function(x){floor(abs(max(x)-min(x))/break.unit)},main="",ylab="",xlim=xlims,freq=FALSE,xlab="$\\delta P^a_\\mu$")
     if(text){
       lims <- par('usr')
       qt <- quantile(df_a[[i]]$df,probs=c(0.01,0.5,0.99)) 
@@ -332,23 +335,25 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
     }
     tikz.finalize(tikzfiles)
   }
-  
-  tex.basename <- "diff.df_a.prec"
-  if(!missing(single) && !missing(pattern)) {
-    tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+ 
+  if(length(df_a)>1){ 
+    tex.basename <- "diff.df_a.prec"
+    if(!missing(single) && !missing(pattern)) {
+      tex.basename <- sprintf("%s.%s",pattern,tex.basename)
+    }
+    tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
+    # set up plot area
+    plot(x=log10(mean_df_a$prec),y=mediandiff.df_a[,2],ylab="",
+                 main="$\\delta P^a_\\mu(x,\\tau,\\sigma_f=10^{-26}) - \\delta P^a_\\mu(x,\\tau,\\sigma_f)$",
+                 xlab="$\\log_{10}(\\sigma_f)$",
+                 type='n',ylim=c(-1e-5,1e-5),
+                 xlim=c( min(log10(mean_df_a$prec)) , -3 ) )
+    poly.col <- rgb(0.0,0.0,1.0,0.7)
+    poly.x <- c(log10(mean_df_a$prec),rev(log10(mean_df_a$prec)))
+    poly.y <- c(mediandiff.df_a[,1],rev(mediandiff.df_a[,3]))
+    polygon(x=poly.x,y=poly.y,col=poly.col)
+    tikz.finalize(tikzfiles)
   }
-  tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
-  # set up plot area
-  plot(x=log10(mean_df_a$prec),y=mediandiff.df_a[,2],ylab="",
-               main="$\\delta P^a_\\mu(x,\\tau,\\sigma_f=10^{-26}) - \\delta P^a_\\mu(x,\\tau,\\sigma_f)$",
-               xlab="$\\log_{10}(\\sigma_f)$",
-               type='n',ylim=c(-1e-5,1e-5),
-               xlim=c( min(log10(mean_df_a$prec)) , -3 ) )
-  poly.col <- rgb(0.0,0.0,1.0,0.7)
-  poly.x <- c(log10(mean_df_a$prec),rev(log10(mean_df_a$prec)))
-  poly.y <- c(mediandiff.df_a[,1],rev(mediandiff.df_a[,3]))
-  polygon(x=poly.x,y=poly.y,col=poly.col)
-  tikz.finalize(tikzfiles)
   
   # optim countour is useless, but the code is nice, let's preserve it for the future
   #diffs <- diffs[with(diffs,order(prec,eps)),]
@@ -381,5 +386,23 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
     legend(x="topright",legend=labels,lty=lt,col=clr,lwd=3,bty='n') 
     tikz.finalize(tikzfiles)
   }
+
+  # do fourier analysis of complete data set
+  ft <- rep(0,times=length(df_a[[1]]$df[,1]))
+  for( i in 1:ncol(df_a[[length(df_a)]]$df) ) {
+    # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies) 
+    ft <- ft+Mod(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
+  }
+  ft <- ft / ncol(df_a[[1]]$df)
+
+  tex.basename <- "ft"
+  if(!missing(single) && !missing(pattern)) {
+      tex.basename <- sprintf("%s.%s.%s",pattern,int.steps,tex.basename)
+    }
+  # these need to be a little larger
+  tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
+  plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,6),#log='x',
+       xlab="f",ylab="$Re(\\hat{dP}(f))^2$",lwd=3 )
+  tikz.finalize(tikzfiles)
 
 }
