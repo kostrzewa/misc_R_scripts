@@ -2,8 +2,8 @@
 # and an error shading for an error analysis via uwerr
 
 plot_timeseries <- function(dat,trange,pdf.filename,
-                            ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
-                            hist.breaks=70,uwerr.S=5,periodogram=FALSE,debug=FALSE,...) {
+                            ylab,name,plotsize,filelabel,titletext,hist.xlim,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
+                            hist.by=0.2,uwerr.S=5,periodogram=FALSE,debug=FALSE,...) {
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat)
       
@@ -14,12 +14,11 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   }
   
   tikzfiles <- tikz.init(basename=pdf.filename,width=plotsize,height=plotsize)
-  #pdf(pdf.filename,width=plotsize,height=plotsize,title=filelabel)
   op <- par(family="Palatino",cex.main=0.6,font.main=1)
-  par(mgp=c(2,1,0))
+  par(mgp=c(2,1.0,0))
 
   # plot the timeseries
-  plot(x=xdat,xlim=trange,y=dat,ylim=yrange,ylab=ylab,t='l',xlab=expression(t[MD]),main=titletext,...)
+  plot(x=xdat,xlim=trange,y=dat,ylab=ylab,t='l',xlab="$t_\\mathrm{MD}$",main=titletext,...)
 
   rect(xleft=trange[1],
        xright=trange[2],
@@ -27,7 +26,16 @@ plot_timeseries <- function(dat,trange,pdf.filename,
        ybottom=uw.data$value-uw.data$dvalue,border=FALSE,col=errorband_color)
   abline(h=uw.data$value,col="black")                                                                                                   
   # plot the corresponding histogram
-  hist.data <- hist(dat,xlim=yrange,main=paste("histogram",titletext),xlab=ylab, breaks=hist.breaks)
+  hist.data <- NULL
+  print(yrange)
+  print(hist.by)
+  hist.breaks <- floor( ( max(dat)-min(dat) ) / hist.by )
+  print(hist.breaks)
+  if(!missing(hist.xlim)){
+    hist.data <- hist(dat,xlim=hist.xlim,main=titletext,xlab=ylab, breaks=hist.breaks)
+  } else {
+    hist.data <- hist(dat,xlim=yrange,main=titletext,xlab=ylab, breaks=hist.breaks)
+  }
   rect(ytop=max(hist.data$counts),
        ybottom=0,
        xright=uw.data$value+uw.data$dvalue,

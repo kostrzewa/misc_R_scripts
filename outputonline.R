@@ -74,50 +74,51 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
       filelabel <- rundir
     }
 
-    dpaopp_filename <- sprintf("01_dpaopp_%s.pdf",filelabel)
+    dpaopp_filename <- sprintf("01_dpaopp_%s",filelabel)
 
     result$obs$mpcac_mc <- plot_timeseries(dat=onlineout$MChist.dpaopp,
       trange=c(skip+1,(skip+length(onlineout$MChist.dpaopp))),
       pdf.filename=dpaopp_filename,
-      ylab=expression(am[PCAC]),
+      ylab="$am_\\mathrm{PCAC}$",
       name="am_PCAC (MC history)",
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color)
+      errorband_color=errorband_color,
+      hist.by=0.0002)
 
     lengthdpaopp <- length(onlineout$MChist.dpaopp)
     mindpaopp <- min(onlineout$MChist.dpaopp)
     maxdpaopp <- max(onlineout$MChist.dpaopp)
 
-    dpaopp_plateau_filename <- sprintf("02_dpaopp_plateau_%s.pdf",filelabel)
-    pdf(dpaopp_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
+    dpaopp_plateau_filename <- sprintf("02_dpaopp_plateau_%s",filelabel)
+    tikzfiles <- tikz.init(basename=dpaopp_plateau_filename,width=plotsize,height=plotsize)
     op <- par(family="Palatino",cex.main=0.6,font.main=1)
     par(mgp=c(2,1,0))
     plotwitherror(x=onlineout$dpaopp$t,
       y=onlineout$dpaopp$mass,dy=onlineout$dpaopp$dmass,t='p',
-      ylab=expression(am[PCAC]),
-      xlab=expression(t),
+      ylab="$am_\\mathrm{PCAC}$",
+      xlab="$t/a$",
       main=titletext)
     rect(xleft=t1,
       xright=t2,
       ytop=onlineout$uwerrresultmpcac$value+onlineout$uwerrresultmpcac$dvalue,
       ybottom=onlineout$uwerrresultmpcac$value-onlineout$uwerrresultmpcac$dvalue,border=FALSE,col=errorband_color)
     abline(h=onlineout$uwerrresultmpcac$value,col="black")
-    dev.off()
+    tikz.finalize(tikzfiles)
 
     result$obs["val","mpcac_fit"] <- (onlineout$fitresult$par[3]*onlineout$fitresult$par[2]/onlineout$fitresult$par[1]/2.)
     # no error or tauint from the fit
 
-    mpi_plateau_filename <- sprintf("03_mpi_plateau_%s.pdf",filelabel)
-    pdf(mpi_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
+    mpi_plateau_filename <- sprintf("03_mpi_plateau_%s",filelabel)
+    tikzfiles <- tikz.init(mpi_plateau_filename,width=plotsize,height=plotsize)
     op <- par(family="Palatino",cex.main=0.6,font.main=1)
     par(mgp=c(2,1,0))
 
     ploterror <- try(plotwitherror(x=onlineout$effmass$t,
       y=onlineout$effmass$m,dy=onlineout$effmass$dm,t='p',
-      ylab=expression(am[PS]),
-      xlab=expression(t),
+      ylab="$aM_\\mathrm{PS}$",
+      xlab="$t/a$",
       main=titletext),silent=FALSE)
 
     if(inherits(ploterror,"try-error")) {
@@ -128,7 +129,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
       ytop=onlineout$uwerrresultmps$value+onlineout$uwerrresultmps$dvalue,
       ybottom=onlineout$uwerrresultmps$value-onlineout$uwerrresultmps$dvalue,border=FALSE,col=errorband_color)
     abline(h=onlineout$uwerrresultmps$value,col="black")
-    dev.off()
+    tikz.finalize(tikzfiles)
 
     result$obs$mpi[1] <- abs(onlineout$fitresultpp$par[2])
     result$obs$mpi[2] <- onlineout$uwerrresultmps$dvalue
@@ -163,55 +164,63 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
   }
 
   if(plaquette) {
-    plaquette_filename <- sprintf("04_plaquette_%s.pdf",filelabel,title=filelabel)
+    plaquette_filename <- sprintf("04_plaquette_%s",filelabel,title=filelabel)
     result$params$N.plaq <- trange[2]-trange[1]
     result$obs$P <- plot_timeseries(dat=outdat$V2[trange[1]:trange[2]],
       trange=trange,
       pdf.filename=plaquette_filename,
-      ylab=expression("<P>"),
+      ylab="$ \\langle P \\rangle$" ,
       name="plaquette",
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color)
+      errorband_color=errorband_color,
+      hist.by=0.00002)
   }
   if(dH) {
-    dH_filename <- sprintf("05_dH_%s.pdf",filelabel)
+    dH_filename <- sprintf("05_dH_%s",filelabel)
     result$obs$dH <- plot_timeseries(dat=outdat$V3[trange[1]:trange[2]],
       trange=trange,
       pdf.filename=dH_filename,
-      ylab=expression(paste(delta,"H",sep="")),
+      ylab="$ \\delta H $",
       name="dH",
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color)
+      errorband_color=errorband_color,
+      hist.xlim=c(-3,3),
+      ylim=c(-2,2),
+      hist.by=0.2)
 
-    expdH_filename <- sprintf("06_expdH_%s.pdf",filelabel)
+    expdH_filename <- sprintf("06_expdH_%s",filelabel)
     result$obs$expdH <- plot_timeseries(dat=outdat$V4[trange[1]:trange[2]],
       trange=trange,
       pdf.filename=expdH_filename,
-      ylab=expression(paste(paste("exp(-",delta),"H)")),
-      name="expdH",
+      ylab="$ \\exp(-\\delta H) $",
+      name="exp(-dH)",
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color)
+      errorband_color=errorband_color,
+      hist.xlim=c(-2,4),
+      ylim=c(-2,4),
+      hist.by=0.2)
   }
   if( !missing("cg_col") ) {
-    cg_filename <- sprintf("07_cg_iter_%s.pdf", filelabel)
+    cg_filename <- sprintf("07_cg_iter_%s", filelabel)
     result$obs$CG.iter <- plot_timeseries(dat=outdat[trange[1]:trange[2],cg_col],
       trange=trange,
       pdf.filename=cg_filename,
-      ylab="CG iterations",
+      ylab="$N^\\mathrm{iter}_\\mathrm{CG}$",
       name="CG iterations",
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color)
+      errorband_color=errorband_color,
+      hist.by=5)
   }
   if( !missing("evals") ) {
-    ev_pdf_filename <- sprintf("08_evals_%02d_%s.pdf", evals, filelabel )
+    ev_pdf_filename <- sprintf("08_evals_%02d_%s", evals, filelabel )
     ev_filename <- sprintf("%s/monomial-%02d.data", rundir, evals )
     evaldata <- read.table(ev_filename)
     temp <- plot_eigenvalue_timeseries(dat=evaldata[trange[1]:trange[2],],
