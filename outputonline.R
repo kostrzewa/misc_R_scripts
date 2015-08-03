@@ -29,12 +29,20 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
   
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   
+  shift <- 0  
+  # something in the skip computation is odd, let's just solve it like this
+  if(skip==0){
+    shift <- 1
+  }
+  
   if(missing(rundir)){
     rundir <- construct_rundir(type=type,beta=beta,L=L,T=T,kappa=kappa,mul=mul,
                              csw=csw,musigma=musigma,mudelta=mudelta,muh=muh,addon=addon,
                              debug=debug
                             )
   }
+  
+  filelabel <- rundir
       
   titletext <- NULL
   if(title) {
@@ -45,102 +53,103 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
 
   filename <- sprintf("%s/piononline.dat",rundir)
   outfile <- sprintf("%s/output.data",rundir)
-  pioncor <- readcmicor(filename)
+  pioncor <- try(readcmicor(filename))
+  
+  if(!any(class(pioncor)=='try-error')){
+    if(debug){
+      pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
+    }
 
-  if(debug){
-    pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
-  }
+    onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
 
-  onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
+    result$params$N.online <- onlineout$N
 
-  result$params$N.online <- onlineout$N
+    if(debug){
+      print(onlineout)
+    }
 
-  if(debug){
-    print(onlineout)
-  }
+    if(trajlabel){
+      filelabel <- sprintf("%s_traj%d-%d",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
+    } else {
+      filelabel <- rundir
+    }
 
-  filelabel <- NULL
-  if(trajlabel){
-    filelabel <- sprintf("%s_traj%d-%d",rundir,skip,(skip-1+length(onlineout$MChist.dpaopp)))
-  } else {
-    filelabel <- rundir
-  }
+    dpaopp_filename <- sprintf("01_dpaopp_%s.pdf",filelabel)
 
-  dpaopp_filename <- sprintf("01_dpaopp_%s.pdf",filelabel)
+    result$obs$mpcac_mc <- plot_timeseries(dat=onlineout$MChist.dpaopp,
+      trange=c(skip+1,(skip+length(onlineout$MChist.dpaopp))),
+      pdf.filename=dpaopp_filename,
+      ylab=expression(am[PCAC]),
+      name="am_PCAC (MC history)",
+      plotsize=plotsize,
+      filelabel=filelabel,
+      titletext=titletext,
+      errorband_color=errorband_color)
 
-  result$obs$mpcac_mc <- plot_timeseries(dat=onlineout$MChist.dpaopp,
-    trange=c(skip+1,(skip+length(onlineout$MChist.dpaopp))),
-    pdf.filename=dpaopp_filename,
-    ylab=expression(am[PCAC]),
-    name="am_PCAC (MC history)",
-    plotsize=plotsize,
-    filelabel=filelabel,
-    titletext=titletext,
-    errorband_color=errorband_color)
+    lengthdpaopp <- length(onlineout$MChist.dpaopp)
+    mindpaopp <- min(onlineout$MChist.dpaopp)
+    maxdpaopp <- max(onlineout$MChist.dpaopp)
 
-  lengthdpaopp <- length(onlineout$MChist.dpaopp)
-  mindpaopp <- min(onlineout$MChist.dpaopp)
-  maxdpaopp <- max(onlineout$MChist.dpaopp)
+    dpaopp_plateau_filename <- sprintf("02_dpaopp_plateau_%s.pdf",filelabel)
+    pdf(dpaopp_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
+    op <- par(family="Palatino",cex.main=0.6,font.main=1)
+    par(mgp=c(2,1,0))
+    plotwitherror(x=onlineout$dpaopp$t,
+      y=onlineout$dpaopp$mass,dy=onlineout$dpaopp$dmass,t='p',
+      ylab=expression(am[PCAC]),
+      xlab=expression(t),
+      main=titletext)
+    rect(xleft=t1,
+      xright=t2,
+      ytop=onlineout$uwerrresultmpcac$value+onlineout$uwerrresultmpcac$dvalue,
+      ybottom=onlineout$uwerrresultmpcac$value-onlineout$uwerrresultmpcac$dvalue,border=FALSE,col=errorband_color)
+    abline(h=onlineout$uwerrresultmpcac$value,col="black")
+    dev.off()
 
-  dpaopp_plateau_filename <- sprintf("02_dpaopp_plateau_%s.pdf",filelabel)
-  pdf(dpaopp_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
-  op <- par(family="Palatino",cex.main=0.6,font.main=1)
-  par(mgp=c(2,1,0))
-  plotwitherror(x=onlineout$dpaopp$t,
-    y=onlineout$dpaopp$mass,dy=onlineout$dpaopp$dmass,t='p',
-    ylab=expression(am[PCAC]),
-    xlab=expression(t),
-    main=titletext)
-  rect(xleft=t1,
-    xright=t2,
-    ytop=onlineout$uwerrresultmpcac$value+onlineout$uwerrresultmpcac$dvalue,
-    ybottom=onlineout$uwerrresultmpcac$value-onlineout$uwerrresultmpcac$dvalue,border=FALSE,col=errorband_color)
-  abline(h=onlineout$uwerrresultmpcac$value,col="black")
-  dev.off()
+    result$obs["val","mpcac_fit"] <- (onlineout$fitresult$par[3]*onlineout$fitresult$par[2]/onlineout$fitresult$par[1]/2.)
+    # no error or tauint from the fit
 
-  result$obs["val","mpcac_fit"] <- (onlineout$fitresult$par[3]*onlineout$fitresult$par[2]/onlineout$fitresult$par[1]/2.)
-  # no error or tauint from the fit
+    mpi_plateau_filename <- sprintf("03_mpi_plateau_%s.pdf",filelabel)
+    pdf(mpi_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
+    op <- par(family="Palatino",cex.main=0.6,font.main=1)
+    par(mgp=c(2,1,0))
 
-  mpi_plateau_filename <- sprintf("03_mpi_plateau_%s.pdf",filelabel)
-  pdf(mpi_plateau_filename,width=plotsize,height=plotsize,title=filelabel)
-  op <- par(family="Palatino",cex.main=0.6,font.main=1)
-  par(mgp=c(2,1,0))
+    ploterror <- try(plotwitherror(x=onlineout$effmass$t,
+      y=onlineout$effmass$m,dy=onlineout$effmass$dm,t='p',
+      ylab=expression(am[PS]),
+      xlab=expression(t),
+      main=titletext),silent=FALSE)
 
-  ploterror <- try(plotwitherror(x=onlineout$effmass$t,
-    y=onlineout$effmass$m,dy=onlineout$effmass$dm,t='p',
-    ylab=expression(am[PS]),
-    xlab=expression(t),
-    main=titletext),silent=FALSE)
+    if(inherits(ploterror,"try-error")) {
+      plot(x=onlineout$effmass$t,y=onlineout$effmass$m)
+    }
+    rect(xleft=t1,
+      xright=t2,
+      ytop=onlineout$uwerrresultmps$value+onlineout$uwerrresultmps$dvalue,
+      ybottom=onlineout$uwerrresultmps$value-onlineout$uwerrresultmps$dvalue,border=FALSE,col=errorband_color)
+    abline(h=onlineout$uwerrresultmps$value,col="black")
+    dev.off()
 
-  if(inherits(ploterror,"try-error")) {
-    plot(x=onlineout$effmass$t,y=onlineout$effmass$m)
-  }
-  rect(xleft=t1,
-    xright=t2,
-    ytop=onlineout$uwerrresultmps$value+onlineout$uwerrresultmps$dvalue,
-    ybottom=onlineout$uwerrresultmps$value-onlineout$uwerrresultmps$dvalue,border=FALSE,col=errorband_color)
-  abline(h=onlineout$uwerrresultmps$value,col="black")
-  dev.off()
-
-  result$obs$mpi[1] <- abs(onlineout$fitresultpp$par[2])
-  result$obs$mpi[2] <- onlineout$uwerrresultmps$dvalue
-  result$obs$mpi[3] <- onlineout$uwerrresultmps$tauint
-  result$obs$mpi[4] <- onlineout$uwerrresultmps$dtauint
-  result$obs$mpi[5] <- onlineout$uwerrresultmps$Wopt
+    result$obs$mpi[1] <- abs(onlineout$fitresultpp$par[2])
+    result$obs$mpi[2] <- onlineout$uwerrresultmps$dvalue
+    result$obs$mpi[3] <- onlineout$uwerrresultmps$tauint
+    result$obs$mpi[4] <- onlineout$uwerrresultmps$dtauint
+    result$obs$mpi[5] <- onlineout$uwerrresultmps$Wopt
 
 
-  result$obs$fpi[1] <- 2*kappa*2*mul/sqrt(2)*abs(onlineout$fitresultpp$par[1])/sqrt(onlineout$fitresultpp$par[2]^3)
-  result$obs$fpi[2] <- 2*kappa*2*mul/sqrt(2)*onlineout$uwerrresultfps$dvalue
-  result$obs$fpi[3] <- onlineout$uwerrresultfps$tauint
-  result$obs$fpi[4] <- onlineout$uwerrresultfps$dtauint
-  result$obs$fpi[5] <- onlineout$uwerrresultfps$Wopt
+    result$obs$fpi[1] <- 2*kappa*2*mul/sqrt(2)*abs(onlineout$fitresultpp$par[1])/sqrt(onlineout$fitresultpp$par[2]^3)
+    result$obs$fpi[2] <- 2*kappa*2*mul/sqrt(2)*onlineout$uwerrresultfps$dvalue
+    result$obs$fpi[3] <- onlineout$uwerrresultfps$tauint
+    result$obs$fpi[4] <- onlineout$uwerrresultfps$dtauint
+    result$obs$fpi[5] <- onlineout$uwerrresultfps$Wopt
 
-  # something in the skip computation is odd, let's just solve it like this
-  if(skip==0){
-    shift <- 1
-  } else {
-    shift <- 0
-  }
+    # something in the skip computation is odd, let's just solve it like this
+    if(skip==0){
+      shift <- 1
+    } else {
+      shift <- 0
+    }
+  } # if(!any(class(pioncor)=='try-error'))
 
   outdat <- NULL
   trange <- NULL

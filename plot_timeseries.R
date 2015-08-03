@@ -3,7 +3,7 @@
 
 plot_timeseries <- function(dat,trange,pdf.filename,
                             ylab,name,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
-                            hist.breaks=30,uwerr.S=5,periodogram=FALSE,debug=FALSE,...) {
+                            hist.breaks=70,uwerr.S=5,periodogram=FALSE,debug=FALSE,...) {
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat)
       
