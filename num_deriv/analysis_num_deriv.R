@@ -187,6 +187,10 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
       ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
       plot(y=ft,type='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',lwd=3,
            xlab="f",ylab="$\\left( \\Re \\left[ \\tilde{\\delta P}^a_\\mu(x,f) \\right] \\right)^2$")
+      plot(y=df_a[[length(df_a)]]$df[,i]^2,
+           x=seq(1,length(df_a[[length(df_a)]]$df[,i]))*tau/int.steps,
+           type='l',pch='.',lwd=3,tck=0.10,las=1,
+           xlab="$\\tau$",ylab="$\\left( \\delta P^a_\\mu(x,\\tau) \\right)^2$")
     }
     tikz.finalize(tikzfiles)
     
@@ -305,14 +309,16 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
     mediandiff.df_a <- rbind(mediandiff.df_a,quantile(as.vector(tddf),probs=c(0.1573,0.5,0.8427)))
     
     diff.df_a <- rbind(diff.df_a,as.vector(abs(df_a[[length(df_a)]]$df-df_a[[i]]$df)))
-    cat("Number of breaks: ", floor(abs(max(df_a[[i]]$df)-min(df_a[[i]]$df))/break.unit), "\n")
+    cat("Number of breaks: ", floor(20*abs(max(df_a[[i]]$df)-min(df_a[[i]]$df))/sd(df_a[[i]]$df)), "\n")
     xlims <- c(mean(df_a[[i]]$df)-2*sd(df_a[[i]]$df),mean(df_a[[i]]$df)+2*sd(df_a[[i]]$df))
-    hist(df_a[[i]]$df,breaks=function(x){floor(abs(max(x)-min(x))/break.unit)},main="",ylab="",xlim=xlims,freq=FALSE,xlab="$\\delta P^a_\\mu$")
+    hist(df_a[[i]]$df,breaks=function(x){floor(20*abs(max(x)-min(x))/sd(x))},main="",ylab="",xlim=xlims,freq=FALSE,xlab="$\\delta P^a_\\mu$")
     if(text){
       lims <- par('usr')
       qt <- quantile(df_a[[i]]$df,probs=c(0.01,0.5,0.99)) 
       text(x=lims[1]+0.18*(lims[2]-lims[1]),y=lims[4]-0.1*(lims[4]-lims[3]),labels=sprintf("$%5g~~%5g~~%5g$",qt[1],qt[2],qt[3]))
     }
+    xlims <- c(0,3*sd(df_a[[i]]$df^2))
+    hist(df_a[[i]]$df^2,breaks=function(x){floor(20*max(x)/sd(x))},main="",ylab="",xlim=xlims,freq=FALSE,xlab="$\\left( \\delta P^a_\\mu \\right)^2$")
   }
   tikz.finalize(tikzfiles)
 
