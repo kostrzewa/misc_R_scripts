@@ -1,12 +1,14 @@
 logseq <- function( d1, d2, length.out) exp(log(10)*seq(d1, d2, length.out=length.out))
 
-massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kappa2mu=0.0002746,boot.R=300,width=8,height=6) {
+massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kappa2mu=0.0002746,boot.R=300,width=6,height=4.2,fit="pheno"){ 
   fdat <- read.table(header=TRUE,file=datfile,stringsAsFactors=FALSE)
   fdat <- fdat[!(fdat$mon %in% c("GAUGE","cloverdet","cloverdetratio1","cloverdetratio2")),]
   MON <- unique(fdat$mon)
-  
+  pchlist <- c(15,16,17,18,4,7,8,11)
+   
   if(missing(nsteps)) {
     nsteps <- length(which(fdat$mon==MON[1]))
+    cat("nsteps: ", nsteps,"\n")
   } else {
     fdat <- fdat[1:(length(MON)*nsteps),]
   }
@@ -26,11 +28,17 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
   }
   
   require("RColorBrewer")
-  mu1s <- unique(mus$mu1)
+  mu1s <- sort(unique(mus$mu1),decreasing=TRUE)
   mu2s <- unique(mus$mu2)
+  pchlist <- pchlist[1:length(mu2s)]
+  # legend scaling depends on the number of mu2s
+  cex <- 0.8 
+  if(length(mu2s)>6)
+    cex <- 0.7 
   mu1cols <- data.frame(clr=rainbow(n=length(mu1s)),mu1=mu1s,stringsAsFactors=FALSE)
   mu2cols <- data.frame(clr=brewer.pal(n=length(mu2s),name="Dark2"),mu2=mu2s,stringsAsFactors=FALSE)
-  
+  mu2pch <- data.frame(pch=pchlist,mu2=mu2s)
+
   # assemble data into data frame with some statistical analysis for confidence intervals
   force.df <- NULL
 
@@ -40,6 +48,7 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
   }
 
   for( i in 1:length(MON) ) {
+    #if(mus$mu1[i] >= mus$mu2[i]) next
     ind <- which(fdat$mon==MON[i])
     nsteps <- length(fdat$aver[ind])
     aver.tsboot <- tsboot(tseries=fdat$aver[ind],R=boot.R,l=2,sim="geom",statistic=function(x){ quantile(x,probs=c(0.5,0.1573,0.8427)) })
@@ -54,9 +63,10 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
                       data.frame(name=MON[i],
                                  aver=aver[1],maver=aver[2],paver=aver[3],
                                  max=maxi[1],mmax=maxi[2],pmax=maxi[3],
-                                 mu1=mus$mu1[i],mu2=mus$mu2[i],
+                                 mu1=mus$mu1[i],mu2=mus$mu2[i],kappa2mu=kappa2mu,
                                  mu1col=mu1cols$clr[which(mu1cols$mu1==mus$mu1[i])[1]],
                                  mu2col=mu2cols$clr[which(mu2cols$mu2==mus$mu2[i])[1]],
+                                 mu2pch=mu2pch$pch[which(mu2pch$mu2==mus$mu2[i])[1]],
                                  stringsAsFactors=FALSE)
                      )
   }
@@ -64,16 +74,89 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
   print(force.df)
   
   fmodel <- list()
+  fmodel.pmax <- NULL
   #fmodel[[1]] <- nls(aver~a*(mu2-mu1)^2*((mu2+1e-11)/(mu1+1e-11))^b,data=force.df,start=list(a=0.1,b=0.2),trace=TRUE,algorithm='port',control=list(maxiter=1000))
-  fmodel[[1]] <- nls(aver~a*abs(mu2-mu1)^2*abs((mu2+1e-9)/(mu1+1e-9))^b,data=force.df,start=list(a=0.1,b=1.0),
-                     trace=TRUE,algorithm='port',control=list(maxiter=1000),
-                     weights=1/(force.df$paver^2+force.df$maver^2))
-  fmodel[[2]] <- nls(max~a*abs(mu2-mu1)^2/abs((mu2+1e-9)*(mu1+1e-9))^b,data=force.df,start=list(a=1.0,b=2.0),
-                     trace=TRUE,control=list(maxiter=1000),
-                     weights=1/(force.df$pmax^2+force.df$mmax^2))
-  fmodel.pmax <- nls(pmax~a*abs(mu2-mu1)^2/abs((mu2+1e-9)*(mu1+1e-9))^b,data=force.df,start=list(a=0.1,b=2.0),#,c=0.1),
-                     trace=TRUE,algorithm='port',control=list(maxiter=1000))
-  
+  if(fit=="pade") {
+    fmodel[[1]] <- nls(aver~(a*abs(mu2-mu1)^2+b*abs(mu2-mu1)^4)/(1+c*abs(mu2-mu1)^2),
+                       weights=1/force.df$paver^2,
+                       algorithm='port',lower=c(0,0,0),
+                       data=force.df,start=list(a=10,b=5,c=2),trace=TRUE,control=list(minFactor=0.00000001,maxiter=10000)) 
+                       #trace=TRUE,algorithm='port',control=list(maxiter=10000))  
+    fmodel[[2]] <- nls(max~(a*abs(mu2-mu1)^2+b*abs(mu2-mu1)^4)/(1+c*abs(mu2-mu1)^2),
+                       #weights=1/force.df$pmax^2,
+                       data=force.df,start=list(a=10,b=1,c=0.2),trace=TRUE,control=list(minFactor=0.00000001,maxiter=10000))
+    #                   trace=TRUE,algorithm='port',control=list(maxiter=10000))  
+    fmodel.pmax <- nls(pmax~(a*abs(mu2-mu1)^2+b*abs(mu2-mu1)^4)/(1+c*abs(mu2-mu1)^2),
+                       data=force.df,start=list(a=10,b=1,c=0.2),trace=TRUE,control=list(minFactor=0.00000001,maxiter=10000))
+    #                   trace=TRUE,algorithm='port',control=list(maxiter=10000))  
+  } else if(fit=="paderat") {
+    fmodel[[1]] <- nls(aver~(a*(1-abs(mu2/mu1))^2+b*(1-abs(mu2/mu1))^4)/(1+c*(1-abs(mu2/mu1))^2),
+                       weights=1/force.df$paver^2,
+                       algorithm='port',lower=c(0,0,0),
+                       data=force.df,start=list(a=10,b=5,c=2),trace=TRUE,control=list(minFactor=0.00000001,maxiter=10000)) 
+                       #trace=TRUE,algorithm='port',control=list(maxiter=10000))  
+    fmodel[[2]] <- nls(max~(a*(1-abs(mu2/mu1))^2+b*(1-abs(mu2/mu1))^4)/(1+c*(1-abs(mu2/mu1))^2),
+                       #weights=1/force.df$pmax^2,
+                       data=force.df,start=list(a=10,b=1,c=0.2),trace=TRUE,control=list(minFactor=0.00000001,maxiter=10000))
+    #                   trace=TRUE,algorithm='port',control=list(maxiter=10000))  
+    fmodel.pmax <- nls(aver~(a*(1-abs(mu2/mu1))^2+b*(1-abs(mu2/mu1))^4)/(1+c*(1-abs(mu2/mu1))^2),
+                       data=force.df,start=list(a=10,b=1,c=0.2),trace=TRUE,control=list(minFactor=0.00000001,maxiter=10000))
+    #                   trace=TRUE,algorithm='port',control=list(maxiter=10000))  
+
+  } else if(fit=="pheno") {
+    fmodel[[1]] <- nls(aver~a*abs(mu2-mu1)^2*abs(mu2/mu1)^b,
+                       ,data=force.df,start=list(a=0.1,b=0.4),
+                       trace=TRUE,control=list(minFactor=0.0000001),
+                       weights=1/(force.df$paver^2+force.df$maver^2))
+    fmodel[[2]] <- nls(max~a*abs(mu2-mu1)^2/abs((mu2)*(mu1))^b,data=force.df,start=list(a=1.0,b=2.0),
+                       trace=TRUE,control=list(maxiter=1000),
+                       weights=1/(force.df$pmax^2+force.df$mmax^2))
+    fmodel.pmax <- nls(pmax~a*abs(mu2-mu1)^2/abs((mu2+1e-9)*(mu1+1e-9))^b,data=force.df,start=list(a=0.1,b=2.0),#,c=0.1),
+                       trace=TRUE,algorithm='port',control=list(maxiter=1000))
+  } else if(fit=="phenodim") {
+    fmodel[[1]] <- nls(aver~a*abs(mu2-mu1)^2*abs(mu1*mu2/kappa2mu^2)^b,
+                       data=force.df,start=list(a=10,b=0.7),
+                       trace=TRUE,control=list(minFactor=0.0000001,maxiter=10000))#,#)#,
+                       #weights=1/(force.df$paver^2+force.df$maver^2))
+    fmodel[[2]] <- nls(max~a*abs(mu2-mu1)^2*abs(mu1*mu2/kappa2mu^2)^b,#abs((mu2)*(mu1)/kappa2mu^2)^b,
+                       data=force.df,start=list(a=10,b=0.7),
+                       trace=TRUE,control=list(maxiter=1000,minFactor=0.000001),
+                       algorithm='port',
+                       weights=1/(force.df$pmax^2+force.df$mmax^2)
+                       )
+    fmodel.pmax <- nls(pmax~a*abs(mu2-mu1)^2*abs(mu1*mu2/kappa2mu^2)^b,
+                       #*abs(mu2/mu1)^b,
+                       data=force.df,start=list(a=20,b=0.7),#,c=0.1),
+                       trace=TRUE,algorithm='port',control=list(maxiter=1000))
+  } else if(fit=="phenodim2") {
+    fmodel[[1]] <- nls(aver~(mu2-mu1)^2*exp(a+b*(mu2/mu1)+c*(mu1-kappa2mu)/(mu2-kappa2mu)),
+                       data=force.df,start=list(a=1,b=-0.2,c=0.1),
+                       trace=TRUE,control=list(minFactor=0.0000001,maxiter=10000),
+                       algorithm='port')#,
+                       #weights=1/(force.df$paver^2+force.df$maver^2))
+    fmodel[[2]] <- nls(max~(mu2-mu1)^2*exp(a+b*(mu1/mu2)+c*(mu1-kappa2mu)/(mu2-kappa2mu)),
+                       data=force.df,start=list(a=1.2,b=-0.2,c=0.1),
+                       trace=TRUE,control=list(maxiter=1000,minFactor=0.000001),
+                       algorithm='port',
+                       weights=1/(force.df$pmax^2+force.df$mmax^2)
+                       )
+    fmodel.pmax <- nls(pmax~a*abs(mu2-mu1)^2*abs(mu1*mu2/kappa2mu^2)^b,
+                       #*abs(mu2/mu1)^b,
+                       data=force.df,start=list(a=20,b=0.7),#,c=0.1),
+                       trace=TRUE,algorithm='port',control=list(maxiter=1000))
+  } else if(fit=="rat") {
+    fmodel[[1]] <- nls(aver~a*(1-abs(mu2/mu1))^b,
+                       data=force.df,start=list(a=0.1,b=2),
+                       algorithm='port',
+                       trace=TRUE,control=list(minFactor=0.0000001,maxiter=10000))#,
+                       #weights=1/(force.df$paver^2+force.df$maver^2))
+    fmodel[[2]] <- nls(max~a*(1-abs(mu2/mu1))^b,data=force.df,start=list(a=1.0,b=2.0),
+                       trace=TRUE,control=list(maxiter=10000,minFactor=0.0000001),
+                       weights=1/(force.df$pmax^2+force.df$mmax^2))
+    fmodel.pmax <- nls(pmax~a*(1-abs(mu2/mu1)^b),data=force.df,start=list(a=0.1,b=2.0),#,c=0.1),
+                       trace=TRUE,algorithm='port',control=list(maxiter=10000,minFactor=0.0000001))
+  }
+   
   # for more involved error analysis 
   #fmodel.tsboot <- lapply(X=df.tsboot,FUN=function(x) {
   #                                                      nls(aver~a*abs(mu2-mu1)^2*abs((mu2+1e-7)/(mu1+1e-7))^b,data=x,start=list(a=0.1,b=1.0),
@@ -113,18 +196,40 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
   #readline()
   
   tikzfiles <- tikz.init(basename=sprintf("%s.fmodel",basename),width=width,height=height,lwdUnit=0.8)
-  par(mgp=c(3,0.3,0),mar=c(5,4,4,15))
-  ylims <- c(-5,3)
+
+  # for the plots in terms of mu2, need the margin
+  par(mgp=c(3,0.3,0),mar=c(5,4,4,8)+0.1)
+
+
+
+  ylims <- c(-5,1)
   xlims <- c(4e-3,0.21)
   plotwitherror(x=force.df$mu2,y=force.df$aver,main="",tck=0.02,xlim=xlims,
-                ylab="$\\|F\\|^2$",xlab="",ylim=10^ylims,las=1,yaxt='n',xaxt='n',log='xy',type='n')
+                ylab="$\\|F\\|^2_\\mathrm{av}$",xlab="",ylim=10^ylims,las=1,yaxt='n',xaxt='n',log='xy',type='n')
   for(i in 1:length(constmu1)){
-    for(j in 1:length(fmodel)){
-      pred.y <- predict(fmodel[[j]],newdata=constmu1[[i]])
-      lines(y=pred.y,x=constmu1[[i]]$mu2,col=mu1cols$clr[i],lty=j)
-    }
+    pred.y <- predict(fmodel[[1]],newdata=constmu1[[i]])
+    lines(y=pred.y,x=constmu1[[i]]$mu2,col=mu1cols$clr[i],lty=1)
   }
   plotwitherror(x=force.df$mu2,y=force.df$aver,dy=force.df$paver,mdy=force.df$maver,pch=16,col=force.df$mu1col,rep=TRUE)
+  axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.02,las=1)
+  axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.01)
+  axis(side=1, labels=TRUE, at=10^(-2:-1),tck=0.02,las=1)
+  axis(side=1, labels=FALSE, at=c(outer(4:9,1e-3),outer(2:9,1e-2),2e-1),tck=0.01)
+  mtext(side=1,line=1.5,text="$\\tilde{\\mu}_2$")
+  par(xpd=TRUE)
+  #legend(x=0.23,y=10^(ylims[1]+1),legend=c("max","aver"),pch=c(17,16),bty='n',lty=c(2,1))
+  # to get colours and numbers in the same order
+  legend(x=0.25,y=2*10^ylims[2],legend=sprintf("$\\tilde{\\mu}_1=%.7f$",rev(mu1cols$mu1)),fill=rev(mu1cols$clr),bty='n',cex=0.8)
+  par(xpd=FALSE)
+
+  ylims <- c(-3,3)
+  xlims <- c(4e-3,0.21)
+  plotwitherror(x=force.df$mu2,y=force.df$max,main="",tck=0.02,xlim=xlims,
+                ylab="$\\|F\\|^2_\\mathrm{max}$",xlab="",ylim=10^ylims,las=1,yaxt='n',xaxt='n',log='xy',type='n')
+  for(i in 1:length(constmu1)){
+    pred.y <- predict(fmodel[[2]],newdata=constmu1[[i]])
+    lines(y=pred.y,x=constmu1[[i]]$mu2,col=mu1cols$clr[i],lty=1)
+  }
   plotwitherror(rep=TRUE,x=force.df$mu2,y=force.df$max,dy=force.df$pmax,mdy=force.df$mmax,pch=17,col=force.df$mu1col)
   axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.02,las=1)
   axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.01)
@@ -132,35 +237,101 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
   axis(side=1, labels=FALSE, at=c(outer(4:9,1e-3),outer(2:9,1e-2),2e-1),tck=0.01)
   mtext(side=1,line=1.5,text="$\\tilde{\\mu}_2$")
   par(xpd=TRUE)
-  legend(x=0.23,y=10^(ylims[1]+1),legend=c("max","aver"),pch=c(17,16),bty='n',lty=c(2,1))
+  #legend(x=0.23,y=10^(ylims[1]+1),legend=c("max","aver"),pch=c(17,16),bty='n',lty=c(2,1))
   # to get colours and numbers in the same order
-  legend(x=0.23,y=10^ylims[2],legend=sprintf("$\\mu_1=%.7f$",rev(mu1cols$mu1)),fill=rev(mu1cols$clr),bty='n')
+  legend(x=0.25,y=2*10^ylims[2],legend=sprintf("$\\tilde{\\mu}_1=%.7f$",rev(mu1cols$mu1)),fill=rev(mu1cols$clr),bty='n',cex=0.8)
+  par(xpd=FALSE)
 
   #####
+  # and default margins for the plots in terms of mu1 
+  par(mgp=c(3,0.3,0),mar=c(5,4,4,2)+0.1)
   
-  par(xpd=FALSE)
-  xlims <- c(1e-3,0.15)
-  plotwitherror(x=force.df$mu1,y=force.df$aver,main="",tck=0.02,xlim=xlims,
-                ylab="$\\|F\\|^2$",xlab="",ylim=10^ylims,las=1,yaxt='n',xaxt='n',log='xy',type='n')
+  # summary plot in terms of |mu2-mu1|
+  xlims <- c(1e-1,1e3)
+  ylims <- c(-5,0)
+  plotwitherror(x=abs(force.df$mu2/force.df$mu1),y=force.df$aver,main="",tck=0.02,
+                xlim=xlims,
+                ylab="$\\|F\\|_\\mathrm{av}^2$",xlab="",
+                ylim=10^ylims,las=1,yaxt='n',xaxt='n',
+                log='xy',
+                type='n')
   for(i in 1:length(constmu2)){
-#    if(constmu2[[i]]$mu2[1] > 0.08) next
-    for(j in 1:length(fmodel)){
-      pred.y <- predict(fmodel[[j]],newdata=constmu2[[i]])
-      lines(y=pred.y,x=constmu2[[i]]$mu1,col=mu2cols$clr[i],lty=j)
-    }
+    pred.y <- predict(fmodel[[1]],newdata=constmu2[[i]])
+    lines(y=pred.y,x=abs(constmu2[[i]]$mu2/constmu2[[i]]$mu1),col=mu2cols$clr[i],lty=1)
   }
-  plotwitherror(x=force.df$mu1,y=force.df$aver,dy=force.df$paver,mdy=force.df$maver,pch=16,col=force.df$mu2col,rep=TRUE)
-  plotwitherror(rep=TRUE,x=force.df$mu1,y=force.df$max,dy=force.df$pmax,mdy=force.df$mmax,pch=17,col=force.df$mu2col)
+  plotwitherror(x=abs(force.df$mu2/force.df$mu1),y=force.df$aver,dy=force.df$paver,mdy=force.df$maver,pch=force.df$mu2pch,col=force.df$mu2col,rep=TRUE)
+  axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.02,las=1)
+  axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.01)
+  axis(side=1, labels=TRUE, at=10^(-5:5),tck=0.02,las=1)
+  axis(side=1, labels=FALSE, at=c(outer(2:9,10^(-2:3))),tck=0.01)
+  mtext(side=1,line=1.5,text="$|\\tilde{\\mu}_2/\\tilde{\\mu}_1|$")
+  # to get colours and numbers in the same order
+  legend("bottomright",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",mu2cols$mu2),col=mu2cols$clr,pch=mu2pch$pch,bty='n',cex=cex,pt.cex=1.1)
+  
+  xlims <- c(1e-3,0.15)
+  ylims <- c(-5,3)
+  plotwitherror(x=force.df$mu1,y=force.df$aver,main="",tck=0.02,
+                xlim=xlims,
+                ylab="$\\|F\\|_\\mathrm{av}^2$",xlab="",
+                ylim=10^ylims,las=1,yaxt='n',xaxt='n',
+                log='xy',
+                type='n')
+  for(i in 1:length(constmu2)){
+    pred.y <- predict(fmodel[[1]],newdata=constmu2[[i]])
+    lines(y=pred.y,x=constmu2[[i]]$mu1,col=mu2cols$clr[i],lty=1)
+  }
+  plotwitherror(x=force.df$mu1,y=force.df$aver,dy=force.df$paver,mdy=force.df$maver,pch=force.df$mu2pch,col=force.df$mu2col,rep=TRUE)
   axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.02,las=1)
   axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.01)
   axis(side=1, labels=TRUE, at=10^(-3:-1),tck=0.02,las=1)
   axis(side=1, labels=FALSE, at=c(outer(2:9,c(1e-3,1e-2))),tck=0.01)
   mtext(side=1,line=1.5,text="$\\tilde{\\mu}_1$")
-  legend(x=0.001,y=2*10^ylims[2],legend=c("max","av"),pch=c(17,16),pt.cex=1.3,bty='n',lty=c(2,1))
   # to get colours and numbers in the same order
-  legend("topright",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",mu2cols$mu2),fill=mu2cols$clr,bty='n',cex=0.7)
+  legend("topright",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",mu2cols$mu2),col=mu2cols$clr,pch=mu2pch$pch,bty='n',cex=cex,pt.cex=1.1)
+
+  # summary plot in terms of |mu2-mu1|
+  xlims <- c(1e-1,1e3)
+  ylims <- c(-3,3)
+  plotwitherror(x=abs(force.df$mu2/force.df$mu1),y=force.df$max,main="",tck=0.02,
+                xlim=xlims,
+                ylab="$\\|F\\|_\\mathrm{max}^2$",xlab="",
+                ylim=10^ylims,las=1,yaxt='n',xaxt='n',
+                log='xy',
+                type='n')
+  for(i in 1:length(constmu2)){
+    pred.y <- predict(fmodel[[2]],newdata=constmu2[[i]])
+    lines(y=pred.y,x=abs(constmu2[[i]]$mu2/constmu2[[i]]$mu1),col=mu2cols$clr[i],lty=1)
+  }
+  plotwitherror(x=abs(force.df$mu2/force.df$mu1),y=force.df$max,dy=force.df$pmax,mdy=force.df$mmax,pch=force.df$mu2pch,col=force.df$mu2col,rep=TRUE)
+  axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.02,las=1)
+  axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.01)
+  axis(side=1, labels=TRUE, at=10^(-5:5),tck=0.02,las=1)
+  axis(side=1, labels=FALSE, at=c(outer(2:9,10^(-2:3))),tck=0.01)
+  mtext(side=1,line=1.5,text="$|\\tilde{\\mu}_2/\\tilde{\\mu}_1|$")
+  # to get colours and numbers in the same order
+  legend("bottomright",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",mu2cols$mu2),col=mu2cols$clr,pch=mu2pch$pch,bty='n',cex=cex,pt.cex=1.1)
+  
+  xlims <- c(1e-3,0.15)
+  ylims <- c(-3,4)
+  plotwitherror(x=force.df$mu1,y=force.df$max,main="",tck=0.02,xlim=xlims,
+                ylab="$\\|F\\|_\\mathrm{max}^2$",xlab="",ylim=10^ylims,las=1,yaxt='n',xaxt='n',log='xy',type='n')
+  for(i in 1:length(constmu2)){
+    pred.y <- predict(fmodel[[2]],newdata=constmu2[[i]])
+    lines(y=pred.y,x=constmu2[[i]]$mu1,col=mu2cols$clr[i],lty=1)
+  }
+  plotwitherror(rep=TRUE,x=force.df$mu1,y=force.df$max,dy=force.df$pmax,mdy=force.df$mmax,pch=force.df$mu2pch,col=force.df$mu2col)
+  axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.02,las=1)
+  axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.01)
+  axis(side=1, labels=TRUE, at=10^(-3:-1),tck=0.02,las=1)
+  axis(side=1, labels=FALSE, at=c(outer(2:9,c(1e-3,1e-2))),tck=0.01)
+  mtext(side=1,line=1.5,text="$\\tilde{\\mu}_1$")
+  # to get colours and numbers in the same order
+  legend("topright",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",mu2cols$mu2),col=mu2cols$clr,pch=mu2pch$pch,bty='n',cex=cex,pt.cex=1.1)
+  
   tikz.finalize(tikzfiles) 
   
+  #########################################
+
   tikzfiles <- tikz.init(basename=sprintf("%s.fmodel.ratios",basename),width=5,height=3.4,lwdUnit=0.8)
   par(mgp=c(3,0.3,0),mar=c(5,4,4,2))
 
@@ -187,14 +358,14 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
   plotwitherror(x=(force.df$mu2/force.df$mu1)^(-1),y=force.df$max/force.df$aver,
                 dy=sqrt( (force.df$pmax/force.df$aver)^2 + (force.df$paver*force.df$max/force.df$aver^2)^2),
                 mdy=sqrt( (force.df$mmax/force.df$aver)^2 + (force.df$maver*force.df$max/force.df$aver^2)^2),
-                pch=16,col=force.df$mu2col,rep=TRUE)
+                pch=force.df$mu2pch,col=force.df$mu2col,rep=TRUE)
   axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.03,las=1)
   axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.015)
   axis(side=1, labels=TRUE, at=10^(xlims[1]:xlims[2]),tck=0.03,las=1)
   axis(side=1, labels=FALSE, at=c(outer(2:9,10^(xlims[1]:xlims[2]))),tck=0.015)
   mtext(side=1,line=1.5,text="$\\tilde{\\mu}_1/\\tilde{\\mu}_2$")
   # to get colours and numbers in the same order
-  legend("topright",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",rev(mu2cols$mu2)),fill=rev(mu2cols$clr),bty='n',cex=0.7)
+  legend("topright",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",rev(mu2cols$mu2)),col=rev(mu2cols$clr),pch=rev(mu2pch$pch),bty='n',cex=cex,pt.cex=1.1)
   
   xlims <- c(-3,2)
   ylims <- c(-3,2)
@@ -204,14 +375,14 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
                 ylab="$\\Delta^+(\\|F\\|_\\mathrm{max}^2)$",
                 xlab="",las=1,yaxt='n',xaxt='n',type='n',log='xy') 
   plotwitherror(x=(force.df$mu2/force.df$mu1)^(-1),y=force.df$pmax,
-                pch=16,col=force.df$mu2col,rep=TRUE)
+                pch=force.df$pch,col=force.df$mu2col,rep=TRUE)
   axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.03,las=1)
   axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.015)
   axis(side=1, labels=TRUE, at=10^(xlims[1]:xlims[2]),tck=0.03,las=1)
   axis(side=1, labels=FALSE, at=c(outer(2:9,10^(xlims[1]:xlims[2]))),tck=0.015)
   mtext(side=1,line=1.5,text="$\\tilde{\\mu}_1/\\tilde{\\mu}_2$")
   # to get colours and numbers in the same order
-  legend("bottomleft",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",rev(mu2cols$mu2)),fill=rev(mu2cols$clr),bty='n',cex=0.7)
+  legend("bottomleft",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",rev(mu2cols$mu2)),col=rev(mu2cols$clr),pch=rev(mu2pch$pch),bty='n',cex=cex,pt.cex=1.1)
   
   # return to original parameters 
   constmu1 <- list()
@@ -234,14 +405,14 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
     lines(y=pred.y,x=constmu2[[i]]$mu1,col=mu2cols$clr[i],lty=1)
   }
   plotwitherror(x=force.df$mu1,y=force.df$pmax,
-                pch=16,col=force.df$mu2col,rep=TRUE)
+                pch=force.df$mu2pch,col=force.df$mu2col,rep=TRUE)
   axis(side=2, labels=TRUE, at=10^(ylims[1]:(ylims[2])),tck=0.03,las=1)
   axis(side=2, labels=FALSE, at=outer(2:9,10^(ylims[1]:(ylims[2]-1))),tck=0.015)
   axis(side=1, labels=TRUE, at=10^(xlims[1]:xlims[2]),tck=0.03,las=1)
   axis(side=1, labels=FALSE, at=c(outer(2:9,10^(xlims[1]:xlims[2]))),tck=0.015)
   mtext(side=1,line=1.5,text="$\\tilde{\\mu}_1$")
   # to get colours and numbers in the same order
-  legend("bottomleft",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",mu2cols$mu2),fill=mu2cols$clr,bty='n',cex=0.7)
+  legend("bottomleft",legend=sprintf("$\\tilde{\\mu}_2=%.7f$",mu2cols$mu2),col=mu2cols$clr,bty='n',cex=cex,pt.cex=1.1,pch=mu2pch$pch)
   
   tikz.finalize(tikzfiles)
   stop()
