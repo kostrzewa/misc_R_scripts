@@ -30,7 +30,9 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   print(yrange)
   print(hist.by)
   hist.breaks <- floor( ( max(dat)-min(dat) ) / hist.by )
-  print(hist.breaks)
+  if(hist.breaks == 0 || hist.breaks > 1000){
+    hist.breaks <- 70
+  }
   if(!missing(hist.xlim)){
     hist.data <- hist(dat,xlim=hist.xlim,main=titletext,xlab=ylab, breaks=hist.breaks)
   } else {

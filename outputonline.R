@@ -23,7 +23,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
 {
   navec <- c(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA)
   result <- list(params=data.frame(L=L,T=T,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta,N.online=0,N.plaq=0,skip=skip),
-                 obs=data.frame(mpcac_fit=navec, mpcac_mc=navec, mpi=navec, fpi=navec, P=navec, dH=navec, expdH=navec, mineval=navec, maxeval=navec, CG.iter=navec))
+                 obs=data.frame(mpcac_fit=navec, mpcac_mc=navec, mpi=navec, fpi=navec, P=navec, dH=navec, expdH=navec, mineval=navec, maxeval=navec, CG.iter=navec, accrate=navec))
 
   result$obs$mpcac_fit[1] <- 0.1
   
@@ -161,6 +161,7 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
     no_columns <- max(count.fields(outfile))
     outdat <- read.table(outfile,fill=TRUE,col.names=paste("V",1:no_columns,sep=""))
     trange <- c(skip+shift,length(outdat$V2))
+    #result$accrate <- mean(outdat[trange[1]:trange[2],no_columns-2],na.rm=TRUE)
   }
 
   if(plaquette) {
@@ -234,8 +235,22 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
     result$obs$mineval <- temp$mineval
     result$obs$maxeval <- temp$maxeval
   }
+  # finally add acceptance rate
+  accrate_filename <- sprintf("09_accrate_%s",filelabel,title=filelabel)
+  result$obs$accrate <- plot_timeseries(dat=outdat[trange[1]:trange[2],no_columns-2],
+    trange=trange,
+    pdf.filename=accrate_filename,
+    ylab="$ \\langle P_\\mathrm{acc} \\rangle$" ,
+    name="accrate",
+    plotsize=plotsize,
+    filelabel=filelabel,
+    titletext=titletext,
+    errorband_color=errorband_color,
+    hist.by=0.5)
 
-  print(result)
+
+  print(result$params)
+  print(t(result$obs))
 
   # if the script "pdfcat" exists, concatenate the plots and remove the individual files
   if( Sys.which("pdfcat") != "" ) {
