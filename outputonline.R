@@ -1,22 +1,22 @@
 # to use this script, change this to the location where the helper scripts are located!
 coderoot <- "~/code/R/misc_R_scripts"
 
-# this function is used by xyplot to split the panels and give titles as given in strip.labels
-
-
 source(paste(coderoot,"/plot_timeseries.R",sep=""))
 source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 
 # convenience function for analyzing online data from a tmLQCD run
 ### the various parameters are used to build a directory name into which R descends to read
 ### pionline.dat and output.data
+### but a directory can also be provided via rundir with the understanding
+### that L, T, kappa and mul must always be provided
 # addon can be used to add arbitrary text to the directory name (such as for replicas)
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
 
-outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
-  cg_col, evals, kappa=0, mul=0,
-  csw=0,musigma=0,mudelta=0,muh=0,addon="",
+outputonline <- function(L,T,t1,t2,rundir,
+  cg_col, evals, kappa, mul,
+  type="", skip=0,
+  beta=0,csw=0,musigma=0,mudelta=0,muh=0,addon="",
   plaquette=TRUE, dH=TRUE,
   plotsize=5,debug=FALSE,trajlabel=FALSE,title=TRUE,
   pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,S=3)
@@ -24,7 +24,8 @@ outputonline <- function(type,beta,L,T,t1,t2,skip,rundir,
   navec <- c(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA)
   result <- list(params=data.frame(L=L,T=T,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta,N.online=0,N.plaq=0,skip=skip),
                  obs=data.frame(mpcac_fit=navec, mpcac_mc=navec, mpi=navec, fpi=navec, P=navec, dH=navec, expdH=navec, mineval=navec, maxeval=navec, CG.iter=navec, accrate=navec))
-
+  
+  # not sure why this is one, investigate!
   result$obs$mpcac_fit[1] <- 0.1
   
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
