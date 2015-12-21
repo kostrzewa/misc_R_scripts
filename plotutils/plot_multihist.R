@@ -1,22 +1,26 @@
 require("hadron")
-plot_multihist <- function(dat,lg,basename="multihist",factor=8,pts=FALSE,width=6,height=3,...) {
+plot_multihist <- function(dat,lg,xlim.probs=c(0.0,0.99),label.x="",label.y="",basename="multihist",factor=8,pts=FALSE,width=6,height=3,...) {
   tikzfiles <- tikz.init(basename,width=width,height=height)
+  
+  par(mgp=c(3,0.6,0))
   cols <- c("red","blue")
   if(length(dat)>2){  
     require("RColorBrewer")
-    cols <- brewer.pal(n=length(dat),name="Set1")
+    cols <- brewer.pal(n=length(dat),name="PuOr")
   }
   pcols <- cols
   cols <- t(col2rgb(cols))
-  cols <- cbind(cols,rep(100,times=nrow(cols)))
+  cols <- cbind(cols,rep(150,times=nrow(cols)))
   cols <- apply(X=cols,MARGIN=1,FUN=function(x){ rgb(x[1],x[2],x[3],x[4],maxColorValue=255) })
-  lims <- c(min(unlist(dat)),max(unlist(dat)))
+  lims <- quantile(unlist(dat),probs=xlim.probs)
+  print(lims)
   dev <- sd(unlist(dat))/factor
-  breaks <- seq(lims[1]-dev,lims[2]+dev,dev)
+  med <- median(unlist(dat))
+  breaks <- seq(min(unlist(dat))-dev,max(unlist(dat))+dev,dev)
   hst <- list()
   ylim <- c(0,0)
   py <- 0
-  
+ 
   # determine a sensible ylim
   for( i in 1:length(dat) ) {
     hst[[i]] <- hist(dat[[i]],breaks=breaks,plot=FALSE)
@@ -27,10 +31,14 @@ plot_multihist <- function(dat,lg,basename="multihist",factor=8,pts=FALSE,width=
     }
   }
    
-  plot(hst[[1]],col=cols[1],xlim=c(lims[1]-dev,lims[2]+dev),ylim=ylim,...)
-  for( i in 2:length(dat) ) {
-    plot(hst[[i]],add=TRUE,col=cols[i])
+  plot(hst[[1]],col=cols[1],xlim=c(lims[1],lims[2]),ylim=ylim,yaxt='n',...)
+  if(length(hst)>1){
+    for( i in 2:length(dat) ) {
+      plot(hst[[i]],add=TRUE,col=cols[i])
+    }
   }
+  axis(side=2,tck=0.05,labels=TRUE,las=1)
+  mtext(line=1.4,text=label.x,side=1)
   if(pts){
     for( i in 1:length(dat) ){
       uw <- uwerr(data=dat[[i]])
@@ -38,7 +46,7 @@ plot_multihist <- function(dat,lg,basename="multihist",factor=8,pts=FALSE,width=
     }
   }
   if(!missing(lg)){
-    legend(x="topleft",legend=lg,pch=15,col=cols,bty='n')
+    legend(x="topright",legend=lg,pch=NA,fill=cols,col=cols,bty='n',pt.cex=1.3,)
   }
   tikz.finalize(tikzfiles)
 }
