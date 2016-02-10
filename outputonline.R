@@ -1,9 +1,3 @@
-# to use this script, change this to the location where the helper scripts are located!
-coderoot <- "~/code/R/misc_R_scripts"
-
-source(paste(coderoot,"/plot_timeseries.R",sep=""))
-source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
-
 # convenience function for analyzing online data from a tmLQCD run
 ### the various parameters are used to build a directory name into which R descends to read
 ### pionline.dat and output.data
@@ -13,17 +7,37 @@ source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 # plaquette and dH control whether these are plotted
 # cg_col indicates which column in output.data should be used 
 
-outputonline <- function(L,T,t1,t2,rundir,
-  cg_col, evals, kappa, mul,
-  type="", skip=0,
-  beta=0,csw=0,musigma=0,mudelta=0,muh=0,addon="",
-  plaquette=TRUE, dH=TRUE,
+# to use this script, change this to the location where the helper scripts are located!
+coderoot <- "~/code/R/misc_R_scripts"
+
+source(paste(coderoot,"/plot_timeseries.R",sep=""))
+source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
+
+outputonline <- function(L, T, t1, t2, kappa, mul,
+  cg_col, evals, rundir,
+  type="", beta=0, csw=0, musigma=0, mudelta=0, muh=0, addon="",
+  skip=0,
+  plaquette=TRUE, dH=TRUE, acc=TRUE,
   plotsize=5,debug=FALSE,trajlabel=FALSE,title=TRUE,
-  pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=F,S=3)
+  pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=FALSE,S=1.5,
+  omeas.start=0, omeas.stepsize=1, evals.stepsize=1)
 {
+  # vector with NAs to initialise result data frame
   navec <- c(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA)
+  
+  # set up data structure for analysis results 
   result <- list(params=data.frame(L=L,T=T,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta,N.online=0,N.plaq=0,skip=skip),
-                 obs=data.frame(mpcac_fit=navec, mpcac_mc=navec, mpi=navec, fpi=navec, P=navec, dH=navec, expdH=navec, mineval=navec, maxeval=navec, CG.iter=navec, accrate=navec))
+                 obs=data.frame(mpcac_fit=navec, 
+                                mpcac_mc=navec, 
+                                mpi=navec, 
+                                fpi=navec, 
+                                P=navec, 
+                                dH=navec, 
+                                expdH=navec, 
+                                mineval=navec, 
+                                maxeval=navec, 
+                                CG.iter=navec, 
+                                accrate=navec))
   
   # not sure why this is one, investigate!
   result$obs$mpcac_fit[1] <- 0.1
@@ -57,11 +71,16 @@ outputonline <- function(L,T,t1,t2,rundir,
   pioncor <- try(readcmicor(filename))
   
   if(!any(class(pioncor)=='try-error')){
-    if(debug){
-      pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
-    }
+    #if(debug){
+    #  pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
+    #}
 
-    onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
+    # when the online measurement frequency is not 1, we need to adjust for this
+    omeas.skip <- as.integer(ceiling(skip/omeas.stepsize))
+    # we have some annoying situations where online measurements are missing from the beginning of the run,
+    # this should allow to take that into account
+    if(omeas.start > skip) omeas.skip <- 0
+    onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=omeas.skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
 
     result$params$N.online <- onlineout$N
 
@@ -77,16 +96,22 @@ outputonline <- function(L,T,t1,t2,rundir,
 
     dpaopp_filename <- sprintf("01_dpaopp_%s",filelabel)
 
-    result$obs$mpcac_mc <- plot_timeseries(dat=onlineout$MChist.dpaopp,
-      trange=c(skip+1,(skip+length(onlineout$MChist.dpaopp))),
+    result$obs$mpcac_mc <- t(plot_timeseries(dat=onlineout$MChist.dpaopp,
+      trange=(omeas.start+c(omeas.skip+1,(omeas.skip+length(onlineout$MChist.dpaopp))))*omeas.stepsize,
+      stepsize=omeas.stepsize,
       pdf.filename=dpaopp_filename,
       ylab="$am_\\mathrm{PCAC}$",
       name="am_PCAC (MC history)",
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color,
-      hist.by=0.0002)
+      errorband_color=errorband_color))
+      #ist.by=0.0002))
+    
+    # adjust autocorrelation times to be in terms of trajectories
+    result$obs$mpcac_mc[3] <- result$obs$mpcac_mc[3]*omeas.stepsize
+    result$obs$mpcac_mc[4] <- result$obs$mpcac_mc[4]*omeas.stepsize
+    result$obs$mpcac_mc[5] <- result$obs$mpcac_mc[5]*omeas.stepsize
 
     lengthdpaopp <- length(onlineout$MChist.dpaopp)
     mindpaopp <- min(onlineout$MChist.dpaopp)
@@ -134,16 +159,16 @@ outputonline <- function(L,T,t1,t2,rundir,
 
     result$obs$mpi[1] <- abs(onlineout$fitresultpp$par[2])
     result$obs$mpi[2] <- onlineout$uwerrresultmps$dvalue
-    result$obs$mpi[3] <- onlineout$uwerrresultmps$tauint
-    result$obs$mpi[4] <- onlineout$uwerrresultmps$dtauint
-    result$obs$mpi[5] <- onlineout$uwerrresultmps$Wopt
+    result$obs$mpi[3] <- onlineout$uwerrresultmps$tauint*omeas.stepsize
+    result$obs$mpi[4] <- onlineout$uwerrresultmps$dtauint*omeas.stepsize
+    result$obs$mpi[5] <- onlineout$uwerrresultmps$Wopt*omeas.stepsize
 
 
     result$obs$fpi[1] <- 2*kappa*2*mul/sqrt(2)*abs(onlineout$fitresultpp$par[1])/sqrt(onlineout$fitresultpp$par[2]^3)
     result$obs$fpi[2] <- 2*kappa*2*mul/sqrt(2)*onlineout$uwerrresultfps$dvalue
-    result$obs$fpi[3] <- onlineout$uwerrresultfps$tauint
-    result$obs$fpi[4] <- onlineout$uwerrresultfps$dtauint
-    result$obs$fpi[5] <- onlineout$uwerrresultfps$Wopt
+    result$obs$fpi[3] <- onlineout$uwerrresultfps$tauint*omeas.stepsize
+    result$obs$fpi[4] <- onlineout$uwerrresultfps$dtauint*omeas.stepsize
+    result$obs$fpi[5] <- onlineout$uwerrresultfps$Wopt*omeas.stepsize
 
     # something in the skip computation is odd, let's just solve it like this
     if(skip==0){
@@ -151,7 +176,10 @@ outputonline <- function(L,T,t1,t2,rundir,
     } else {
       shift <- 0
     }
-  } # if(!any(class(pioncor)=='try-error'))
+  } else { # if(!any(class(pioncor)=='try-error'))
+    stop("outputonline: there was an error trying to read the output files (pionionline.dat or output.data)")
+  }
+
 
   outdat <- NULL
   trange <- NULL
@@ -168,7 +196,7 @@ outputonline <- function(L,T,t1,t2,rundir,
   if(plaquette) {
     plaquette_filename <- sprintf("04_plaquette_%s",filelabel,title=filelabel)
     result$params$N.plaq <- trange[2]-trange[1]
-    result$obs$P <- plot_timeseries(dat=outdat$V2[trange[1]:trange[2]],
+    result$obs$P <- t(plot_timeseries(dat=outdat$V2[trange[1]:trange[2]],
       trange=trange,
       pdf.filename=plaquette_filename,
       ylab="$ \\langle P \\rangle$" ,
@@ -176,12 +204,12 @@ outputonline <- function(L,T,t1,t2,rundir,
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color,
-      hist.by=0.00002)
+      errorband_color=errorband_color))
+      #ist.by=0.00002))
   }
   if(dH) {
     dH_filename <- sprintf("05_dH_%s",filelabel)
-    result$obs$dH <- plot_timeseries(dat=outdat$V3[trange[1]:trange[2]],
+    result$obs$dH <- t(plot_timeseries(dat=outdat$V3[trange[1]:trange[2]],
       trange=trange,
       pdf.filename=dH_filename,
       ylab="$ \\delta H $",
@@ -189,13 +217,13 @@ outputonline <- function(L,T,t1,t2,rundir,
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color,
-      hist.xlim=c(-3,3),
-      ylim=c(-2,2),
-      hist.by=0.2)
+      errorband_color=errorband_color))
+      #hist.xlim=c(-3,3),
+      #ylim=c(-2,6),
+      #ist.by=0.2))
 
     expdH_filename <- sprintf("06_expdH_%s",filelabel)
-    result$obs$expdH <- plot_timeseries(dat=outdat$V4[trange[1]:trange[2]],
+    result$obs$expdH <- t(plot_timeseries(dat=outdat$V4[trange[1]:trange[2]],
       trange=trange,
       pdf.filename=expdH_filename,
       ylab="$ \\exp(-\\delta H) $",
@@ -205,12 +233,12 @@ outputonline <- function(L,T,t1,t2,rundir,
       titletext=titletext,
       errorband_color=errorband_color,
       hist.xlim=c(-2,4),
-      ylim=c(-2,4),
-      hist.by=0.2)
+      ylim=c(-0,6)))
+      #ist.by=0.2))
   }
   if( !missing("cg_col") ) {
     cg_filename <- sprintf("07_cg_iter_%s", filelabel)
-    result$obs$CG.iter <- plot_timeseries(dat=outdat[trange[1]:trange[2],cg_col],
+    result$obs$CG.iter <- t(plot_timeseries(dat=outdat[trange[1]:trange[2],cg_col],
       trange=trange,
       pdf.filename=cg_filename,
       ylab="$N^\\mathrm{iter}_\\mathrm{CG}$",
@@ -218,15 +246,21 @@ outputonline <- function(L,T,t1,t2,rundir,
       plotsize=plotsize,
       filelabel=filelabel,
       titletext=titletext,
-      errorband_color=errorband_color,
-      hist.by=5)
+      errorband_color=errorband_color))
+      #ist.by=5))
   }
+  # TODO: if eigenvalue measurement is not every trajectory, need to correctly handle 
+  # evals.stepsize and trange!!!
   if( !missing("evals") ) {
     ev_pdf_filename <- sprintf("08_evals_%02d_%s", evals, filelabel )
     ev_filename <- sprintf("%s/monomial-%02d.data", rundir, evals )
-    evaldata <- read.table(ev_filename)
+    
+    evaldata <- tryCatch(read.table(ev_filename,stringsAsFactors=FALSE), 
+                         error=function(e){ stop(sprintf("Reading of %s failed!",ev_filename)) } )
+
     temp <- plot_eigenvalue_timeseries(dat=evaldata[trange[1]:trange[2],],
         trange=trange,
+        stepsize=evals.stepsize,
         pdf.filename = ev_pdf_filename,
         ylab = "eigenvalue",
         plotsize=plotsize,
@@ -236,19 +270,20 @@ outputonline <- function(L,T,t1,t2,rundir,
     result$obs$mineval <- temp$mineval
     result$obs$maxeval <- temp$maxeval
   }
-  # finally add acceptance rate
-  accrate_filename <- sprintf("09_accrate_%s",filelabel,title=filelabel)
-  result$obs$accrate <- plot_timeseries(dat=outdat[trange[1]:trange[2],no_columns-2],
-    trange=trange,
-    pdf.filename=accrate_filename,
-    ylab="$ \\langle P_\\mathrm{acc} \\rangle$" ,
-    name="accrate",
-    plotsize=plotsize,
-    filelabel=filelabel,
-    titletext=titletext,
-    errorband_color=errorband_color,
-    hist.by=0.5)
-
+  if( acc == TRUE ){
+    # finally add acceptance rate
+    accrate_filename <- sprintf("09_accrate_%s",filelabel,title=filelabel)
+    result$obs$accrate <- t(plot_timeseries(dat=outdat[trange[1]:trange[2],no_columns-2],
+      trange=trange,
+      pdf.filename=accrate_filename,
+      ylab="$ \\langle P_\\mathrm{acc} \\rangle$" ,
+      name="accrate",
+      plotsize=plotsize,
+      filelabel=filelabel,
+      titletext=titletext,
+      errorband_color=errorband_color,
+      hist.by=0.5))
+  }
 
   print(result$params)
   print(t(result$obs))

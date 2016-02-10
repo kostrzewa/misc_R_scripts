@@ -2,42 +2,45 @@
 # and an error shading for an error analysis via uwerr
 
 plot_timeseries <- function(dat,trange,pdf.filename,
-                            ylab,name,plotsize,filelabel,titletext,hist.xlim,errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
-                            hist.by=0.2,uwerr.S=5,periodogram=FALSE,debug=FALSE,...) {
-  xdat <- seq(trange[1],trange[2],stepsize)
+                            ylab,plotsize,titletext,hist.by,
+                            name="",xlab="$t_\\mathrm{MD}$",hist.probs=c(0.0,1.0),errorband_color=rgb(0.6,0.0,0.0,0.6),stepsize=1,
+                            uwerr.S=2,periodogram=FALSE,debug=FALSE,uw.summary=TRUE,...) {
+  xdat <- seq(1,length(dat),stepsize)
+  if(!missing(trange)) xdat <- seq(trange[1],trange[2],stepsize)
+
   yrange <- range(dat)
-      
+  
   uw.data <- uwerrprimary(dat,S=uwerr.S)
   if(debug) {
     print(paste("uw.",name,sep=""))
-    summary(uw.data)
+    print(summary(uw.data))
   }
   
   tikzfiles <- tikz.init(basename=pdf.filename,width=plotsize,height=plotsize)
-  op <- par(family="Palatino",cex.main=0.6,font.main=1)
+  op <- par(family="Palatino",cex.main=0.8,font.main=1)
   par(mgp=c(2,1.0,0))
 
   # plot the timeseries
-  plot(x=xdat,xlim=trange,y=dat,ylab=ylab,t='l',xlab="$t_\\mathrm{MD}$",main=titletext,...)
+  plot(x=xdat,xlim=range(xdat),y=dat,ylab=ylab,t='l',xlab=xlab,main=titletext,...)
 
-  rect(xleft=trange[1],
-       xright=trange[2],
+  rect(xleft=range(xdat)[1],
+       xright=range(xdat)[2],
        ytop=uw.data$value+uw.data$dvalue,
        ybottom=uw.data$value-uw.data$dvalue,border=FALSE,col=errorband_color)
   abline(h=uw.data$value,col="black")                                                                                                   
   # plot the corresponding histogram
   hist.data <- NULL
-  print(yrange)
-  print(hist.by)
-  hist.breaks <- floor( ( max(dat)-min(dat) ) / hist.by )
-  if(hist.breaks == 0 || hist.breaks > 1000){
-    hist.breaks <- 70
-  }
-  if(!missing(hist.xlim)){
-    hist.data <- hist(dat,xlim=hist.xlim,main=titletext,xlab=ylab, breaks=hist.breaks)
+  
+  hist.breaks <- floor( ( max(dat)-min(dat) ) / uw.data$dvalue )
+  if(!missing(hist.by)){
+    hist.breaks <- floor( ( max(dat)-min(dat) ) / hist.by )
   } else {
-    hist.data <- hist(dat,xlim=yrange,main=titletext,xlab=ylab, breaks=hist.breaks)
+    if(hist.breaks < 10 || hist.breaks > 150){
+      hist.breaks <- 70
+    }
   }
+  
+  hist.data <- hist(dat,xlim=quantile(dat,probs=hist.probs),main=titletext,xlab=ylab, breaks=hist.breaks)
   rect(ytop=max(hist.data$counts),
        ybottom=0,
        xright=uw.data$value+uw.data$dvalue,
@@ -51,10 +54,12 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   }
 
   # and the uwerr plots
-  plot(uw.data,main=paste(ylab,paste("UWErr analysis",titletext)),x11=FALSE,plot.hist=FALSE)
+  if(uw.summary){
+    plot(uw.data,main=paste(ylab,paste("UWErr analysis",titletext)),x11=FALSE,plot.hist=FALSE)
+  }
    
   tikz.finalize(tikzfiles)
   #dev.off()
 
-  return(c(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint, Wopt=uw.data$Wopt))
+  return(data.frame(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint, Wopt=uw.data$Wopt))
 }

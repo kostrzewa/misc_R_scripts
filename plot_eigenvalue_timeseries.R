@@ -3,20 +3,21 @@
 
 source("~/code/R/misc_R_scripts/plotutils/plot_multihist.R")
 
-plot_eigenvalue_timeseries <- function(dat,trange,stepsize=1,pdf.filename,
-                            ylab,plotsize,filelabel,titletext,errorband_color=rgb(0.6,0.0,0.0,0.6),
+plot_eigenvalue_timeseries <- function(dat,trange,pdf.filename,
+                            ylab,plotsize,filelabel,titletext,
+                            stepsize=1,errorband_color=rgb(0.6,0.0,0.0,0.6),
                             debug=FALSE) {
   xdat <- seq(trange[1],trange[2],stepsize)
   yrange <- range(dat[,2:5])
-      
+ 
   uw.min_ev <- uwerrprimary(dat[,2])
   uw.max_ev <- uwerrprimary(dat[,3])
-  
+
   if(debug){
     print("uw.eval.min_ev")
-    summary(uw.min_ev)
+    print(summary(uw.min_ev))
     print("uw.eval.max_ev")
-    summary(uw.max_ev)
+    print(summary(uw.max_ev))
   }
 
   #pdf(pdf.filename,width=plotsize,height=plotsize,title=filelabel)
