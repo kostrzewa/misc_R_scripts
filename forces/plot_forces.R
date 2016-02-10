@@ -16,7 +16,7 @@ plot_forces <- function(datfile,nsteps,lg,basename="forces",width=10,height=8,yl
   }
   
   require("RColorBrewer")
-  clr <- brewer.pal(name="Set1",n=9)
+  clr <- rep(brewer.pal(name="Set1",n=9),2)
   
   if(summary){
     tikzfiles <- tikz.init(basename=basename,width=width,height=height)
@@ -63,7 +63,17 @@ plot_forces <- function(datfile,nsteps,lg,basename="forces",width=10,height=8,yl
     for( i in 1:length(mon) ) {
       ind <- which(fdat$mon==mon[i])
       hst[[length(hst)+1]] <- fdat$max[ind]
-      hst.max <- hist(fdat$max[ind],plot=FALSE,breaks=50) 
+      # remove outliers from individual histogram plots so that the plots are clear and there is a sufficient number of breaks
+      aver.qt <- quantile(fdat$aver[ind],probs=c(0.01,0.99))
+      max.qt <- quantile(fdat$max[ind],probs=c(0.01,0.99))
+      
+      dat.aver <- c(fdat$aver[ind])[ which( fdat$aver[ind] >= aver.qt[1] & fdat$aver[ind] <= aver.qt[2] ) ]
+      dat.max <- c(fdat$max[ind])[ which( fdat$max[ind] >= max.qt[1] & fdat$max[ind] <= max.qt[2] ) ]
+      hst.aver <- hist( dat.aver, #fdat$aver[ind],
+                       plot=FALSE, breaks=50)
+      hst.max <- hist( dat.max, #fdat$max[ind],
+                      plot=FALSE, breaks=50)
+      plot(hst.aver,col=clr[i],main="",xlab="$\\mathrm{avg}(F^2)$")
       plot(hst.max,col=clr[i],main="",xlab="$\\max(F^2)$")
     }
     tikz.finalize(tikzfiles)
