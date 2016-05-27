@@ -1,12 +1,17 @@
 require("hadron")
-plot_multihist <- function(dat,lg,xlim.probs=c(0.0,0.99),label.x="",label.y="",basename="multihist",factor=8,pts=FALSE,width=6,height=3,...) {
-  tikzfiles <- tikz.init(basename,width=width,height=height)
+plot_multihist <- function(dat,lg,cols,lg.pos,xlim.probs=c(0.01,0.99),label.x="",label.y="",
+                           basename="multihist",factor=8,pts=FALSE,width=6,height=3,
+                           medians=FALSE,init=TRUE,...) {
+  tikzfiles <- NULL
+  if(init) tikzfiles <- tikz.init(basename,width=width,height=height)
   
   par(mgp=c(3,0.6,0))
-  cols <- c("red","blue")
-  if(length(dat)>2){  
-    require("RColorBrewer")
-    cols <- brewer.pal(n=length(dat),name="PuOr")
+  if(missing(cols)){
+    cols <- c("red","blue")
+    if(length(dat)>2){  
+      require("RColorBrewer")
+      cols <- brewer.pal(n=length(dat),name="PuOr")
+    }
   }
   pcols <- cols
   cols <- t(col2rgb(cols))
@@ -31,12 +36,17 @@ plot_multihist <- function(dat,lg,xlim.probs=c(0.0,0.99),label.x="",label.y="",b
     }
   }
    
-  plot(hst[[1]],col=cols[1],xlim=c(lims[1],lims[2]),ylim=ylim,yaxt='n',...)
+  plot(hst[[1]],col=cols[1],xlim=c(lims[1],lims[2]),ylim=ylim,xlab="",yaxt='n',...)
   if(length(hst)>1){
     for( i in 2:length(dat) ) {
       plot(hst[[i]],add=TRUE,col=cols[i])
     }
   }
+  if(medians){
+    for( i in 1:length(dat) )
+      abline(v=median(dat[[i]]),col=cols[i],lwd=3)
+  }
+
   axis(side=2,tck=0.05,labels=TRUE,las=1)
   mtext(line=1.4,text=label.x,side=1)
   if(pts){
@@ -46,7 +56,8 @@ plot_multihist <- function(dat,lg,xlim.probs=c(0.0,0.99),label.x="",label.y="",b
     }
   }
   if(!missing(lg)){
-    legend(x="topright",legend=lg,pch=NA,fill=cols,col=cols,bty='n',pt.cex=1.3,)
+    if(missing(lg.pos)) lg.pos <- "topright"
+    legend(x=lg.pos,legend=lg,pch=NA,fill=cols,col=cols,bty='n',pt.cex=1.3,)
   }
-  tikz.finalize(tikzfiles)
+  if(init) tikz.finalize(tikzfiles)
 }
