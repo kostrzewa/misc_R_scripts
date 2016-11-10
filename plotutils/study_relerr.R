@@ -1,4 +1,4 @@
-study_relerr <- function(basename,nosamples=12,T=48,boot.R=1000,boot.l=1,seed=123456,sym=TRUE,label="C_\\pi",log="",plot.cf=FALSE){
+study_relerr <- function(basename,nosamples=12,T=48,boot.R=1000,boot.l=1,seed=123456,sym=TRUE,label="C_\\pi",log="",plot.cf=FALSE,t=16){
   files <- getorderedfilelist(path=".",basename=basename, last.digits=4)
   cfsamples <- readbinarysamples(files=files, T=T, nosamples=nosamples, sym=sym )
   for( i in 1:length(cfsamples) ){
@@ -8,14 +8,15 @@ study_relerr <- function(basename,nosamples=12,T=48,boot.R=1000,boot.l=1,seed=12
   plotname <- strsplit(x=basename,split='/')[[1]]
   plotname <- plotname[length(plotname)]
 
-  tikzfiles <- tikz.init(basename=sprintf("relerrs.%s",plotname),width=5,height=5)
+  tikzfiles <- tikz.init(basename=sprintf("relerrs.%s",plotname),width=4.5,height=4.5)
+  par(mgp=c(2.0,0.2,0),tcl=0.3)
   if(plot.cf){
     for( i in 1:length(cfsamples) ){
       plot(cfsamples[[i]],xlab="$t/a$",log=log,ylab=sprintf("$%s(t/a,N_\\eta=%d)$",label,i),xaxp=c(0,T/2+1,T/2+1))
     }
   }
   
-  t20relerr <- double()
+  trelerr <- double()
   cferr <- NULL
   for( i in 1:length(cfsamples) ){ 
     cferr <- apply(X=cfsamples[[i]]$cf.tsboot$t,MARGIN=2,FUN=sd)
@@ -27,20 +28,21 @@ study_relerr <- function(basename,nosamples=12,T=48,boot.R=1000,boot.l=1,seed=12
     plot(ylim=c(0,0.18),y=cferr/cfsamples[[i]]$cf0,x=0:(T/2),las=1,xlab="$t/a$",ylab=sprintf("$\\sigma_{%s}/%s\\,(t/a,N_\\eta=%d)$",label,label,i),pch=15,xaxp=c(0,T/2+1,T/2+1))
     plotwitherror(x=0:(T/2),y=cferr.uw$dvalue/cferr.uw$value,dy=cferr.uw$ddvalue/cferr.uw$value,rep=TRUE,col="red",pch=16,cex=0.5)
     legend("topright",col=c("black","red"),pch=c(15,16),bty='n',legend=c("bootstrap","Gamma method"))
-    t20relerr <- c(t20relerr,cferr[21]/cfsamples[[i]]$cf0[21])
+    trelerr <- c(trelerr,cferr[t+1]/cfsamples[[i]]$cf0[t+1])
   }
 
-  etafit <- lm( "t20relerr ~ oneoversqrtNeta + 0", data=data.frame(t20relerr=t20relerr,oneoversqrtNeta=1/sqrt(1:nosamples)) )
+  etafit <- lm( "trelerr ~ oneoversqrtNeta + 0", data=data.frame(trelerr=trelerr,oneoversqrtNeta=1/sqrt(1:nosamples)) )
 
   print(etafit)
   
-  Neta <- seq(from=1,to=15,by=0.2)
+  Neta <- seq(from=0,to=nosamples+2,by=0.2)
   newdata <- data.frame(oneoversqrtNeta=1/sqrt(Neta))
 
   pred.y <- predict(etafit,newdata=newdata)
 
 
-  plot(y=t20relerr,x=1:nosamples,xlab="$N_\\eta$",ylab=sprintf("$\\sigma_{%s}/%s\\,(t/a=20,N_\\eta)$",label,label),las=1,xaxp=c(1,nosamples,nosamples-1),pch=16)
+  plot(y=trelerr,x=1:nosamples,xlab="",ylab=sprintf("$\\sigma_{%s}/%s\\,(t/a=%d,N_\\eta)$",label,label,t),las=1,xaxp=c(1,nosamples,nosamples-1),pch=16)
+  mtext(side=1,text="$N_\\eta$",line=1.3)
   lines(x=Neta,y=pred.y)
   legend("topright",lty=1,pch=NA,col="black",legend=sprintf("$%f/\\sqrt{N_\\eta}$",etafit$coefficients[1]),bty='n',lwd=2)
 
