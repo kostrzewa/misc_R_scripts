@@ -61,5 +61,5 @@ plot_timeseries <- function(dat,trange,pdf.filename,
   tikz.finalize(tikzfiles)
   #dev.off()
 
-  return(data.frame(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint, Wopt=uw.data$Wopt))
+  return(t(data.frame(val=uw.data$value, dval=uw.data$dvalue, tauint=uw.data$tauint, dtauint=uw.data$dtauint, Wopt=uw.data$Wopt)))
 }
