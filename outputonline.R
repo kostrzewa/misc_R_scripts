@@ -31,10 +31,11 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
   }
 
   # vector with NAs to initialise result data frame
-  navec <- t(data.frame(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA))
+  navec <- t(data.frame(val=NA,dval=NA,tauint=NA,dtauint=NA,Wopt=NA,stringsAsFactors=FALSE))
   
   # set up data structure for analysis results 
-  result <- list(params=data.frame(L=L,T=T,t1=t1,t2=t2,kappa=kappa,csw=csw,mul=mul,muh=muh,musigma=musigma,mudelta=mudelta,N.online=0,N.plaq=0,skip=skip),
+  result <- list(params=data.frame(L=L,T=T,t1=t1,t2=t2,kappa=kappa,csw=csw,mul=mul,muh=muh,
+                                   musigma=musigma,mudelta=mudelta,N.online=0,N.plaq=0,skip=skip,stringsAsFactors=FALSE),
                  obs=data.frame(mpcac_fit=navec, 
                                 mpcac_mc=navec, 
                                 mpi=navec, 
@@ -45,7 +46,7 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
                                 mineval=navec, 
                                 maxeval=navec, 
                                 CG.iter=navec, 
-                                accrate=navec))
+                                accrate=navec, stringsAsFactors=FALSE))
   
   errorband_color <- rgb(0.6,0.0,0.0,0.6)
   
@@ -138,7 +139,7 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
     tikz.finalize(tikzfiles)
 
     result$obs$mpcac_fit <- t(data.frame(val=(onlineout$fitresult$par[3]*onlineout$fitresult$par[2]/onlineout$fitresult$par[1]/2.),
-                                         dval=NA, tauint=NA, dtauint=NA, Wopt=NA))
+                                         dval=NA, tauint=NA, dtauint=NA, Wopt=NA, stringsAsFactors=FALSE))
     # no error or tauint from the fit
 
     mpi_plateau_filename <- sprintf("03_mpi_plateau_%s",filelabel)
@@ -166,13 +167,13 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
                                    dval=onlineout$uwerrresultmps$dvalue,
                                    tauint=onlineout$uwerrresultmps$tauint*omeas.stepsize,
                                    dtauint=onlineout$uwerrresultmps$dtauint*omeas.stepsize,
-                                   Wopt=onlineout$uwerrresultmps$Wopt*omeas.stepsize) )
+                                   Wopt=onlineout$uwerrresultmps$Wopt*omeas.stepsize, stringsAsFactors=FALSE) )
 
     result$obs$fpi <- t(data.frame(val=2*kappa*2*mul/sqrt(2)*abs(onlineout$fitresultpp$par[1])/sqrt(onlineout$fitresultpp$par[2]^3),
                                    dval=2*kappa*2*mul/sqrt(2)*onlineout$uwerrresultfps$dvalue,
                                    tauint=onlineout$uwerrresultfps$tauint*omeas.stepsize,
                                    dtauint=onlineout$uwerrresultfps$dtauint*omeas.stepsize,
-                                   Wopt=onlineout$uwerrresultfps$Wopt*omeas.stepsize) )
+                                   Wopt=onlineout$uwerrresultfps$Wopt*omeas.stepsize, stringsAsFactors=FALSE) )
 
     # something in the skip computation is odd, let's just solve it like this
     if(skip==0){
