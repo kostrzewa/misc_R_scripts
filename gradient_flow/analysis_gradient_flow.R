@@ -1,6 +1,7 @@
 source("~/code/R/misc_R_scripts/lat_phys_ratios/compute_ratio.R")
+source("~/code/R/misc_R_scripts/plot_timeseries.R")
 
-analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
+analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,dbg=FALSE) {
   if(read.data) {
     raw.gradflow <- readgradflow(path=path,skip=skip)
     save(raw.gradflow,file="raw.gradflow.Rdata",compress=FALSE)
@@ -8,6 +9,7 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
     cat("Warning, reading data from raw.gradflow.Rdata, if the number of samples changed, set read.data=TRUE to reread all output files\n")
     load("raw.gradflow.Rdata")
   }
+  if(dbg==TRUE) print(raw.gradflow)
 
   t_vec <- unique(raw.gradflow$t)
   Ncol <- ncol(raw.gradflow)
@@ -32,13 +34,19 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
     gradflow[i_row,] <- summaryvec
   }
   
-  save(gradflow,file="gradflow.Rdata",compress=FALSE)
+  save(gradflow,file="result.gradflow.Rdata",compress=FALSE)
    
-  # find w_0 and its lower and upper values
+  # find w_0 and its lower and upper values, note how x and y are reversed for this purpose
   w0sq <- c( approx(x=gradflow$Wsym.value+gradflow$Wsym.dvalue,y=gradflow$t,xout=0.3)$y, 
              approx( x=gradflow$Wsym.value, y=gradflow$t, xout=0.3 )$y, 
              approx( x=gradflow$Wsym.value-gradflow$Wsym.dvalue, y=gradflow$t, xout=0.3)$y )
-  
+ 
+  # find t value closest to w0sq
+  w0sq_approx <- w0sq[2]
+  for( i in 1:length(t_vec) ){
+    if( t_vec[i] >= w0sq_approx ) { w0sq_approx <- t_vec[i]; break }
+  }
+
   cat(sprintf("w0^2/a^2: %f (+%f -%f)\n",w0sq[2],w0sq[3]-w0sq[2],w0sq[2]-w0sq[1]))
    
   w0 <- sqrt(w0sq)
@@ -56,10 +64,11 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
   cat("a(fm) ~ ", a[2,1], "(", sqrt( 0.5*(abs(a[3,1]-a[2,1])+abs(a[1,1]-a[2,1]))^2 + a[2,2]^2 ), ")\n");   
   
   if(plot) {
+    tikzfiles <- tikz.init(basename="Wsym.gradflow",width=4,height=4)
     # set up plot
     plot(x=gradflow$t, y=gradflow$Wsym.value,
          type='n',xlim=c(0,4),ylim=c(0.0,0.4),
-         xlab="t/a^2",ylab="W(t)")
+         xlab="$t/a^2$",ylab="$W(t)$")
     # draw errorband
     poly.col <- rgb(red=1.0,green=0.0,blue=0.0,alpha=0.6)
     poly.x <- c(gradflow$t,rev(gradflow$t))
@@ -67,6 +76,10 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
     polygon(x=poly.x,y=poly.y,col=poly.col)
     abline(h=0.3)
     abline(v=w0sq)
+
+    plot(raw.gradflow[which(raw.gradflow$t==w0sq_approx),"Wsym"],type='l',lwd=3,
+         main="",xlab="$N_\\mathrm{conf}$",ylab=sprintf("$W\\left( t/a^2 = %s \\right)$",w0sq_approx),las=1)
+    tikz.finalize(tikzfiles)
   }
   
 }
