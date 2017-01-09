@@ -1,6 +1,6 @@
 source("~/code/R/misc_R_scripts/lat_phys_ratios/compute_ratio.R")
 
-analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
+analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0,scale=1) {
   if(read.data) {
     raw.gradflow <- readgradflow(path=path,skip=skip)
     save(raw.gradflow,file="raw.gradflow.Rdata",compress=FALSE)
@@ -39,11 +39,24 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
              approx( x=gradflow$Wsym.value, y=gradflow$t, xout=0.3 )$y, 
              approx( x=gradflow$Wsym.value-gradflow$Wsym.dvalue, y=gradflow$t, xout=0.3)$y )
   
+  # find available t value closest to w0sq value
+  tw0 <- 0
+  for(t in t_vec){
+    if(t <= w0sq[2])
+      tw0 <- t
+  }
+  ind <- which(raw.gradflow$t==tw0)
+  Wsym.uwerr <- uwerr(data=raw.gradflow$Wsym[ind])
+  
+  cat(sprintf("Gamma method analysis of Wsym at t=%.2f\n",tw0))
+  print(summary(Wsym.uwerr))
+  cat("\n")
+  
+   
   cat(sprintf("w0^2/a^2: %f (+%f -%f)\n",w0sq[2],w0sq[3]-w0sq[2],w0sq[2]-w0sq[1]))
    
   w0 <- sqrt(w0sq)
   cat(sprintf("w0/a: %f (+%f -%f)\n",w0[2],w0[3]-w0[2],w0[2]-w0[1]))
-   
 
   w0fm <- list(val=0.1755,dval=0.0019,name="w_0(fm)")
   a <- matrix(nrow=3,ncol=2)
@@ -56,10 +69,11 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
   cat("a(fm) ~ ", a[2,1], "(", sqrt( 0.5*(abs(a[3,1]-a[2,1])+abs(a[1,1]-a[2,1]))^2 + a[2,2]^2 ), ")\n");   
   
   if(plot) {
+    tikzfiles <- tikz.init(basename="gradflow",width=4,height=4)
     # set up plot
     plot(x=gradflow$t, y=gradflow$Wsym.value,
-         type='n',xlim=c(0,4),ylim=c(0.0,0.4),
-         xlab="t/a^2",ylab="W(t)")
+         type='n',xlim=c(0,1.25*w0sq[2]),ylim=c(0.0,0.4),
+         xlab="$t/a^2$",ylab="$W(t)$",las=1)
     # draw errorband
     poly.col <- rgb(red=1.0,green=0.0,blue=0.0,alpha=0.6)
     poly.x <- c(gradflow$t,rev(gradflow$t))
@@ -67,6 +81,12 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0) {
     polygon(x=poly.x,y=poly.y,col=poly.col)
     abline(h=0.3)
     abline(v=w0sq)
+    
+    # plot MD history of Wsym at w0
+    plot(x=start+(1:length(ind))*scale,y=raw.gradflow$Wsym[ind],type='l',
+         ylab=sprintf("$W(t=%.2f)$",tw0),xlab="$t_\\mathrm{MD}$")
+
+    tikz.finalize(tikzfiles)
   }
   
 }
