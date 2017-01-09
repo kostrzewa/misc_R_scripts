@@ -1,4 +1,4 @@
-plot_csw_beta_ensembles <- function(datafile, input,cswrange=c(1.00,2.5),betarange=c(1.6,1.85),Nt=500) {
+plot_csw_beta_ensembles <- function(datafile, input,cswrange=c(1.00,2.5),betarange=c(1.6,1.85),Nt=500,width=3.5,height=3.5) {
 
   require("RColorBrewer")
 
@@ -27,22 +27,26 @@ plot_csw_beta_ensembles <- function(datafile, input,cswrange=c(1.00,2.5),betaran
     if(clr.idx==(length(clr.pal)+1) ) clr.idx <- 1
   }
 
-  tikzfiles <- tikz.init("csw_beta_ensembles",width=3.5,height=3.5,lwdUnit=0.7)
-   
+  tikzfiles <- tikz.init("csw_beta_ensembles",width=width,height=height,lwdUnit=0.7)
+  
+  par(mgp=c(3,0.3,0)) 
   # prepare plot area
   plot(x=ensembles$beta,y=ensembles$csw,
        xlim=betarange, ylim=cswrange,
-       ylab="$ c_\\mathrm{sw} $",
-       xlab="$ \\beta $", 
+       ylab="",
+       xlab="", 
        pch=syms, col=clrs, cex=ensembles$Nt/Nt,
        xaxt='n',
        yaxt='n' )
-  points(x=ensembles$beta,y=ensembles$csw,pch='.',col='black')
-  axis(side=1,at=seq(betarange[1],betarange[2],by=0.025))
-  axis(side=2,at=seq(cswrange[1],cswrange[2],by=0.25),las=1)
+  points(x=ensembles$beta,y=ensembles$csw,pch='.',col='black',cex=2)
+  axis(side=1,at=seq(betarange[1],betarange[2],by=0.025),tck=0.02)
+  axis(side=2,at=seq(cswrange[1],cswrange[2],by=0.25),las=1,tck=0.02)
+  lims <- par("usr")
+  text("$ c_\\mathrm{sw} $",y=0.95*lims[4],x=1.01*lims[1],adj=c(0,0))
+  text("$ \\beta $",adj=c(1,1),y=1.13,x=0.998*lims[2])
 
-  lg <- c(sprintf("$ a\\mu = %s $", mu ),sprintf("%d traj.", Nt))
-  legend(x="topright",legend=lg,pch=c(unique(syms),1),col=c(unique(clrs),"black"), bty='n',pt.cex=c(rep(1.5,length(unique(ensembles$mu))),1.0))
+  lg <- c(sprintf("$ a\\mu = %.4f $", mu ),sprintf("%d traj.", Nt))
+  legend(x="bottomleft",legend=lg,pch=c(unique(syms),1),col=c(unique(clrs),"black"), bty='n',pt.cex=c(rep(1.5,length(unique(ensembles$mu))),1.0))
  
   tikz.finalize(tikzfiles)
 

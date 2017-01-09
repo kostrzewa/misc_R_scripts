@@ -28,11 +28,13 @@ plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,yl
   if(!missing(mar)){
     par(mar=mar)
   }
-  
+ 
   y <- 1:length(x)
   # set up plot region
   if(!rep){
+    par(mgp=c(2,0.75,0))
     plotwitherror(y=y,x=x,dx=dx,mdx=mdx,yaxt='n',ylab="",type='n',ylim=ylim,...)
+    #mtext(text=xlabel,side=1,line=1.75)
     lims <- par("usr")
     # draw some gray rectangles to make reading the plot easier
     for( i in y ) {

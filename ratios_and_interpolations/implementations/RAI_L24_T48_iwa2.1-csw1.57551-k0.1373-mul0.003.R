@@ -37,15 +37,15 @@ ratios_and_iterpolations_conn_meson <- function(analyses="all",debug=FALSE,recom
   
   # File (and object) names of the data to be loaded
   matrixfit.datanames <- list(ll_c=sprintf("ll_c.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
-                ll_nud=sprintf("ll_n_ud.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
-                ll_ndu=sprintf("ll_n_du.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
+#                ll_nud=sprintf("ll_n_ud.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
+#                ll_ndu=sprintf("ll_n_du.m%g.m%g.matrixfit",mass_comb$ll$m1,mass_comb$ll$m2),
                 ls_c=sprintf("ls_c.m%g.m%g.matrixfit",mass_comb$ls$m1,mass_comb$ls$m2),
                 lc_c=sprintf("lc_c.m%g.m%g.matrixfit",mass_comb$lc$m1,mass_comb$lc$m2),
                 sc_c=sprintf("sc_c.m%g.m%g.matrixfit",mass_comb$sc$m1,mass_comb$sc$m2) )
   
   fitrange.datanames <- list(ll_c=sprintf("llc_u_%g_u_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
-                ll_nud=sprintf("lln_u_%g_d_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
-                ll_ndu=sprintf("lln_d_%g_u_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
+#                ll_nud=sprintf("lln_u_%g_d_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
+#                ll_ndu=sprintf("lln_d_%g_u_%g.fitrange",mass_comb$ll$m1,mass_comb$ll$m2),
                 ls_c=sprintf("ls_u_%g_sp_%g.fitrange",mass_comb$ls$m1,mass_comb$ls$m2),
                 lc_c=sprintf("lc_u_%g_cp_%g.fitrange",mass_comb$lc$m1,mass_comb$lc$m2),
                 sc_c=sprintf("sc_sp_%g_cp_%g.fitrange",mass_comb$sc$m1,mass_comb$sc$m2) )

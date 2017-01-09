@@ -167,7 +167,7 @@ plot.fitrange <- function(fr) {
   # and the final determination of the error
   wM <- wP1 <- wP2 <- (1-2*abs(fr$matrixfit.Q-0.5))^2
   wMeff <- (1-2*abs(fr$effectivemass.Q-0.5))^2
-  if(fr$boot.fit[1]){
+  if(fr$boot.fit){
     wM <- wM*(min(fr$dM)/fr$dM)^2
     wP1 <- wP1*(min(fr$dP1)/fr$dP1)^2
     wP2 <- wP2*(min(fr$dP2)/fr$dP2)^2
