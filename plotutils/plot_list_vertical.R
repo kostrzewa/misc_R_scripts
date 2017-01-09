@@ -11,7 +11,7 @@
 # * it may be interesting to provide x, dx and mdx in relative terms where 
 #   all(x==1) and everyhting else is normalized by the central value
 
-plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,ylim,mar,clr,pch,perlines,errband,item.height=0.15,rep=FALSE,finalize=TRUE,...) {
+plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,ylim,mar,clr,pch,perlines,errband,cex.label=0.7,item.height=0.15,rep=FALSE,finalize=TRUE,...) {
   if(missing(height)) height <- length(x)*item.height+1 # the one is for the bottom margin
   if(missing(width)) width <- 5
   if(missing(mdx)) mdx <- dx
@@ -67,11 +67,11 @@ plot_list_vertical <- function(basename,x,dx,mdx,labels,height,width,labelpos,yl
   # so we should disable clipping 
   if(!missing(mar)) par(xpd=NA)
   if(!is.list(labels)) {
-    text(x=labelpos,y=y,labels=labels,adj=c(0.5,0.5), cex=0.8)
+    text(x=labelpos,y=y,labels=labels,adj=c(0.5,0.5), cex=cex.label)
   } else {
     increment <- 0.5/length(labels)
     for( i in 1:length(labels) ) {
-      text(x=labelpos,y=y+increment*2*(i-1)-0.1,adj=c(0.5,0.5),labels=labels[[i]],cex=0.8)
+      text(x=labelpos,y=y+increment*2*(i-1)-0.1,adj=c(0.5,0.5),labels=labels[[i]],cex=cex.label)
     }
   }
   if(finalize){
