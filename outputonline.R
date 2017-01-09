@@ -72,10 +72,17 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
     titletext <- ""
   }
 
-  filename <- sprintf("%s/piononline.dat",rundir)
   outfile <- sprintf("%s/output.data",rundir)
-  pioncor <- try(readcmicor(filename))
   
+  # read online measurements
+  omeas.files <- getorderedfilelist(path=rundir, basename="onlinemeas", last.digits=6)
+  omeas.cnums <- getorderedconfignumbers(path=rundir, basename="onlinemeas", last.digits=6)
+  omeas.idx   <- c((1+omeas.start*omeas.stepsize+skip*omeas.stepsize):length(omeas.files))
+  omeas.files <- omeas.files[omeas.idx]
+  omeas.cnums <- omeas.cnums[omeas.idx]
+  pioncor <- readcmidatafiles( files=omeas.files, skip=0 )
+  pioncor <- cbind( pioncor, rep(omeas.cnums, each=3*(T/2+1) ) )
+
   if(!any(class(pioncor)=='try-error')){
     #if(debug){
     #  pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
