@@ -1,5 +1,5 @@
 
-plot_residue <- function(datfiles,lg,basename="residues",width=7,height=5,ylims=c(-20,3)) {
+plot_residue <- function(datfiles,lg,basename="residues",width=7,height=5,ylims=c(-12,8)) {
   fdat <- list()
   for(f in datfiles){
     fdat[[length(fdat)+1]] <- read.table(header=TRUE,file=f,stringsAsFactors=FALSE)[,5]
@@ -13,9 +13,10 @@ plot_residue <- function(datfiles,lg,basename="residues",width=7,height=5,ylims=
   }
   
   require("RColorBrewer")
-  clr <- rep(brewer.pal(name="Set1",n=9),2)
+  clr <- rep(brewer.pal(name="Dark2",n=8),2)
   
   tikzfiles <- tikz.init(basename=basename,width=width,height=height)
+  par(mgp=c(3,0.3,0))
   # prepare plot area
   plot(NULL,
        xlab="",ylab="$\\|r\\|^2$",main="",las=1,tck=0.02,
@@ -31,7 +32,7 @@ plot_residue <- function(datfiles,lg,basename="residues",width=7,height=5,ylims=
     lines(fdat[[i]],lty=1,col=clr[i],lwd=3)
   }
   if(!missing(lg)){
-    legend(lty=1,lwd=3,col=clr[1:length(fdat)],legend=lg,x=0.8*maxiter,y=10^ylims[2],bty='n')
+    legend(lty=1,lwd=3,col=clr[1:length(fdat)],legend=lg,x='topright',bty='n')
   }
   
   tikz.finalize(tikzfiles)

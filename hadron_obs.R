@@ -241,27 +241,38 @@ plot_syserr_dist.hadron_obs <- function(hadron_obs,width=4.5,height=4,breaks=35)
   if(is.null(hadron_obs[[1]]$fr)){
     stop("plot_syserr_dist.hadron_obs: the 'hadron_obs' argument must have a non-null $fr member!\n")
   }
-  w <- hadron_obs[[1]]$fr$w
-  fr <- apply(X=hadron_obs[[1]]$fr$t,MARGIN=2,mean)
-  qt <- weighted.quantile(x=fr,w=w,probs=c(0.1573,0.5,0.8427))
-  texlabel <- hadron_obs[[1]]$texlabel
-  tikzfiles <- tikz.init(basename=sprintf("fitrange.syserr.dist.%s",hadron_obs[[1]]$name),width=width,height=height)
   
-  hst <- hist(x=fr,main="",yaxt='n',ylab="",xlim=c(min(fr),max(fr)),breaks=breaks,xlab="",freq=FALSE)
-  lims <- par("usr")
-  width <- abs(lims[2]-lims[1])
-  height <- abs(lims[4]-lims[3])
-  text(x=lims[2]-0.20*width,y=lims[4]-0.20*height,labels=texlabel)
+  # assume that this is a filtered hadron_obs
+  basename <- sprintf("fitrange.syserr.dist.%s.raw",hadron_obs[[1]]$name)
   
-  w.hst <- wtd.hist(x=fr,w=w,main="",yaxt='n',ylab="",breaks=breaks,xlab="",xlim=c(min(fr),max(fr)),freq=FALSE)
-  lims <- par("usr")
-  width <- abs(lims[2]-lims[1])
-  height <- abs(lims[4]-lims[3])
-  text(x=lims[2]-0.20*width,y=lims[4]-0.20*height,labels=texlabel)
-  col <- rgb(0.8,0.8,0.8,0.5)
-  rect(xleft=qt[1],ybottom=lims[3],xright=qt[3],ytop=lims[4],col=col,border=NA)
-  abline(v=qt[2],lwd=4)
-  
+  tikzfiles <- tikz.init(basename=basename,width=width,height=height)
+ 
+  for( obs in hadron_obs ){ 
+    w <- obs$fr$w
+    fr <- apply(X=obs$fr$t,MARGIN=2,mean)
+    qt <- quantile(x=fr,probs=c(0.1573,0.5,0.8427))
+    wt.qt <- weighted.quantile(x=fr,w=w,probs=c(0.1573,0.5,0.8427))
+    texlabel <- obs$texlabel
+    
+    col <- rgb(0.8,0.8,0.8,0.5)
+
+    hst <- hist(x=fr,main="",yaxt='n',ylab="",xlim=c(min(fr),max(fr)),breaks=breaks,xlab="",freq=FALSE)
+    lims <- par("usr")
+    width <- abs(lims[2]-lims[1])
+    height <- abs(lims[4]-lims[3])
+    text(x=lims[2]-0.20*width,y=lims[4]-0.20*height,labels=texlabel)
+    rect(xleft=qt[1],ybottom=lims[3],xright=qt[3],ytop=lims[4],col=col,border=NA)
+    abline(v=qt[2],lwd=4)
+    
+    w.hst <- wtd.hist(x=fr,w=w,main="",yaxt='n',ylab="",breaks=breaks,xlab="",xlim=c(min(fr),max(fr)),freq=FALSE)
+    lims <- par("usr")
+    width <- abs(lims[2]-lims[1])
+    height <- abs(lims[4]-lims[3])
+    text(x=lims[2]-0.20*width,y=lims[4]-0.20*height,labels=texlabel)
+    rect(xleft=wt.qt[1],ybottom=lims[3],xright=wt.qt[3],ytop=lims[4],col=col,border=NA)
+    abline(v=wt.qt[2],lwd=4)
+  }
+
   tikz.finalize(tikzfiles)
   return(list(hst,w.hst))
 }
@@ -278,6 +289,11 @@ summary.hadron_obs <- function(hadron_obs) {
   class(rval) <- c(class(rval),"summary_hadron_obs")
   rval
 }
+
+#plot_fitrange_histograms.hadron_obs <- function(hadron_obs,width=5,height=4,...){
+#  tikzfiles <- tikz.init(basename="fitrange_histograms",width=width,height=height)
+#  for( obs in hadron_obs ){
+#    obs.medians <- apply( X=obs$fr$t, MARGIN=2, FUN=median )
 
 plot_fitrange_errors.summary_hadron_obs <- function(summary_hadron_obs,width=6,height=50,...) {
   if(!any(class(summary_hadron_obs)=="summary_hadron_obs")){

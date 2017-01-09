@@ -1,10 +1,10 @@
-plot_csw_beta_P <- function(datafile, input,
+plot_csw_beta_P <- function(datafile,
                                  cswrange=c(1.0,2.5),betarange=c(1.6,1.8),Prange=c(0.45,0.65),
-                                 n.predict=1000, n.sim=200, a=0.075, a.col=rgb(0.0,1.0,0.0,0.6) ) {
+                                 n.predict=1000, n.sim=200, a=0.080, a.col=rgb(0.0,1.0,0.0,0.6) ) {
 
   require("RColorBrewer")
 
-  Pdat <- read.table(file=datafile,header=TRUE,colClasses="numeric")
+  Pdat <- read.table(file=datafile,header=TRUE,stringsAsFactors=FALSE, fill=TRUE)
   Pdat <- Pdat[order(Pdat$csw,Pdat$beta),]
   Pdat <- cbind(Pdat,logP=log(Pdat$P))
   Pdat <- cbind(Pdat,dlogP=Pdat$dP/Pdat$P)
@@ -27,7 +27,7 @@ plot_csw_beta_P <- function(datafile, input,
                         beta=seq(betarange[1]-0.5,betarange[2]+0.5,length.out=n.predict))
 
   # model for log(a)
-  Pmodel <- lm(P ~ csw + beta, data=Pdat, weights=weights)
+  Pmodel <- lm(P ~ csw + beta, data=Pdat, weights=weights, trace=TRUE)
   #print(anova(Pmodel))
   
   # and confidence intervals which are calculated by removing points
@@ -101,7 +101,7 @@ plot_csw_beta_P <- function(datafile, input,
 
   poly.x <- (coefs[2]*newdata$csw+coefs[3]*newdata$beta)
   
-  poly.x <- c(poly.x,rev(poly.x))
+  poly.x <- c(poly.x-dx,rev(poly.x)+dx)
 
   # the uncertainty in y we can take from the simulated confidence interval
   # plus the confidence interval of the model (which includes factors such as the removal of points)
@@ -129,7 +129,7 @@ plot_csw_beta_P <- function(datafile, input,
   # prepare plot area
   plot(x=xpts,y=Pdat$P,#log='y',
        xlim=xlims, ylim=Prange,
-       xlab=sprintf("$ %.3f~c_\\mathrm{sw} + %.3f~\\beta $",coefs[2],coefs[3]),
+       xlab=sprintf("$ %.4f~c_\\mathrm{sw} + %.4f~\\beta $",coefs[2],coefs[3]),
        ylab="$ \\left\\langle P \\right\\rangle $", 
        pch=syms, col=clrs, type='n', las=1)
    
@@ -178,11 +178,11 @@ plot_csw_beta_P <- function(datafile, input,
                      + (match.P/(match.csw.restrict[2,]-1))^2*(match.csw.restrict[2,]-match.csw.restrict[1,])^2
                    )
   poly.y <- c(match.P+match.pdP,rev(match.P-match.mdP))
-  polygon(x=poly.x,y=poly.y,col=a.col, border=NA)
-  lines(x=match.x,y=match.P,lty=3,col="forestgreen")
+  #polygon(x=poly.x,y=poly.y,col=a.col, border=NA)
+  #lines(x=match.x,y=match.P,lty=3,col="forestgreen")
 
   # add points on top
-  plotwitherror(x=xpts,#dx=dx,
+  plotwitherror(x=xpts,dx=dx,
                 y=Pdat$P,dy=Pdat$dP,
                 pch=syms, col=clrs, rep=TRUE )
   
@@ -190,7 +190,10 @@ plot_csw_beta_P <- function(datafile, input,
   legend(x="bottomright",legend=csw.legend,pch=unique(syms), bty='n')
 
   mu.legend <- c(sprintf("$ a\\mu = %s $", mu ),"$ \\langle P \\rangle=\\frac{6\\cdot0.113}{\\beta (\\tilde c_\\mathrm{sw} - 1)} $",sprintf("$\\tilde c_\\mathrm{sw}(a=%s~\\mathrm{fm},\\beta)$",a))
-  legend(x="topleft",legend=mu.legend,pch=c(15,15,15,NA),col=c(unique(clrs),a.col,NA),lty=c(NA,NA,3,NA), 
+  #legend(x="topleft",legend=mu.legend,pch=c(15,15,15,NA),col=c(unique(clrs),a.col,NA),lty=c(NA,NA,3,NA), 
+  #       bty='n',pt.cex=1.5,cex=0.8)
+  # removed the green line here
+  legend(x="topleft",legend=mu.legend[1:2],pch=c(15,15),col=c(unique(clrs)), 
          bty='n',pt.cex=1.5,cex=0.8) 
 
   
@@ -202,6 +205,65 @@ plot_csw_beta_P <- function(datafile, input,
   poly.y <- c(match.csw[3,],rev(match.csw[1,]))
   polygon(x=poly.x,y=poly.y,col=a.col,border=NA)
   lines(x=newdata$beta,y=match.csw[2,],col="forestgreen",lty=3)
+
+  #
+  P.csw <- lapply(
+                  X=sim.Pmodel,
+                  FUN=function(x){
+                        coefs <- x$coefficients
+                        q.a <- coefs[2]*newdata$beta
+                        q.b <- (newdata$beta*coefs[1]+coefs[3]*newdata$beta^2-coefs[2]*newdata$beta)
+                        q.c <- -(coefs[1]*newdata$beta+coefs[3]*newdata$beta^2+6*0.113)
+
+                        Re( (-q.b+sqrt(q.b^2-4*q.a*q.c))/(2*q.a) )
+                  }
+        )
+  #
+
+
+  q.a <- coefs[2]*newdata$beta
+  q.b <- (newdata$beta*coefs[1]+coefs[3]*newdata$beta^2-coefs[2]*newdata$beta)
+  q.c <- -(coefs[1]*newdata$beta+coefs[3]*newdata$beta^2+6*0.113)
+
+  P.dcsw <- 6/sqrt(q.b^2-4*q.a*q.c)
+
+  P.csw <- t(array(unlist(P.csw),dim=c(length(newdata$beta),n.sim)))
+  P.csw <- apply(X=P.csw,MARGIN=2,FUN=quantile,probs=c(0.1573,0.5,0.8427))
+ 
+  P.csw.df <- data.frame(beta=newdata$beta, csw=P.csw[2,], match.csw=match.csw[2,])
+  print(P.csw.df)
+
+  
+  P.pdcsw <- sqrt( (P.csw[3,]-P.csw[2,])^2
+                  + P.dcsw^2*0.003^2 
+                 ) 
+  P.mdcsw <- sqrt( (P.csw[2,]-P.csw[1,])^2
+                  + P.dcsw^2*0.003^2 
+                 ) 
+  #
+  #print(data.frame(P.mdcsw,P.csw[2,],P.pdcsw))
+
+
+  poly.y <- c(P.csw[2,]+P.pdcsw,rev(P.csw[2,]-P.mdcsw))
+
+  polygon(x=poly.x,y=poly.y,col=rgb(0.0,0.0,0.0,0.3),border=NA)
+  lines(y=P.csw[2,],x=newdata$beta)
+  # indicate tree level value for c_sw
+  abline(col="grey45",h=1.0,lty=2)
+
+
+  lg <- c(sprintf("$c_\\mathrm{sw}(a=%s~\\mathrm{fm},\\beta)$",a),"$c_\\mathrm{sw}=1+0.113(3)\\frac{6}{\\beta \\langle P \\rangle}$")
+  legend(x="topright",lg,pch=c(15,15),col=c(a.col,rgb(0.0,0.0,0.0,0.3)),lty=c(3,1), 
+         bty='n',pt.cex=1.5,cex=0.8)
+  tikz.finalize(tikzfiles) 
+ 
+  # finally, plot csw(beta) for a larger range of values
+  tikzfiles <- tikz.init("csw_beta_wide",width=4,height=4  ,lwdUnit=0.7)
+  newdata <- data.frame(csw=seq(0.8,5,length.out=n.predict),
+                        beta=seq(0.001,10,length.out=n.predict))
+  plot(x=newdata$beta,y=match.csw[2,],
+       xlab="$\\beta$",ylab="$c_\\mathrm{sw}$",
+       xlim=c(1,3),ylim=c(0.8,3),las=1,type='n')
 
   #
   P.csw <- lapply(
@@ -234,19 +296,14 @@ plot_csw_beta_P <- function(datafile, input,
   #
   #print(data.frame(P.mdcsw,P.csw[2,],P.pdcsw))
 
-
+  poly.x <- c(newdata$beta,rev(newdata$beta))
   poly.y <- c(P.csw[2,]+P.pdcsw,rev(P.csw[2,]-P.mdcsw))
-
+  poly.y <- c(P.csw[2,]+P.pdcsw,rev(P.csw[2,]-P.mdcsw))
   polygon(x=poly.x,y=poly.y,col=rgb(0.0,0.0,0.0,0.3),border=NA)
   lines(y=P.csw[2,],x=newdata$beta)
   # indicate tree level value for c_sw
   abline(col="grey45",h=1.0,lty=2)
 
-
-  lg <- c(sprintf("$c_\\mathrm{sw}(a=%s~\\mathrm{fm},\\beta)$",a),"$c_\\mathrm{sw}=1+0.113(3)\\frac{6}{\\beta \\langle P \\rangle}$")
-  legend(x="topright",lg,pch=c(15,15),col=c(a.col,rgb(0.0,0.0,0.0,0.3)),lty=c(3,1), 
-         bty='n',pt.cex=1.5,cex=0.8)
- 
   tikz.finalize(tikzfiles)
 
 }

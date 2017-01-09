@@ -1,43 +1,44 @@
 logseq <- function( d1, d2, length.out) exp(log(10)*seq(d1, d2, length.out=length.out))
 
-massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kappa2mu=0.0002746,boot.R=300,width=6,height=4.2,fit="pheno"){ 
-  fdat <- read.table(header=TRUE,file=datfile,stringsAsFactors=FALSE)
-  fdat <- fdat[!(fdat$mon %in% c("GAUGE","cloverdet","cloverdetratio1","cloverdetratio2")),]
-  MON <- unique(fdat$mon)
-  pchlist <- c(15,16,17,18,4,7,8,11)
-   
-  if(missing(nsteps)) {
-    nsteps <- length(which(fdat$mon==MON[1]))
-    cat("nsteps: ", nsteps,"\n")
-  } else {
-    fdat <- fdat[1:(length(MON)*nsteps),]
-  }
-  
-  #require("RColorBrewer")
-  
-  # extract masses from monomial names
-  rholist <- strsplit(MON,"rho")
-  rholist <- lapply(X=rholist,FUN=function(x){ if(length(x)>1) { 
-                                                 data.frame(mu1=as.numeric(paste("0",x[2],sep=".")),
-                                                            mu2=as.numeric(paste("0",x[3],sep="."))) 
-                                               } else { NA } } )
+massprec_model_sim <- function(datfile,kappa2mu,basename="massprec",n.predict=500,boot.R=300,width=6,height=4.2,fit="pheno"){ 
+  fdat <- NULL
   mus <- NULL
-  for( rho in rholist ) {
-    if( is.na(rho) ) next
-    mus <- rbind(mus,rho+kappa2mu)
+  MON <- NULL
+  for( i in 1:length(datfile) ){
+    ftemp <- read.table(header=TRUE,file=datfile[i],stringsAsFactors=FALSE)
+    ftemp <- ftemp[!(ftemp$mon %in% c("GAUGE","cloverdet","cloverdetratio1","cloverdetratio2")),]
+    
+    montemp <- unique(ftemp$mon)
+    rholist <- strsplit(montemp,"rho")
+    rholist <- lapply(X=rholist,FUN=function(x){ if(length(x)>1) { 
+                                                   data.frame(mu1=as.numeric(paste("0",x[2],sep=".")),
+                                                              mu2=as.numeric(paste("0",x[3],sep=".")),
+                                                              kappa2mu=0.0) 
+                                                 } else { NA } } )
+    
+    MON <- c(MON,paste(montemp,kappa2mu[i],sep="."))
+    ftemp$mon <- paste(ftemp$mon,kappa2mu[i],sep=".")
+
+    for( rho in rholist ) {
+      if( is.na(rho) ) next
+      mus <- rbind(mus,rho+kappa2mu[i])
+    }
+    fdat <- rbind(fdat,ftemp)
   }
   
   require("RColorBrewer")
   mu1s <- sort(unique(mus$mu1),decreasing=TRUE)
   mu2s <- unique(mus$mu2)
-  pchlist <- pchlist[1:length(mu2s)]
+  #pchlist <- pchlist[1:length(mu2s)]
   # legend scaling depends on the number of mu2s
   cex <- 0.8 
   if(length(mu2s)>6)
     cex <- 0.7 
   mu1cols <- data.frame(clr=rainbow(n=length(mu1s)),mu1=mu1s,stringsAsFactors=FALSE)
-  mu2cols <- data.frame(clr=brewer.pal(n=length(mu2s),name="Dark2"),mu2=mu2s,stringsAsFactors=FALSE)
-  mu2pch <- data.frame(pch=pchlist,mu2=mu2s)
+  mu2cols <- data.frame(clr=rainbow(n=length(mu2s)),mu2=mu2s,stringsAsFactors=FALSE)
+  #mu2cols <- data.frame(clr=brewer.pal(n=length(mu2s),name="Dark2"),mu2=mu2s,stringsAsFactors=FALSE)
+  #mu2pch <- data.frame(pch=pchlist,mu2=mu2s)
+  mu2pch <- data.frame(pch=16)
 
   # assemble data into data frame with some statistical analysis for confidence intervals
   force.df <- NULL
@@ -63,10 +64,10 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
                       data.frame(name=MON[i],
                                  aver=aver[1],maver=aver[2],paver=aver[3],
                                  max=maxi[1],mmax=maxi[2],pmax=maxi[3],
-                                 mu1=mus$mu1[i],mu2=mus$mu2[i],kappa2mu=kappa2mu,
+                                 mu1=mus$mu1[i],mu2=mus$mu2[i],kappa2mu=mus$kappa2mu[i],
                                  mu1col=mu1cols$clr[which(mu1cols$mu1==mus$mu1[i])[1]],
                                  mu2col=mu2cols$clr[which(mu2cols$mu2==mus$mu2[i])[1]],
-                                 mu2pch=mu2pch$pch[which(mu2pch$mu2==mus$mu2[i])[1]],
+                                 mu2pch=16,#mu2pch$pch[which(mu2pch$mu2==mus$mu2[i])[1]],
                                  stringsAsFactors=FALSE)
                      )
   }
@@ -107,21 +108,18 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
     fmodel[[1]] <- nls(aver~a*abs(mu2-mu1)^2*abs(mu2/mu1)^b,
                        ,data=force.df,start=list(a=0.1,b=0.4),
                        trace=TRUE,control=list(minFactor=0.0000001),
-                       weights=1/(force.df$paver^2+force.df$maver^2),
-                       model=TRUE)
+                       weights=1/(force.df$paver^2+force.df$maver^2))
     fmodel[[2]] <- nls(max~a*abs(mu2-mu1)^2/abs((mu2)*(mu1))^b,data=force.df,start=list(a=1.0,b=2.0),
                        trace=TRUE,control=list(maxiter=1000),
-                       weights=1/(force.df$pmax^2+force.df$mmax^2),
-                       model=TRUE)
+                       weights=1/(force.df$pmax^2+force.df$mmax^2))
     fmodel.pmax <- nls(pmax~a*abs(mu2-mu1)^2/abs((mu2+1e-9)*(mu1+1e-9))^b,data=force.df,start=list(a=0.1,b=2.0),#,c=0.1),
-                       trace=TRUE,algorithm='port',control=list(maxiter=1000),
-                       model=TRUE)
+                       trace=TRUE,algorithm='port',control=list(maxiter=1000))
   } else if(fit=="phenodim") {
-    fmodel[[1]] <- nls(aver~a*abs(mu2-mu1)^2*abs(1+mu2/mu1+kappa2mu/mu1)^b,
+    fmodel[[1]] <- nls(aver~a*abs(mu2-mu1)^2*abs(mu1*mu2/kappa2mu^2)^b,
                        data=force.df,start=list(a=10,b=0.7),
                        trace=TRUE,control=list(minFactor=0.0000001,maxiter=10000))#,#)#,
                        #weights=1/(force.df$paver^2+force.df$maver^2))
-    fmodel[[2]] <- nls(max~a*abs(mu2-mu1)^2*abs(1+mu2/mu1+kappa2mu/mu1)^b,#abs((mu2)*(mu1)/kappa2mu^2)^b,
+    fmodel[[2]] <- nls(max~a*abs(mu2-mu1)^2*abs(mu1*mu2/kappa2mu^2)^b,#abs((mu2)*(mu1)/kappa2mu^2)^b,
                        data=force.df,start=list(a=10,b=0.7),
                        trace=TRUE,control=list(maxiter=1000,minFactor=0.000001),
                        algorithm='port',
@@ -132,21 +130,21 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
                        data=force.df,start=list(a=20,b=0.7),#,c=0.1),
                        trace=TRUE,algorithm='port',control=list(maxiter=1000))
   } else if(fit=="phenodim2") {
-    fmodel[[1]] <- nls(aver~a * (mu2 - mu1)^2 * (mu2/mu1)^b * (1 + kappa2mu/mu1)^c,
-                       data=force.df,start=list(a=5,b=2.0,c=1.0),algorithm='port', 
-                       trace=TRUE,control=list(minFactor=0.0000001,maxiter=10000))#,
-                       #algorithm='port')#,
+    fmodel[[1]] <- nls(aver~((mu2+a)/(mu1+b))*(mu2-mu1)^2,
+                       data=force.df,start=list(a=1,b=0.2),
+                       trace=TRUE,control=list(minFactor=0.0000001,maxiter=10000)#,
+                       #algorithm='port'#,
+                       )
                        #weights=1/(force.df$paver^2+force.df$maver^2))
-    fmodel[[2]] <- nls(max~a * (mu2 - mu1)^2 * (mu2/mu1)^b * (1 + kappa2mu/mu1)^c,
-                       data=force.df,start=list(a=5,b=2.0,c=1.0),
-                       trace=TRUE,control=list(maxiter=100000,minFactor=0.0000001))#
-                       #weights=1/(force.df$pmax^2+force.df$mmax^2))#,
+    fmodel[[2]] <- nls(max~((mu2+a)/(mu1+b))*(mu2-mu1)^2,
+                       data=force.df,start=list(a=20,b=0.2),
+                       trace=TRUE,control=list(maxiter=1000,minFactor=0.000001),
                        #algorithm='port',
-                       #weights=1/(force.df$pmax^2+force.df$mmax^2)
-                       #)
-    fmodel.pmax <- nls(pmax~a*(mu2-mu1)^2,
+                       weights=1/(force.df$pmax^2+force.df$mmax^2)
+                       )
+    fmodel.pmax <- nls(pmax~((mu2+a)/(mu1+b))*(mu2-mu1)^2, 
                        #*abs(mu2/mu1)^b,
-                       data=force.df,start=list(a=0.2),#,c=0.1),
+                       data=force.df,start=list(a=20,b=0.2),
                        trace=TRUE,algorithm='port',control=list(maxiter=1000))
   } else if(fit=="rat") {
     fmodel[[1]] <- nls(aver~a*(1-abs(mu2/mu1))^b,
@@ -182,11 +180,11 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
  
   constmu1 <- list()
   constmu2 <- list()
-  for(mu1 in mu1s){
-    constmu1[[length(constmu1)+1]] <- data.frame(mu1=rep(mu1,times=n.predict),mu2=logseq(-4,-0.3,length.out=n.predict))
+  for(i in 1:nrow(mus)){
+    constmu1[[length(constmu1)+1]] <- data.frame(mu1=rep(mus$mu1[i],times=n.predict),mu2=logseq(-4,-0.3,length.out=n.predict),kappa2mu=rep(mus$kappa2mu[i],times=n.predict))
   }
-  for(mu2 in mu2s){
-    constmu2[[length(constmu2)+1]] <- data.frame(mu1=logseq(-4,-0.3,length.out=n.predict),mu2=rep(mu2,times=n.predict))
+  for(i in 1:nrow(mus)){
+    constmu2[[length(constmu2)+1]] <- data.frame(mu1=logseq(-4,-0.3,length.out=n.predict),mu2=rep(mus$mu2[i],times=n.predict),kappa2mu=rep(mus$kappa2mu[i],times=n.predict))
   }
  
   #cA2.30.24 <- data.frame(rho1=c(0.0363,0.0)+0.0008237,rho2=c(0.04,0.008)+0.0008238,clr=rep("blue",2),stringsAsFactors=FALSE)
@@ -203,8 +201,6 @@ massprec_model <- function(datfile,nsteps,basename="massprec",n.predict=500,kapp
 
   # for the plots in terms of mu2, need the margin
   par(mgp=c(3,0.3,0),mar=c(5,4,4,8)+0.1)
-
-
 
   ylims <- c(-5,1)
   xlims <- c(4e-3,0.21)

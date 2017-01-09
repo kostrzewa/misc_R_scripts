@@ -1,5 +1,5 @@
 pi0 <- function(pion0.disc_path, pion0.conn_path, pionc.conn_path, pionc.con.fitrange, pion0.con.fitrange, pion0.full.fitrange, 
-                kappa, mul, skip.conf, skipfiles=0, boot.R=1800, boot.l=2, read.data=TRUE, seed=c(34872), useCov=TRUE) {
+                kappa, mul, skip.conf, skipfiles=0, boot.R=800, boot.l=1, read.data=TRUE, seed=c(12345), useCov=TRUE) {
   pionc.con <- NULL
   pion0.con <- NULL
   pion0.disc <- NULL
@@ -57,7 +57,7 @@ pi0 <- function(pion0.disc_path, pion0.conn_path, pionc.conn_path, pionc.con.fit
   pionc.con.effMass <- bootstrap.effectivemass(cf=pionc.con,boot.R=boot.R,boot.l=boot.l,type='solve')
   pionc.con.effMass.fit <- fit.effectivemass(cf=pionc.con.effMass,t1=pionc.con.fitrange[1],t2=pionc.con.fitrange[2],replace.na=T,useCov=useCov)
   summary(pionc.con.effMass.fit)
-  save(pionc.con.effMass.fit,file="pionc.con.effMass.fit")
+  save(pionc.con.effMass.fit,file="pionc.con.effMass.fit.Rdata")
   
   plot(pionc.con.effMass.fit,ylim=c(0.11,0.15))
 
@@ -110,12 +110,16 @@ pi0 <- function(pion0.disc_path, pion0.conn_path, pionc.conn_path, pionc.con.fit
     save(pion0.disc.matrixfit,file="pion0.disc.matrixfit.Rdata")
   
     pion0.disc.effMass <- bootstrap.effectivemass(cf=pion0.disc,boot.R=boot.R,boot.l=boot.l,type='solve')
-    pion0.disc.effMass.fit <- fit.effectivemass(cf=pion0.disc.effMass,t1=pion0.full.fitrange[1],t2=pion0.full.fitrange[2],replace.na=T,useCov=useCov)
-     
-    plot(pion0.disc.effMass.fit,ylim=c(-0.1,0.3))
+    pion0.disc.effMass.fit <- try(fit.effectivemass(cf=pion0.disc.effMass,t1=pion0.full.fitrange[1],t2=pion0.full.fitrange[2],replace.na=T,useCov=useCov))
+    
+    if(!any(class(pion0.disc.effMass.fit)=="try-error")){
+      plot(pion0.disc.effMass.fit,ylim=c(-0.1,0.3))
+      summary(pion0.disc.effMass.fit)
+      save(pion0.disc.effMass.fit,file="pion0.disc.effMass.fit.Rdata")
+    }
 
-    summary(pion0.disc.effMass.fit)
-    save(pion0.disc.effMass.fit,file="pion0.disc.effMass.fit.Rdata")
+    # finally, compute and plot ratio of disconnected to connected contribution
+
   }
 
   tikz.finalize(tikzfiles)
@@ -124,22 +128,27 @@ pi0 <- function(pion0.disc_path, pion0.conn_path, pionc.conn_path, pionc.con.fit
 
   # compute mass differences from bootstrap samples 
   mpi0c_m_mpi <- (pion0.con.matrixfit$opt.tsboot[1,]-pionc.con.matrixfit$opt.tsboot[1,])
+  mpi0csq_m_mpisq <- (pion0.con.matrixfit$opt.tsboot[1,]^2-pionc.con.matrixfit$opt.tsboot[1,]^2)
   cat("mpi0c_m_mpi: ", mean(mpi0c_m_mpi), "+-", sd(mpi0c_m_mpi), "\n")
   cat("mpi0c_m_mpi_rel: ", mean(mpi0c_m_mpi/mpi), "+-", sd(mpi0c_m_mpi/mpi), "\n")
 
   mpi_m_mpi0f <- (pionc.con.matrixfit$opt.tsboot[1,]-pion0.full.matrixfit$opt.tsboot[1,])
+  mpisq_m_mpi0fsq <- (pionc.con.matrixfit$opt.tsboot[1,]^2-pion0.full.matrixfit$opt.tsboot[1,]^2)
   cat("mpi_m_mpi0f: ", mean(mpi_m_mpi0f), "+-", sd(mpi_m_mpi0f), "\n")
   cat("mpi_m_mpi0f_rel: ", mean(mpi_m_mpi0f/mpi), "+-", sd(mpi_m_mpi0f/mpi), "\n")
 
   mpi_m_mpi0d <- (pionc.con.matrixfit$opt.tsboot[1,]-pion0.disc.matrixfit$opt.tsboot[1,])
+  mpisq_m_mpi0dsq <- (pionc.con.matrixfit$opt.tsboot[1,]^2-pion0.disc.matrixfit$opt.tsboot[1,]^2)
   cat("mpi_m_mpi0d: ", mean(mpi_m_mpi0d), "+-", sd(mpi_m_mpi0d), "\n")
   cat("mpi_m_mpi0d_rel: ", mean(mpi_m_mpi0d/mpi), "+-", sd(mpi_m_mpi0d/mpi), "\n")
 
   mpi0c_m_mpi0f <- (pion0.con.matrixfit$opt.tsboot[1,]-pion0.full.matrixfit$opt.tsboot[1,])
+  mpi0csq_m_mpi0fsq <- (pion0.con.matrixfit$opt.tsboot[1,]^2-pion0.full.matrixfit$opt.tsboot[1,]^2)
   cat("mpi0c_m_mpi0f: ", mean(mpi0c_m_mpi0f), "+-", sd(mpi0c_m_mpi0f), "\n") 
   cat("mpi0c_m_mpi0f_rel: ", mean(mpi0c_m_mpi0f/mpi), "+-", sd(mpi0c_m_mpi0f/mpi), "\n") 
   
   mpi0c_m_mpi0d <- (pion0.con.matrixfit$opt.tsboot[1,]-pion0.disc.matrixfit$opt.tsboot[1,])
+  mpi0csq_m_mpi0dsq <- (pion0.con.matrixfit$opt.tsboot[1,]^2-pion0.disc.matrixfit$opt.tsboot[1,]^2)
   cat("mpi0c_m_mpi0d: ", mean(mpi0c_m_mpi0d), "+-", sd(mpi0c_m_mpi0d), "\n") 
   cat("mpi0c_m_mpi0d_rel: ", mean(mpi0c_m_mpi0d/mpi), "+-", sd(mpi0c_m_mpi0d/mpi), "\n") 
 
@@ -148,10 +157,15 @@ pi0 <- function(pion0.disc_path, pion0.conn_path, pionc.conn_path, pionc.con.fit
                                mpi0f=mean(pion0.full.matrixfit$opt.tsboot[1,]),dmpi0f=sd(pion0.full.matrixfit$opt.tsboot[1,]),
                                mpi0d=mean(pion0.disc.matrixfit$opt.tsboot[1,]),dmpi0d=sd(pion0.disc.matrixfit$opt.tsboot[1,]), 
                                mpi0c_m_mpi=mean(mpi0c_m_mpi), dmpi0c_m_mpi=sd(mpi0c_m_mpi),
+                               mpi0csq_m_mpisq=mean(mpi0csq_m_mpisq), dmpi0csq_m_mpisq=sd(mpi0csq_m_mpisq),
                                mpi_m_mpi0f=mean(mpi_m_mpi0f), dmpi_m_mpi0f=sd(mpi_m_mpi0f),
+                               mpisq_m_mpi0fsq=mean(mpisq_m_mpi0fsq), dmpisq_m_mpi0fsq=sd(mpisq_m_mpi0fsq),
                                mpi_m_mpi0d=mean(mpi_m_mpi0d), dmpi_m_mpi0d=sd(mpi_m_mpi0d),
+                               mpisq_m_mpi0dsq=mean(mpisq_m_mpi0dsq), dmpisq_m_mpi0dsq=sd(mpisq_m_mpi0dsq),
                                mpi0c_m_mpi0f=mean(mpi0c_m_mpi0f), dmpi0c_m_mpi0f=sd(mpi0c_m_mpi0f),
+                               mpi0csq_m_mpi0fsq=mean(mpi0csq_m_mpi0fsq), dmpi0csq_m_mpi0fsq=sd(mpi0csq_m_mpi0fsq),
                                mpi0c_m_mpi0d=mean(mpi0c_m_mpi0d), dmpi0c_m_mpi0d=sd(mpi0c_m_mpi0d),
+                               mpi0csq_m_mpi0dsq=mean(mpi0csq_m_mpi0dsq), dmpi0csq_m_mpi0dsq=sd(mpi0csq_m_mpi0dsq),
                                mpi0c_m_mpi_rel=mean(mpi0c_m_mpi/mpi), dmpi0c_m_mpi_rel=sd(mpi0c_m_mpi/mpi),
                                mpi_m_mpi0f_rel=mean(mpi_m_mpi0f/mpi), dmpi_m_mpi0f_rel=sd(mpi_m_mpi0f/mpi),
                                mpi_m_mpi0d_rel=mean(mpi_m_mpi0d/mpi), dmpi_m_mpi0d_rel=sd(mpi_m_mpi0d/mpi),

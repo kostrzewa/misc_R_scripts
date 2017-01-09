@@ -118,7 +118,7 @@ plot_csw_beta_kappac <- function(datafile, input,
   # prepare plot area
   plot(x=xpts,y=kcdat$kappac,#log='y',
        xlim=xlims, ylim=kapparange,
-       xlab=sprintf("$ %.3f~c_\\mathrm{sw} + %.3f~\\beta $",-coefs[2],-coefs[3]),
+       xlab=sprintf("$ %.5f~c_\\mathrm{sw} + %.5f~\\beta $",-coefs[2],-coefs[3]),
        ylab="$ \\kappa_c $", 
        pch=syms, col=clr, type='n', las=1 )
   
