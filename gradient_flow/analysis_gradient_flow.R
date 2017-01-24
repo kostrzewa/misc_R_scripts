@@ -1,11 +1,7 @@
 source("~/code/R/misc_R_scripts/lat_phys_ratios/compute_ratio.R")
 source("~/code/R/misc_R_scripts/plot_timeseries.R")
 
-<<<<<<< HEAD
-analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0,scale=1) {
-=======
-analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,dbg=FALSE) {
->>>>>>> 34b81647f0446db3b36c2b4b51dca4fea229a537
+analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0,scale=1,dbg=FALSE) {
   if(read.data) {
     raw.gradflow <- readgradflow(path=path,skip=skip)
     save(raw.gradflow,file="raw.gradflow.Rdata",compress=FALSE)
