@@ -18,7 +18,7 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
   type="", beta=0, csw=0, musigma=0, mudelta=0, muh=0, addon="",
   skip=0,
   plaquette=TRUE, dH=TRUE, acc=TRUE,
-  plotsize=5,debug=FALSE,trajlabel=FALSE,title=TRUE,
+  plotsize=5,debug=FALSE,trajlabel=FALSE,title=FALSE,
   pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=FALSE,S=1.5,
   omeas.start=0, omeas.stepsize=1, evals.stepsize=1)
 {
