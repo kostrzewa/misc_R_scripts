@@ -77,7 +77,7 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
   # read online measurements
   omeas.files <- getorderedfilelist(path=rundir, basename="onlinemeas", last.digits=6)
   omeas.cnums <- getorderedconfignumbers(path=rundir, basename="onlinemeas", last.digits=6)
-  omeas.idx   <- c((1+omeas.start*omeas.stepsize+skip*omeas.stepsize):length(omeas.files))
+  omeas.idx   <- c((1+as.integer(ceiling(skip/omeas.stepsize))):length(omeas.files))
   omeas.files <- omeas.files[omeas.idx]
   omeas.cnums <- omeas.cnums[omeas.idx]
   pioncor <- readcmidatafiles( files=omeas.files, skip=0 )
@@ -88,13 +88,10 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
     #  pion(pioncor,mu=mul,kappa=kappa,t1=t1,t2=t2,pl=TRUE,skip=skip,matrix.size=1)
     #}
 
-    # when the online measurement frequency is not 1, we need to adjust for this
-    omeas.skip <- as.integer(ceiling(skip/omeas.stepsize))-omeas.start
-    # we have some annoying situations where online measurements are missing from the beginning of the run,
-    # this should allow to take that into account
-    if(omeas.skip < 0) omeas.skip <- 0
-    onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=omeas.skip,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
-
+    # the correlation functions have been read externally, taking into account the measurement frequency
+    # and possibly missing files. Therefore, skip=0! 
+    onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=0,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
+    
     result$params$N.online <- onlineout$N
 
     if(debug){
@@ -109,7 +106,7 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
 
     dpaopp_filename <- sprintf("01_dpaopp_%s",filelabel)
     result$obs$mpcac_mc <- plot_timeseries(dat=onlineout$MChist.dpaopp,
-      trange=(omeas.start+c(omeas.skip+1,(omeas.skip+length(onlineout$MChist.dpaopp))))*omeas.stepsize,
+      trange=skip+c(0,(length(onlineout$MChist.dpaopp)-1)*omeas.stepsize),
       stepsize=omeas.stepsize,
       pdf.filename=dpaopp_filename,
       ylab="$am_\\mathrm{PCAC}$",
