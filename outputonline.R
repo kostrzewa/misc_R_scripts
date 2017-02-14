@@ -13,6 +13,18 @@ coderoot <- "~/code/R/misc_R_scripts"
 source(paste(coderoot,"/plot_timeseries.R",sep=""))
 source(paste(coderoot,"/plot_eigenvalue_timeseries.R",sep=""))
 
+compute_ratio <- function(dividend,divisor,name=NA,debug=FALSE) {
+  rval <- data.frame( val=dividend["val",] / divisor["val",], 
+                      dval=sqrt( (dividend["dval",]/divisor["val",])^2 + (divisor["dval",]*dividend["val",]/divisor["val",]^2)^2 ),                                      
+                      name=name )
+  if(debug) {
+    print(sprintf("compute_ratio: %s",as.character(name)))
+    print(rval)
+  }
+  return(rval)
+}
+
+
 outputonline <- function(L, T, t1, t2, kappa, mul,
   cg_col, evals, rundir, cg.ylim,
   type="", beta=0, csw=0, musigma=0, mudelta=0, muh=0, addon="",
@@ -20,7 +32,8 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
   plaquette=TRUE, dH=TRUE, acc=TRUE,
   plotsize=5,debug=FALSE,trajlabel=FALSE,title=FALSE,
   pl=FALSE,method="uwerr",fit.routine="optim",oldnorm=FALSE,S=1.5,
-  omeas.start=0, omeas.stepsize=1, evals.stepsize=1)
+  omeas.start=0, omeas.stepsize=1, evals.stepsize=1,
+  boot.R=1500, boot.l=2)
 {
   # store analysis results in practical R format, replacing entries as new data is added
   resultsfile <- "omeas.summary.RData"
@@ -39,7 +52,8 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
                  obs=data.frame(mpcac_fit=navec, 
                                 mpcac_mc=navec, 
                                 mpi=navec, 
-                                fpi=navec, 
+                                fpi=navec,
+                                mpi_ov_fpi=navec, 
                                 P=navec, 
                                 dH=navec, 
                                 expdH=navec, 
@@ -90,7 +104,8 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
 
     # the correlation functions have been read externally, taking into account the measurement frequency
     # and possibly missing files. Therefore, skip=0! 
-    onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=0,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S)
+    onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=0,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S,
+                            boot.R=boot.R,boot.l=boot.l)
     
     result$params$N.online <- onlineout$N
 
@@ -178,6 +193,14 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
                                    tauint=onlineout$uwerrresultfps$tauint*omeas.stepsize,
                                    dtauint=onlineout$uwerrresultfps$dtauint*omeas.stepsize,
                                    Wopt=onlineout$uwerrresultfps$Wopt*omeas.stepsize, stringsAsFactors=FALSE) )
+
+    # error propagation without taking the correlation into account until bootstrap error is fixed
+    mpi_ov_fpi <- compute_ratio( result$obs$mpi, result$obs$fpi )
+    result$obs$mpi_ov_fpi <- t(data.frame(val=mpi_ov_fpi$val,
+                                          dval=mpi_ov_fpi$dval,
+                                          tauint=NA,
+                                          dtauint=NA,
+                                          Wopt=NA, stringsAsFactors=FALSE) )
 
     # something in the skip computation is odd, let's just solve it like this
     if(skip==0){
