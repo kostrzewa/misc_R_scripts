@@ -29,12 +29,34 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0
     summaryvec <- c(t_vec[i_row])
     for(i_col in 1:length(cnames)) {
       obs <- uwerr.gradflow[[cnames[i_col]]]
-      summaryvec <- c(summaryvec, obs$value, obs$dvalue, obs$ddvalue, obs$tauint, obs$dtauint)
+      summaryvec <- c(summaryvec, obs$value, obs$dvalue, obs$ddvalue, obs$tauint*scale, obs$dtauint*scale)
     }
     gradflow[i_row,] <- summaryvec
   }
   
   save(gradflow,file="result.gradflow.Rdata",compress=FALSE)
+  
+  gf.scales <- list()
+  
+  gf.scales[["sqrt_t0_Eplaq"]] <- list(val=rep(0,3), ref.val=0.1416, ref.dval=0.0008, approx.idx=0,
+                                       label="\\sqrt{ t_0^{\\mathrm{plaq}} }", obs="tsqEplaq")
+
+  gf.scales[["sqrt_t0_Esym"]] <- list(val=rep(0,3), ref.val=0.1416, ref.dval=0.0008, approx.idx=0,
+                                      label="\\sqrt{ t_0^{\\mathrm{sym}} }", obs="tsqEsym")
+
+  gf.scales[["w0_Wsym"]] <- list(val=rep(0,3), ref.val=0.1755, ref.dval=0.0019, approx.idx=0,
+                                 label="\\w_0^{\\mathrm{sym}}", obs="Wsym")
+
+  for( i in 1:length(gf.scales) ){
+    val <- gradflow[,sprintf("%s.value", gf.scales[[i]]$obs)]
+    dval <- gradflow[,sprintf("%s.dvalue", gf.scales[[i]]$obs)] 
+    tref <- c( approx( x=val+dval,y=gradflow$t,xout=0.3)$y, 
+               approx( x=val, y=gradflow$t, xout=0.3 )$y, 
+               approx( x=val-dval, y=gradflow$t, xout=0.3)$y )
+
+    sqrt_tref <- sqrt(tref)
+  }
+
    
   # find w_0 and its lower and upper values, note how x and y are reversed for this purpose
   w0sq <- c( approx(x=gradflow$Wsym.value+gradflow$Wsym.dvalue,y=gradflow$t,xout=0.3)$y, 
@@ -60,7 +82,11 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0
   }
   cat(sprintf("Using w0 = %f (%f)\n",w0fm$val,w0fm$dval))
   cat("a(fm):", a[2,1], " (", a[3,1]-a[2,1], ",", a[1,1]-a[2,1]," ) ( ", a[2,2], ")\n")
-  cat("a(fm) ~ ", a[2,1], "(", sqrt( 0.5*(abs(a[3,1]-a[2,1])+abs(a[1,1]-a[2,1]))^2 + a[2,2]^2 ), ")\n");   
+  cat("a(fm) ~ ", a[2,1], "(", sqrt( 0.5*(abs(a[3,1]-a[2,1])+abs(a[1,1]-a[2,1]))^2 + a[2,2]^2 ), ")\n");
+
+
+
+
   
   if(plot) {
     tikzfiles <- tikz.init(basename="gradflow",width=4,height=4)
@@ -77,7 +103,9 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0
     abline(v=w0sq)
     
     # plot MD history of Wsym at w0
-    plot(raw.gradflow[which(raw.gradflow$t==w0sq_approx),"Wsym"],type='l',lwd=3,
+    plot(y=raw.gradflow[which(raw.gradflow$t==w0sq_approx),"Wsym"],
+         x=start+c( 0:( length(raw.gradflow[which(raw.gradflow$t==w0sq_approx),"Wsym"]) - 1 ) )*scale,
+         type='l',lwd=3,
          main="",xlab="$N_\\mathrm{conf}$",ylab=sprintf("$W\\left( t/a^2 = %s \\right)$",w0sq_approx),las=1)
     
     tikz.finalize(tikzfiles)
