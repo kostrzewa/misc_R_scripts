@@ -1,13 +1,13 @@
 source("~/code/R/misc_R_scripts/lat_phys_ratios/compute_ratio.R")
 source("~/code/R/misc_R_scripts/plot_timeseries.R")
 
-analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0,scale=1,dbg=FALSE) {
+analysis_gradient_flow <- function(path,basename="ensemble",read.data=TRUE,plot=FALSE,skip=0,start=0,scale=1,dbg=FALSE) {
   if(read.data) {
     raw.gradflow <- readgradflow(path=path,skip=skip)
-    save(raw.gradflow,file="raw.gradflow.Rdata",compress=FALSE)
+    save(raw.gradflow,file=sprintf("%s.raw.gradflow.Rdata",basename),compress=FALSE)
   }else{
-    cat("Warning, reading data from raw.gradflow.Rdata, if the number of samples changed, set read.data=TRUE to reread all output files\n")
-    load("raw.gradflow.Rdata")
+    cat(sprintf("Warning, reading data from %s.raw.gradflow.Rdata, if the number of samples changed, set read.data=TRUE to reread all output files\n",basename))
+    load(sprintf("%s.raw.gradflow.Rdata",basename))
   }
   if(dbg==TRUE) print(raw.gradflow)
 
@@ -34,8 +34,6 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0
     gradflow[i_row,] <- summaryvec
   }
   
-  save(gradflow,file="result.gradflow.Rdata",compress=FALSE)
-  
   gf.scales <- list()
   
   gf.scales[["sqrt_t0_Eplaq"]] <- list(val=rep(0,3), ref.val=0.1416, ref.dval=0.0008, approx.idx=0,
@@ -57,6 +55,7 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0
     sqrt_tref <- sqrt(tref)
   }
 
+  save(gradflow,file=sprintf("%s.result.gradflow.Rdata",basename),compress=FALSE)
    
   # find w_0 and its lower and upper values, note how x and y are reversed for this purpose
   w0sq <- c( approx(x=gradflow$Wsym.value+gradflow$Wsym.dvalue,y=gradflow$t,xout=0.3)$y, 
@@ -84,12 +83,9 @@ analysis_gradient_flow <- function(path,read.data=TRUE,plot=FALSE,skip=0,start=0
   cat("a(fm):", a[2,1], " (", a[3,1]-a[2,1], ",", a[1,1]-a[2,1]," ) ( ", a[2,2], ")\n")
   cat("a(fm) ~ ", a[2,1], "(", sqrt( 0.5*(abs(a[3,1]-a[2,1])+abs(a[1,1]-a[2,1]))^2 + a[2,2]^2 ), ")\n");
 
-
-
-
   
   if(plot) {
-    tikzfiles <- tikz.init(basename="gradflow",width=4,height=4)
+    tikzfiles <- tikz.init(basename=sprintf("%s.gradflow",basename),width=4,height=4)
     # set up plot
     plot(x=gradflow$t, y=gradflow$Wsym.value,
          type='n',xlim=c(0,1.25*w0sq[2]),ylim=c(0.0,0.4),
