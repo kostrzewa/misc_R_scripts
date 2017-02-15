@@ -188,7 +188,7 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
                                    dtauint=onlineout$uwerrresultmps$dtauint*omeas.stepsize,
                                    Wopt=onlineout$uwerrresultmps$Wopt*omeas.stepsize, stringsAsFactors=FALSE) )
 
-    result$obs$fpi <- t(data.frame(val=2*kappa*2*mul/sqrt(2)*abs(onlineout$fitresultpp$par[1])/sqrt(onlineout$fitresultpp$par[2]^3),
+    result$obs$fpi <- t(data.frame(val=2*kappa*2*mul/sqrt(2)*abs(onlineout$fitresultpp$par[1])/(sqrt(onlineout$fitresultpp$par[2])*sinh(onlineout$fitresultpp$par[2])),
                                    dval=2*kappa*2*mul/sqrt(2)*onlineout$uwerrresultfps$dvalue,
                                    tauint=onlineout$uwerrresultfps$tauint*omeas.stepsize,
                                    dtauint=onlineout$uwerrresultfps$dtauint*omeas.stepsize,
