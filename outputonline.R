@@ -106,8 +106,6 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
     # and possibly missing files. Therefore, skip=0! 
     onlineout <- onlinemeas(pioncor,t1=t1,t2=t2,kappa=kappa,mu=mul,skip=0,method=method,pl=pl,fit.routine=fit.routine,oldnorm=oldnorm,S=S,
                             boot.R=boot.R,boot.l=boot.l)
-    
-    result$params$N.online <- onlineout$N
 
     if(debug){
       print(onlineout)
@@ -118,6 +116,7 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
     } else {
       filelabel <- rundir
     }
+    save(onlineout,file=sprintf("onlineout.%s.RData",filelabel))
 
     dpaopp_filename <- sprintf("01_dpaopp_%s",filelabel)
     result$obs$mpcac_mc <- plot_timeseries(dat=onlineout$MChist.dpaopp,
@@ -194,13 +193,22 @@ outputonline <- function(L, T, t1, t2, kappa, mul,
                                    dtauint=onlineout$uwerrresultfps$dtauint*omeas.stepsize,
                                    Wopt=onlineout$uwerrresultfps$Wopt*omeas.stepsize, stringsAsFactors=FALSE) )
 
-    # error propagation without taking the correlation into account until bootstrap error is fixed
-    mpi_ov_fpi <- compute_ratio( result$obs$mpi, result$obs$fpi )
-    result$obs$mpi_ov_fpi <- t(data.frame(val=mpi_ov_fpi$val,
-                                          dval=mpi_ov_fpi$dval,
-                                          tauint=NA,
-                                          dtauint=NA,
-                                          Wopt=NA, stringsAsFactors=FALSE) )
+    if(method=="boot" | method=="all"){
+      mpi_ov_fpi <- onlineout$tsboot$t[,1]/(2*kappa*2*mul/sqrt(2)*(onlineout$tsboot$t[,3]/(sinh(onlineout$tsboot$t[,1])*sqrt(onlineout$tsboot$t[,1]))))
+      result$obs$mpi_ov_fpi <- t(data.frame(val=mean(mpi_ov_fpi),
+                                            dval=sd(mpi_ov_fpi),
+                                            tauint=NA,
+                                            dtauint=NA,
+                                            Wopt=NA, stringsAsFactors=FALSE) )
+
+    } else {
+      mpi_ov_fpi <- compute_ratio( result$obs$mpi, result$obs$fpi )
+      result$obs$mpi_ov_fpi <- t(data.frame(val=mpi_ov_fpi$val,
+                                            dval=mpi_ov_fpi$dval,
+                                            tauint=NA,
+                                            dtauint=NA,
+                                            Wopt=NA, stringsAsFactors=FALSE) )
+    }
 
     # something in the skip computation is odd, let's just solve it like this
     if(skip==0){
