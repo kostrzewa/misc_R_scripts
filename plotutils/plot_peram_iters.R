@@ -1,9 +1,10 @@
-plot_peram_iters <- function(filename="iters.dat"){
+plot_peram_iters <- function(filename="iters.dat", max.iters=5000){
   iters <- read.table(filename, header=TRUE); 
   
   conf <- unique(iters$conf)
   rnd <- unique(iters$rnd)
   
+  nonconv <- NULL
   require("RColorBrewer")
   
   pal <- brewer.pal(n=length(rnd), name="Dark2") 
@@ -18,6 +19,10 @@ plot_peram_iters <- function(filename="iters.dat"){
     for( rn in rnd ){
       i <- cnf + rn/length(rnd)
       liters <- iters[which(iters$conf == cnf & iters$rnd == rn), ]
+      if( any(liters$iters > max.iters) ){
+        print(data.frame(cnf=cnf, rn=rn))
+        nonconv <- rbind(nonconv, data.frame(cnf=cnf, rn=rn))
+      }
       pt <- mean(liters$iters)
       pt.dy <- max(liters$iters)-pt
       pt.mdy <- pt-min(liters$iters)
@@ -26,4 +31,6 @@ plot_peram_iters <- function(filename="iters.dat"){
   }
   legend(x="topright", col=pal, legend=sprintf("$n_r=%d$",rnd), pt.cex=5, pch='.')
   tikz.finalize(tikzfiles)
+
+  return(nonconv)
 }
