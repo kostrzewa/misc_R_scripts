@@ -8,7 +8,12 @@
 # with the corresponding values listed below, one set per row
 # colour is a string for the colour name such as "red" or "blue"
 
-plot_mpcac_v_kappa <- function(datafile,width=3.4,height=3.4,basename="mpcac_v_kappa",debug=FALSE,fit=TRUE,sim=500,n.predict=2000,mpcac.ylim=c(-0.006,0.006),mu.ylim=c(-0.001,0.001),...)
+plot_mpcac_v_kappa <- function(datafile,
+                               width=3.4, height=3.4,
+                               basename = "mpcac_v_kappa",
+                               debug=FALSE,neg=TRUE,fit=TRUE,
+                               sim=500,n.predict=2000,
+                               mpcac.ylim=c(-0.006,0.006),mu.ylim=c(-0.001,0.001),...)
 {
   pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=FALSE)
   pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
@@ -34,17 +39,21 @@ plot_mpcac_v_kappa <- function(datafile,width=3.4,height=3.4,basename="mpcac_v_k
     pred.y <- predict(lmodel,newdata=pred.x)
     print(summary(lmodel))
     if(sim>0){
-      lmodel.sim <- t(apply(X=simdata,MARGIN=1,
-                          FUN=function(x){ 
-                                           summary(lm(mpcac~oneov2k,data=data.frame(mpcac=x,oneov2k=pcacdat$oneov2k),weights=1/pcacdat$dmpcac^2))$coefficients[1:2]
-                                         }
+      lmodel.sim <- t(apply(X=simdata,
+                            MARGIN=1,
+                            FUN=function(x){ 
+                                    summary(lm(mpcac~oneov2k,
+                                               data=data.frame(mpcac=x,
+                                                               oneov2k=pcacdat$oneov2k),
+                                               weights=1/pcacdat$dmpcac^2))$coefficients[1:2]
+                                }
                          ) )
       param.cov <- cov(lmodel.sim)
       print(param.cov)
       print(sqrt(diag(param.cov)))
     }
   }
-  
+
   tikzfiles <- tikz.init(basename=basename,width=width,height=height,lwdUnit=0.8)
   
   par(mgp=c(3,0.3,0))
@@ -69,10 +78,23 @@ plot_mpcac_v_kappa <- function(datafile,width=3.4,height=3.4,basename="mpcac_v_k
   lns <- c(1,rep(NA,length(unique(pcacdat$colour))))
   pch <- rep(15,length(unique(pcacdat$colour))+1)
   clrs <- c("#0000FF55",unique(pcacdat$colour))
-  lg <- c(sprintf("$am_\\mathrm{PCAC}=%.2f+%.2f \\frac{1}{2\\kappa}$",lmodel$coefficients[1],lmodel$coefficients[2]),
-          sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )))
-  legend( x="topleft", col=clrs, legend=lg, 
-          pch=pch, lty=lns, bty='n', pt.cex=1.3 )
+
+  if(fit){
+    lg <- c(sprintf("$am_\\mathrm{PCAC}=%.3f+%.3f \\frac{1}{2\\kappa}$",lmodel$coefficients[1],lmodel$coefficients[2]),
+            sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )))
+    legend( x="topleft", col=clrs, legend=lg, 
+            pch=pch, lty=lns, bty='n', pt.cex=1.3 )
+    legend(x = "bottomleft",
+           pch = NA,
+           bty = 'n',
+           legend = sprintf("$\\kappa_\\mathrm{cr} = %s$",
+                   tex.catwitherror(x = -0.5*lmodel$coefficients[2]/lmodel$coefficients[1],
+                                    dx = sd(-0.5*lmodel.sim[,2]/lmodel.sim[,1]),
+                                    digits = 2,
+                                    with.dollar = FALSE)
+                   )
+           )
+  }
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )
   
