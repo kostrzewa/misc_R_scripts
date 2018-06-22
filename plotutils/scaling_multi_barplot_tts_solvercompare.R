@@ -1,9 +1,9 @@
 #scaling_multi_barplot_tts <- function(datfile,basename="scaling.invert",solver='cg',action='tm',dbg=FALSE,show.max=FALSE) {
-scaling_multi_barplot_tts <- function(datfile,basename="scaling.invert",solver='cg',dbg=FALSE,show.max=FALSE) {
+scaling_multi_barplot_tts_solvercompare <- function(datfile,basename="scaling.invert",solver='cg',dbg=FALSE,show.max=FALSE) {
   require("RColorBrewer")
   
   dat <- read.table(datfile,stringsAsFactors=FALSE,header=TRUE)
-  dat <- dat[ dat$nds > 18, ]
+  #dat <- dat[ dat$nds > 18, ]
   if(dbg) print(dat)
 
   action_types <- sort(unique(dat$action))
@@ -72,7 +72,7 @@ scaling_multi_barplot_tts <- function(datfile,basename="scaling.invert",solver='
                     xaxs='i',yaxs='i',
                     yaxp=c(0,ceiling(signif(max(tts[1,1]/tts),2)),ceiling(signif(max(tts[1,1]/tts),2))),
                     tck=0.015)
-    
+
     if(show.max)
       points(x=mids,y=maxdat$tts,pch='-')
 
@@ -84,7 +84,7 @@ scaling_multi_barplot_tts <- function(datfile,basename="scaling.invert",solver='
       print(xtckidx)
       print(xtckpos)
     }
-
+   
     mtext(side=2,line=3,"Speed-up")
     mtext(side=1,line=0.5,N_nds,at=xtckpos,adj=0.5)
     mtext(side=1,line=1.5,text="Jureca Nodes")
@@ -129,6 +129,7 @@ scaling_multi_barplot_tts <- function(datfile,basename="scaling.invert",solver='
     
     tikz.finalize(tikzFiles)
 
+    cat("Speed-ups\n")
     print( tts[1,1]/tts )
   } # action types
 }

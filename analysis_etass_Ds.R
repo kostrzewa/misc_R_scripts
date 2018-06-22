@@ -4,7 +4,7 @@ library("propagate")
 
 analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,analyses_to_be_done_input,skip=0) {
   strange_masses <- c(0.021,0.023,0.025,0.027,0.031)
-  charm_masses <- c(0.18,0.25,0.27,0.29,0.31,0.36,0.37,0.38)
+  charm_masses <- c(0.25,0.27,0.29,0.31,0.36,0.37,0.38)#0.18
   light_masses <- c(0.003)#,0.006,0.01)
   skip_strange_masses <- NULL
   skip_charm_masses <- NULL
@@ -244,18 +244,19 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
 
     cat("Pheno (M_ss/M_sc)^2",0.348^2," +- ",2*0.348*0.004,"\n") 
  
-    library(tikzDevice)
-    texfile <- "plots/M_eta_ss_over_M_D_s.tex"
-    tikz(texfile, standAlone = TRUE, width=7, height=5)
+    #library(tikzDevice)
+    #texfile <- "plots/M_eta_ss_over_M_D_s.tex"
+    #tikz(texfile, standAlone = TRUE, width=5, height=4.5)
+    tikzfiles <- tikz.init(basename="M_eta_ss_over_M_D_s",width=6,height=4.5)
   
     #pdf("plots/M_eta_ss_over_M_D_s.pdf",title="(M_ss/M_sc)^2",width=9,height=7)
     par(family="Palatino")
     # plot only data that was used for the fit
-    plotwitherror(x=fitdata$s_mass,y=fitdata$val,dy=ratios$dval,ylab="$(M(\\eta_{ss})/M(D_s))^2$",xlab="$a\\mu_s$",
+    plotwitherror(x=fitdata$s_mass,y=fitdata$val,dy=ratios$dval,ylab="$(M_{ss'}/M_{sc})^2$",xlab="$a\\mu_s$",
                   #xlim=c(min(strange_masses)-0.01,max(strange_masses)+0.008),
                   xlim=c(0.012,max(strange_masses)+0.008),
                   ylim=c(min(fitdata$val)-0.01,max(fitdata$val)+0.07),                   
-                  xaxp=c(min(strange_masses)-5*0.002,max(strange_masses)+4*0.002,length(strange_masses)+9) )
+                  xaxp=c(min(strange_masses)-5*0.002,max(strange_masses)+4*0.002,length(strange_masses)+9), pch=16, col="black", cex=0.7, las=1)
 
     # if not all data was used for the fit, add remaining points in red
     newdata <- ratios[ (ratios$s_mass %in% skip_strange_masses) | (ratios$c_mass %in% skip_charm_masses), ]
@@ -267,9 +268,14 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
    
         
     #let's add some extra charm masses
-    pred_charm_masses <- c( 0.16, charm_masses)
-
-    line_colours <- rainbow(length(pred_charm_masses)+2)
+    pred_charm_masses <- c( charm_masses)
+    
+    require("RColorBrewer")
+    bpal <- brewer.pal(name="Dark2",n=length(pred_charm_masses))
+    line_colours <- c(bpal,"blue","red")
+    abline(h=0.348^2,col=line_colours[length(pred_charm_masses)+2],lwd=3)
+    rect(xleft=min(strange_masses)-0.015,xright=max(strange_masses)+0.01,ytop=0.348^2+2*0.348*0.004,ybottom=0.348^2-2*0.348*0.004,
+         col=rgb(t(col2rgb(line_colours[length(pred_charm_masses)+2])/255),alpha=0.3),border=NA )
     # indicate fit lines and predictions on the plot with confidence intervals
     for( i in 1:length(pred_charm_masses) ) {
       pred_points <- data.frame( s_mass=seq(min(strange_masses)-0.01, max(strange_masses)+0.01, length.out=40), 
@@ -282,7 +288,7 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
         cat("running predictNLS\n")
         preds <- predictNLS(fit_r_v_sc, newdata = pred_points, interval='confidence', do.sim=F)
       }
-
+    
       # for the linear model we can do confidence intervals
       prediction <- NULL
       conf_band <- NULL
@@ -294,7 +300,7 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
         prediction <- preds$summary[,1]
         conf_band <- c(rev(preds$summary[,5]),preds$summary[,6])
       }
-      lines(x=pred_points$s_mass,y=prediction,col=line_colours[i])
+      lines(x=pred_points$s_mass,y=prediction,col=line_colours[i],lwd=3)
       polycol <- col2rgb(line_colours[i])/255
       polygon(c(rev(pred_points$s_mass), pred_points$s_mass), 
              conf_band, col = rgb(t(polycol),alpha=0.2), border=NA)
@@ -322,21 +328,18 @@ analysis_etass_Ds <- function(debug=F,pause=F,read_from_file=F,compute_ratio=T,a
     }
     
     polycol <- col2rgb(line_colours[length(pred_charm_masses)+1])/255
-    lines(x=pred_points$s_mass, y=prediction,col=line_colours[length(pred_charm_masses)+1]) 
-    polygon(c(rev(pred_points$s_mass), pred_points$s_mass), conf_band, col = rgb(t(polycol),alpha=0.2))
+    lines(x=pred_points$s_mass, y=prediction,col=line_colours[length(pred_charm_masses)+1],lwd=3) 
+    polygon(c(rev(pred_points$s_mass), pred_points$s_mass), conf_band, col = rgb(t(polycol),alpha=0.2),border=NA)
 
     legend.xpos = min(strange_masses)-0.01
     legend.ypos = max(ratios$val)+0.08
-    legend.labels = c( paste( paste("$a\\mu_c =",pred_charm_masses), "$") , "$a\\mu_c = 11.85(16) * a\\mu_s$", "$(M_{ss}/M_{sc})^2 = 0.121(3)$" )
+    legend.labels = c( paste( paste("$a\\mu_c =",pred_charm_masses), "$") , "$a\\mu_c = 11.85(16) \\cdot a\\mu_s$", "$(M_{ss'}/M_{sc})^2 = 0.121(3)$" )
 
-    legend(x=legend.xpos,y=legend.ypos,legend=legend.labels,col=line_colours,lty=rep(1,length(pred_charm_masses)+2),bty="n")
+    legend(x=legend.xpos,y=legend.ypos,legend=legend.labels,col=line_colours,lty=rep(1,length(pred_charm_masses)+2),bty="n",lwd=3)
 
-    abline(h=0.348^2,col=line_colours[length(pred_charm_masses)+2])
-    rect(xleft=min(strange_masses)-0.015,xright=max(strange_masses)+0.01,ytop=0.348^2+2*0.348*0.004,ybottom=0.348^2-2*0.348*0.004,
-         col=rgb(t(col2rgb(line_colours[length(pred_charm_masses)+2])/255),alpha=0.3),border=NA )
-
-    dev.off()
-    tools::texi2dvi(texfile,pdf=T)
+    #dev.off()
+    #tools::texi2dvi(texfile,pdf=T)
+    tikz.finalize(tikzfiles)
 
   }
   

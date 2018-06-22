@@ -12,7 +12,7 @@
 # indices  - for the non-overview plots, this selects one/multiple particular lattice point(s), direction(s) and generator(s) (optional)
 #            otherwise all indices are used         
 
-analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",single=FALSE,all=FALSE,width=4,height=4,text=FALSE,break.unit=0.01) {
+analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volume=2^4,int.steps=101,trajs=1,tau=1,endian="little",single=FALSE,all=FALSE,width=4,height=4,text=FALSE,finite.width=6,finite.fmax=60) {
  
   # we will use list.files with a pattern to read all the data files of interest
   # in the next few lines we construct which files we would like to read 
@@ -124,9 +124,11 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
            x=seq(1,length(df_a[[length(df_a)]]$df[,i]))*tau/int.steps,
            t='l',lwd=3,
            xlab="t",ylab="dP")
-      # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies) 
-      ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
-      plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
+      # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies)
+      x <- df_a[[length(df_a)]]$df[,i]
+      ft <- Mod(fft(x-mean(x)))/sqrt(length(x))
+      ft <- ft[2:length(ft)]
+      plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1,length(ft)/2)/(tau),log='x',
            xlab="f",ylab="$Re(\\hat{dP}(f))^2$",lwd=3 )
     }
     tikz.finalize(tikzfiles)
@@ -161,8 +163,10 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
         plot(y=df_n[[length(df_n)]]$df[,i],
              x=seq(1,length(df_n[[length(df_n)]]$df[,i]))*tau/int.steps,
              t='l',xlab="t",ylab="dP",lwd=3)
-        ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
-        plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',
+        x <- df_n[[length(df_n)]]$df[,i]
+        ft <- Mod(fft(x-mean(x)))/sqrt(length(x))
+        ft <- ft[2:length(ft)]
+        plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1,length(ft)/2)/(tau),log='x',
         xlab="f",ylab="$Re(\\hat{dP}(f))^2$",lwd=3 )
       }
       tikz.finalize(tikzfiles)
@@ -173,24 +177,56 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
       tex.basename <- sprintf("%s.%s.%s",pattern,int.steps,tex.basename)
     }
     tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
+    par(mgp=c(2,0.2,0))
+    tck <- 0.2/height
     irange <- 1:ncol(df_a[[length(df_a)]]$df)
     if(!missing(indices)){
       irange <- indices
     }
     for( i in irange ) {
-      op <- par(mar = c(4,5,3,1) + 0.1,mgp = c(2,0.3,0) )
+      #op <- par(mar = c(4,5,3,1) + 0.1,mgp = c(2,0.3,0) )
       plot(y=df_a[[length(df_a)]]$df[,i],
            x=seq(1,length(df_a[[length(df_a)]]$df[,i]))*tau/int.steps,
-           type='l',pch='.',lwd=3,tck=0.10,las=1,
-           xlab="$\\tau$",ylab="$\\delta P^a_\\mu(x,\\tau)$")
+           type='l',pch='.',lwd=3,tck=tck,las=1,xaxt='n',
+           xlab="",ylab="$\\delta P^a_\\mu(x,\\tau)$")
+      mtext(side=1,line=1.0,text="$\\tau$")
+      if(length(df_a[[length(df_a)]]$df[,i])*tau/int.steps > 5){
+        axis(side=1, labels=TRUE, at=seq(0,20,5),tck=tck)
+        axis(side=1, labels=FALSE, at=outer(c(1:4),seq(0,20,5), FUN="+"), tck=0.6*tck)
+      } else {
+        axis(side=1,tck=tck)
+      }
+
       # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies) 
-      ft <- Re(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
-      plot(y=ft,type='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',lwd=3,
-           xlab="f",ylab="$\\left( \\Re \\left[ \\tilde{\\delta P}^a_\\mu(x,f) \\right] \\right)^2$")
-      plot(y=df_a[[length(df_a)]]$df[,i]^2,
-           x=seq(1,length(df_a[[length(df_a)]]$df[,i]))*tau/int.steps,
-           type='l',pch='.',lwd=3,tck=0.10,las=1,
-           xlab="$\\tau$",ylab="$\\left( \\delta P^a_\\mu(x,\\tau) \\right)^2$")
+      x <- df_a[[length(df_a)]]$df[,i]
+      ft <- Mod(fft(x-mean(x)))/sqrt(length(x))
+      ft <- ft[2:length(ft)]
+      incr <- 20
+      if(length(ft)<4000)
+        incr <- incr/2
+      if(length(ft)<2000)
+        incr <- incr/2
+      plot(y=ft,type='l',x=seq(1,length(ft))/(tau),xlim=c(1,length(ft)/2)/(tau),log='y',lwd=3,las=1,xaxt='n',yaxt='n',
+           xlab="",ylab="",tck=tck)
+      axis(side=1, labels=TRUE, at=seq(-20,500,incr),tck=tck)
+      if(incr>=10)
+        axis(side=1, labels=FALSE, at=outer(c(2,4,6,8),seq(-10,500,10), FUN="+"), tck=0.6*tck)
+      else
+        axis(side=1, labels=FALSE, at=outer(c(1:4,6:9),seq(-10,500,10), FUN="+"), tck=0.6*tck)
+      if(incr==20)
+        axis(side=1, labels=FALSE, at=outer(10,seq(-20,500,20), FUN="+"), tck=tck)
+      mtext(side=2,line=2.5,text="$\\| \\mathcal{F} \\left[ {\\delta P}^a_\\mu(x) \\right] (f) \\|$")
+      axis(side=2, labels=TRUE, at=10^(seq(-20,20,2)), tck=tck,las=1)                                                                                      
+      axis(side=2, labels=FALSE, at=outer(2:9,10^(-20:19)),tck=0.6*tck)
+      mtext(side=1,line=1.0,text="$f$")
+
+      plot(y=x^2,
+           x=seq(1,length(x))*tau/int.steps,
+           type='l',pch='.',lwd=3,tck=tck,las=1,xaxt='n',
+           xlab="",ylab="$\\left( \\delta P^a_\\mu(x,\\tau) \\right)^2$")
+      mtext(side=1,line=1.0,text="$\\tau$")
+      axis(side=1, labels=TRUE, at=seq(0,20,5),tck=tck)
+      axis(side=1, labels=FALSE, at=outer(c(1:4),seq(0,20,5), FUN="+"), tck=0.6*tck)
     }
     tikz.finalize(tikzfiles)
     
@@ -209,7 +245,8 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
              x=seq(1,length(df_n[[length(df_n)]]$df[,i]))*tau/int.steps,
              t='l',lwd=3,
              xlab="$\\tau$",ylab="$\\delta \\mathcal{P}^a_\\mu(x,\\tau)$")
-        ft <- Re(fft(df_n[[length(df_n)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
+        x <- df_n[[length(df_n)]]$df[,i]
+        ft <- Mod(fft(x-mean(x)))/sqrt(length(x))
         plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,100),log='x',lwd=3,
         xlab="f",ylab="$\\left( \\Re \\left[ \\tilde{\\delta \\mathcal{P}}^a_\\mu(x,f) \\right] \\right)^2$")
       }
@@ -396,10 +433,12 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
   # do fourier analysis of complete data set
   ft <- rep(0,times=length(df_a[[1]]$df[,1]))
   for( i in 1:ncol(df_a[[length(df_a)]]$df) ) {
-    # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies) 
-    ft <- ft+Mod(fft(df_a[[length(df_a)]]$df[,i]))^2/length(df_a[[length(df_a)]]$df[,i])^2
+    # we do a fast fourier transform of the trajectory which provides us with a few of the dominant frequenc(y/ies)
+    x <- df_a[[length(df_a)]]$df[,i]
+    ft <- ft+Mod(fft(x-mean(x)))/sqrt(length(x))
   }
-  ft <- ft / ncol(df_a[[1]]$df)
+  ft <- ft[2:length(ft)]
+  ft <- ft / max(ft)
 
   tex.basename <- "ft"
   if(!missing(single) && !missing(pattern)) {
@@ -407,8 +446,74 @@ analysis_num_deriv <- function(dir,filename,pattern,indices,numerical=TRUE,volum
     }
   # these need to be a little larger
   tikzfiles <- tikz.init(basename=tex.basename,width=width,height=height)
-  plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1/tau,6),#log='x',
-       xlab="f",ylab="$Re(\\hat{dP}(f))^2$",lwd=3 )
+  par(mgp=c(3,0.5,0))
+  tck <- 0.2/height
+  yrange <- range(ft)
+  plot(y=ft,t='l',x=seq(1,length(ft))/(tau),xlim=c(1,length(ft)/2)/(tau),#log='x',
+       xlab="",ylab="$\\|\\mathcal{F} \\left[ \\delta P \\right] (f)\\|_\\mathrm{av} \\cdot N^{-1}$",lwd=3,las=1,yaxt='n',log='y',xaxt='n')
+  abline(h=10^(-4),lty=3)
+  mtext(side=1,line=1.3,text="$f$")
+  incr <- 20
+  if(length(ft)<4000)
+    incr <- incr/2
+  if(length(ft)<2000)
+    incr <- incr/2
+
+  axis(side=1, labels=TRUE, at=seq(0,500,incr),tck=-tck)
+  if(incr>=10)
+    axis(side=1, labels=FALSE, at=outer(c(2,4,6,8),seq(0,500,10), FUN="+"), tck=-0.6*tck)
+  else
+    axis(side=1, labels=FALSE, at=outer(c(1:4,6:9),seq(0,500,10), FUN="+"), tck=-0.6*tck)
+  if(incr==20)
+    axis(side=1, labels=FALSE, at=outer(10,seq(0,500,20), FUN="+"), tck=-0.8*tck)
+  axis(side=2, labels=TRUE, at=10^(-10:10), tck=tck,las=1)                                                                                      
+  axis(side=2, labels=FALSE, at=outer(2:9,10^(-10:9)),tck=0.5*tck)
+  tikz.finalize(tikzfiles)
+  
+  tex.basename <- "ft.finite"
+  if(!missing(single) && !missing(pattern)) {
+      tex.basename <- sprintf("%s.%s.%s",pattern,int.steps,tex.basename)
+  }
+  tikzfiles <- tikz.init(basename=tex.basename,width=3.4,height=2.5)
+  par(mgp=c(3,0.3,0))
+  yrange <- range(ft)
+  plot(y=ft,t='l',x=seq(1,length(ft))/(tau),log='y',
+       xlab="",ylab="$\\|\\mathcal{F} \\left[ \\delta P \\right] (f)\\|_\\mathrm{av} \\cdot N^{-1}$",lwd=3,las=1,yaxt='n',xaxt='n',
+       xlim=c(1/tau,finite.fmax),
+       ylim=10^c(-3,0))
+  abline(h=10^(-2),lty=3)
+  # indicate where ft crosses 10^-2, note how x and y are reversed for this purpose
+  print(approx(y=seq(1,length(ft))/(tau),x=ft,xout=0.01))
+  abline(v=approx(y=seq(1,floor(length(ft)/2))/(tau),x=ft[1:floor(length(ft)/2)],xout=0.01)$y,lty=3)
+  mtext(side=1,line=1.0,text="$f$")
+  axis(side=1, labels=TRUE, at=seq(-5,500,5), tck=0.1)
+  axis(side=1, labels=FALSE, at=outer(c(1,2,3,4,6,7,8,9),seq(-20,500,10), FUN="+"), tck=0.05)
+  #axis(side=1, labels=FALSE, at=outer(10,seq(-20,500,20), FUN="+"), tck=-0.045)
+  axis(side=2, labels=TRUE, at=10^(-10:10), tck=0.05,las=1)                                                                                      
+  axis(side=2, labels=FALSE, at=outer(2:9,10^(-10:9)),tck=0.025)
+  tikz.finalize(tikzfiles)
+  
+  tex.basename <- "ft.loglog"
+  if(!missing(single) && !missing(pattern)) {
+      tex.basename <- sprintf("%s.%s.%s",pattern,int.steps,tex.basename)
+  }
+  tikzfiles <- tikz.init(basename=tex.basename,width=3.4,height=2.5)
+  par(mgp=c(3,0.3,0))
+  yrange <- range(ft)
+  plot(y=ft^2,t='l',x=seq(1,length(ft))/(tau),log='xy',
+       xlab="",ylab="$\\|\\mathcal{F} \\left[ \\delta P \\right] (f)\\|_\\mathrm{av}^2 \\cdot N^{-1}$",lwd=3,las=1,yaxt='n',xaxt='n',
+       xlim=c(1/tau,finite.fmax),
+       ylim=10^c(-6,0))
+  #abline(h=10^(-2),lty=3)
+  # indicate where ft crosses 10^-2, note how x and y are reversed for this purpose
+  #print(approx(y=seq(1,length(ft))/(tau),x=ft,xout=0.01))
+  #abline(v=approx(y=seq(1,floor(length(ft)/2))/(tau),x=ft[1:floor(length(ft)/2)],xout=0.01)$y,lty=3)
+  mtext(side=1,line=1.0,text="$f$")
+  axis(side=1, labels=TRUE, at=seq(-5,500,5), tck=0.1)
+  axis(side=1, labels=FALSE, at=outer(c(1,2,3,4,6,7,8,9),seq(-20,500,10), FUN="+"), tck=0.05)
+  #axis(side=1, labels=FALSE, at=outer(10,seq(-20,500,20), FUN="+"), tck=-0.045)
+  axis(side=2, labels=TRUE, at=10^(-10:10), tck=0.05,las=1)                                                                                      
+  axis(side=2, labels=FALSE, at=outer(2:9,10^(-10:9)),tck=0.025)
   tikz.finalize(tikzfiles)
 
 }
