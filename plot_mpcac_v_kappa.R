@@ -75,15 +75,20 @@ plot_mpcac_v_kappa <- function(datafile,
   }
   plotwitherror(x=pcacdat$oneov2k, y=pcacdat$mpcac, dy=pcacdat$dmpcac, 
                 col=pcacdat$colour, pch=pcacdat$pch, rep=TRUE )
-  lns <- c(1,rep(NA,length(unique(pcacdat$colour))))
-  pch <- rep(15,length(unique(pcacdat$colour))+1)
-  clrs <- c("#0000FF55",unique(pcacdat$colour))
+  lns <- rep(NA,length(unique(pcacdat$colour)))
+  pch <- rep(15,length(unique(pcacdat$colour)))
+  clrs <- unique(pcacdat$colour)
 
+  lg <- sprintf("$a\\mu = %.6f$", unique( pcacdat$mu ))
+  legend( x="topleft", col=clrs, legend=lg, 
+          pch=pch, bty='n', pt.cex=1.3, ncol=2 )
   if(fit){
-    lg <- c(sprintf("$am_\\mathrm{PCAC}=%.3f+%.3f \\frac{1}{2\\kappa}$",lmodel$coefficients[1],lmodel$coefficients[2]),
-            sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )))
-    legend( x="topleft", col=clrs, legend=lg, 
-            pch=pch, lty=lns, bty='n', pt.cex=1.3 )
+    legend(x = "topright",
+           bty = 'n',
+           pch = NA,
+           lty = 1,
+           col = "#0000FF55",
+           legend = sprintf("$am_\\mathrm{PCAC}=%.3f+%.3f \\frac{1}{2\\kappa}$",lmodel$coefficients[1],lmodel$coefficients[2]))
     legend(x = "bottomleft",
            pch = NA,
            bty = 'n',
@@ -102,9 +107,11 @@ plot_mpcac_v_kappa <- function(datafile,
     xlab="", ylab="$ am_\\mathrm{PCAC} $", pch=pcacdat$pch,las=1,tck=0.02)
   abline(h=0,col="gray",lty=2)
   plotwitherror(rep=TRUE, x=pcacdat$mu, y=pcacdat$mpcac, dy=pcacdat$dmpcac,
-    xlab="", ylab="$ am_\\mathrm{PCAC} $", col="black", 
+    xlab="", ylab="$ am_\\mathrm{PCAC} $", col=pcacdat$kappacolour, 
     pch=pcacdat$pch )
   mtext(side=1,text="$ a\\mu_\\ell $",line=1.3)
+  legend( x="topright", col=unique(pcacdat$kappacolour), legend=sprintf("$\\kappa = %.7f$", unique( pcacdat$kappa )), 
+          pch=15, bty='n', pt.cex=1.3 )
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )
 
@@ -112,7 +119,7 @@ plot_mpcac_v_kappa <- function(datafile,
     xlab="", ylab="$ (a M_\\mathrm{PS} )^2 $", col=pcacdat$colour, 
     pch=pcacdat$pch,las=1,tck=0.02, ... )
   mtext(side=1,text="$ 1/2\\kappa $",line=1.3)
-  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )), 
+  legend( x="topright", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.6f$", unique( pcacdat$mu )), 
           pch=15, bty='n', pt.cex=1.3 )
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )
@@ -121,7 +128,7 @@ plot_mpcac_v_kappa <- function(datafile,
     xlab="", ylab="$ a f_\\mathrm{PS} $", col=pcacdat$colour, 
     pch=pcacdat$pch,las=1,tck=0.02, ... )
   mtext(side=1,text="$ 1/2\\kappa $",line=1.3)
-  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )), 
+  legend( x="topright", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.6f$", unique( pcacdat$mu )), 
           pch=15, bty='n', pt.cex=1.3 )
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )
@@ -130,7 +137,7 @@ plot_mpcac_v_kappa <- function(datafile,
     xlab="", ylab="$ (a M_\\mathrm{PS} )^2 $", col=pcacdat$colour, 
     pch=pcacdat$pch,las=1,tck=0.02 )
   mtext(side=1,text="$ am_\\mathrm{PCAC} $",line=1.3)
-  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )), 
+  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.6f$", unique( pcacdat$mu )), 
           pch=15, bty='n', pt.cex=1.3 )
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )
@@ -139,7 +146,34 @@ plot_mpcac_v_kappa <- function(datafile,
     xlab="", ylab="$ a f_\\mathrm{PS} $", col=pcacdat$colour, 
     pch=pcacdat$pch,las=1,tck=0.02 )
   mtext(side=1,text="$ am_\\mathrm{PCAC} $",line=1.3)
-  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.4f$", unique( pcacdat$mu )), 
+  legend( x="topleft", col=unique(pcacdat$colour), legend=sprintf("$a\\mu = %.6f$", unique( pcacdat$mu )), 
+          pch=15, bty='n', pt.cex=1.3 )
+  legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
+          pch=unique(pcacdat$pch), bty='n' )
+  
+  plotwitherror(x=pcacdat$mu, y=pcacdat$mpi^2, dy=pcacdat$dmpi*pcacdat$mpi*2,
+    xlab="", ylab="$ (a M_\\mathrm{PS} )^2 $", col=pcacdat$kappacolour, 
+    pch=pcacdat$pch,las=1,tck=0.02 )
+  mtext(side=1,text="$ a \\mu_{\\ell} $",line=1.3)
+  legend( x="topleft", col=unique(pcacdat$kappacolour), legend=sprintf("$\\kappa = %.7f$", unique( pcacdat$kappa )), 
+          pch=15, bty='n', pt.cex=1.3 )
+  legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
+          pch=unique(pcacdat$pch), bty='n' )
+  
+  plotwitherror(x=pcacdat$mu, y=pcacdat$fpi, dy=pcacdat$dfpi,
+    xlab="", ylab="$ a f_\\mathrm{PS} $", col=pcacdat$kappacolour, 
+    pch=pcacdat$pch,las=1,tck=0.02 )
+  mtext(side=1,text="$ a \\mu_{\\ell} $",line=1.3)
+  legend( x="topleft", col=unique(pcacdat$kappacolour), legend=sprintf("$\\kappa = %.7f$", unique( pcacdat$kappa )), 
+          pch=15, bty='n', pt.cex=1.3 )
+  legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
+          pch=unique(pcacdat$pch), bty='n' )
+  
+  plotwitherror(x=pcacdat$mu, y=pcacdat$P, dy=pcacdat$dP,
+    xlab="", ylab="$ \\langle P \\rangle $", col=pcacdat$kappacolour, 
+    pch=pcacdat$pch,las=1,tck=0.02 )
+  mtext(side=1,text="$ a \\mu_{\\ell} $",line=1.3)
+  legend( x="topright", col=unique(pcacdat$kappacolour), legend=sprintf("$\\kappa = %.7f$", unique( pcacdat$kappa )), 
           pch=15, bty='n', pt.cex=1.3 )
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )

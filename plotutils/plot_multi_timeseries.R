@@ -61,7 +61,7 @@ plot_multi_timeseries <- function(dat,basename,ylims,hl,yticks,width=4.5,height=
     legend(x="topright", legend=lg, pch=NA, col=clr[1:length(dat)], lty=1, lwd=3, bty='n')
   }  
 
-  plot_multihist(dat=rdat,lg=lg,cols=clr,init=FALSE,label.x=name,main="",lg.pos="topleft",xlim.probs=c(0.02,1.0))
+  plot_multihist(dat=rdat,lg=lg,cols=clr,init=FALSE,label.x=name,main="",lg.pos="topleft",xlim.probs=c(0.001,0.999))
 
   tikz.finalize(tikzfiles)
 

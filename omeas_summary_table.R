@@ -3,10 +3,12 @@ omeas_summary_table <- function(filename = "omeas.summary.RData",
   load(filename)
 
   dat <- NULL
-  for( ens in resultsum ){
+  for( ename in names(resultsum) ){
+    ens <- resultsum[[ename]]
 
     dat <- rbind(dat,
-                 data.frame(beta = ens$params$beta,
+                 data.frame(name = ename,
+                            beta = ens$params$beta,
                             csw  = ens$params$csw,
                             kappa = ens$params$kappa,
                             L = ens$params$L,
@@ -54,14 +56,16 @@ omeas_summary_table <- function(filename = "omeas.summary.RData",
   
   Ls <- unique(dat$L)
   mus <- unique(dat$mu)
+  kappas <- unique(dat$kappa)
 
   require("RColorBrewer")
-  allclrs <- brewer.pal(n = length(mus),
+  allclrs <- brewer.pal(n = 8,
                         name = "Dark2")
   allpchs <- c(0:8,15:16)
 
   dat <- cbind(dat, 
                data.frame(colour = allclrs[ match( dat$mu, mus ) ],
+                          kappacolour = allclrs[ match( dat$kappa, kappas ) ], 
                           pch    = allpchs[ match( dat$L, Ls ) ])
                )
 
