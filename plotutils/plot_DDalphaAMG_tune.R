@@ -1,3 +1,5 @@
+require(hadron)
+
 plot_DDalphaAMG_tune <- function(datfile, basename, citer.ylim=c(2000,15000) ){ 
   require("RColorBrewer")
 

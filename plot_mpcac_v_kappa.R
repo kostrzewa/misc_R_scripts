@@ -13,7 +13,10 @@ plot_mpcac_v_kappa <- function(datafile,
                                basename = "mpcac_v_kappa",
                                debug=FALSE,neg=TRUE,fit=TRUE,
                                sim=500,n.predict=2000,
-                               mpcac.ylim=c(-0.006,0.006),mu.ylim=c(-0.001,0.001),...)
+                               mpcac.ylim=c(-0.001,0.001),
+                               mu.ylim=c(-0.001,0.001),
+                               kappalegendpos="topleft",
+                               ...)
 {
   pcacdat <- read.table(file=datafile,header=T,stringsAsFactors=FALSE,fill=FALSE)
   pcacdat <- cbind(oneov2k=1/(2*pcacdat$kappa),pcacdat)
@@ -110,7 +113,7 @@ plot_mpcac_v_kappa <- function(datafile,
     xlab="", ylab="$ am_\\mathrm{PCAC} $", col=pcacdat$kappacolour, 
     pch=pcacdat$pch )
   mtext(side=1,text="$ a\\mu_\\ell $",line=1.3)
-  legend( x="topright", col=unique(pcacdat$kappacolour), legend=sprintf("$\\kappa = %.7f$", unique( pcacdat$kappa )), 
+  legend( x=kappalegendpos, col=unique(pcacdat$kappacolour), legend=sprintf("$\\kappa = %.7f$", unique( pcacdat$kappa )), 
           pch=15, bty='n', pt.cex=1.3 )
   legend( x="bottomright", col="black", legend=sprintf("$L/a = %d$", unique( pcacdat$L ) ), 
           pch=unique(pcacdat$pch), bty='n' )
